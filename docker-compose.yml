@@ -1,0 +1,19 @@
+services:
+  maloja:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./testdata:/data
+      - ./testdata_config:/config:ro
+    ports:
+      - "42010:42010"
+    stdin_open: true
+    tty: true
+    command: "/bin/maloja-rs"
+    env_file:
+      - .env.dev
+    environment:
+      - MALOJA_CONFIG_PATH=/config
+      - MALOJA_DATA_PATH=/data
+      - MALOJA_LOG_PATH=/data/logs
