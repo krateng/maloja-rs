@@ -2,10 +2,11 @@ services:
   maloja:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Containerfile
     volumes:
-      - ./testdata:/data
-      - ./testdata_config:/config:ro
+      - ./testdata/state:/data
+      - ./testdata/config:/config:ro
+      - ./testdata/logs:/var/log/maloja
     ports:
       - "42010:42010"
     stdin_open: true
@@ -16,4 +17,3 @@ services:
     environment:
       - MALOJA_CONFIG_PATH=/config
       - MALOJA_DATA_PATH=/data
-      - MALOJA_LOG_PATH=/data/logs

@@ -23,7 +23,7 @@ pub static FOLDERS: LazyLock<ApplicationFolders> = LazyLock::new(|| {
     let folder_logic: [(&PathBuf, &str, &str, bool); 3] = [
         (&af.data, "MALOJA_DATA_PATH", "/var/lib/maloja", true),
         (&af.config, "MALOJA_CONFIG_PATH", "/etc/maloja", false),
-        (&af.logs, "MALOJA_LOG_PATH", "/var/lib/maloja", true),
+        (&af.logs, "MALOJA_LOG_PATH", "/var/log/maloja", true),
     ];
     for (folder, envvar, default, writable) in folder_logic.iter() {
         match fs::create_dir_all(folder) {
@@ -36,7 +36,7 @@ pub static FOLDERS: LazyLock<ApplicationFolders> = LazyLock::new(|| {
                             let _ = remove_file(test_file);
                         }
                         Err(e) => {
-                            println!("No write access to {}: {}. Make sure to set the environment variable {}.", display_path(folder), e, display_envvar(envvar));
+                            println!("No write access to {}: {}. Make sure to set the environment variable {} to a writable directory.", display_path(folder), e, display_envvar(envvar));
                             success = false;
                         }
                     }
@@ -44,7 +44,7 @@ pub static FOLDERS: LazyLock<ApplicationFolders> = LazyLock::new(|| {
             },
             Err(e) => {
                 // logging isn't setup yet
-                println!("Failed to create {}: {}. Make sure to set the environment variable {}.", display_path(folder), e, display_envvar(envvar));
+                println!("Failed to create {}: {}. Make sure to set the environment variable {} to a writable directory.", display_path(folder), e, display_envvar(envvar));
                 success = false;
             }
         }
