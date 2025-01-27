@@ -1,22 +1,26 @@
 pub mod logging;
 
-use std::{env, fs, io};
-use std::fs::{File, OpenOptions, remove_file};
+use crate::configuration::logging::{display_envvar, display_path};
+use colored::Colorize;
+use confique::serde::Deserialize;
+use confique::{toml, Config, Error};
+use log::{error, info, warn};
+use std::fs::{remove_file, File, OpenOptions};
 use std::io::Write;
 use std::net::IpAddr;
 use std::path::PathBuf;
 use std::sync::LazyLock;
-use colored::Colorize;
-use confique::{toml, Config, Error};
-use confique::serde::Deserialize;
-use log::{info, warn, error};
-use crate::configuration::logging::{display_envvar, display_path};
+use std::{env, fs, io};
 
 pub static FOLDERS: LazyLock<ApplicationFolders> = LazyLock::new(|| {
     let af = ApplicationFolders {
-        data: PathBuf::from(env::var("MALOJA_DATA_PATH").unwrap_or(String::from("/var/lib/maloja"))),
-        config: PathBuf::from(env::var("MALOJA_CONFIG_PATH").unwrap_or(String::from("/etc/maloja"))),
-        logs: PathBuf::from(env::var("MALOJA_LOG_PATH").unwrap_or(String::from("/var/log/maloja")))
+        data: PathBuf::from(
+            env::var("MALOJA_DATA_PATH").unwrap_or(String::from("/var/lib/maloja")),
+        ),
+        config: PathBuf::from(
+            env::var("MALOJA_CONFIG_PATH").unwrap_or(String::from("/etc/maloja")),
+        ),
+        logs: PathBuf::from(env::var("MALOJA_LOG_PATH").unwrap_or(String::from("/var/log/maloja"))),
     };
     let mut success: bool = true;
 
@@ -41,7 +45,7 @@ pub static FOLDERS: LazyLock<ApplicationFolders> = LazyLock::new(|| {
                         }
                     }
                 }
-            },
+            }
             Err(e) => {
                 // logging isn't setup yet
                 println!("Failed to create {}: {}. Make sure to set the environment variable {} to a writable directory.", display_path(folder), e, display_envvar(envvar));
@@ -63,7 +67,6 @@ pub static CONFIG: LazyLock<MalojaConfig> = LazyLock::new(|| {
     })
 });
 
-
 pub struct ApplicationFolders {
     pub data: PathBuf,
     pub config: PathBuf,
@@ -72,7 +75,6 @@ pub struct ApplicationFolders {
 
 #[derive(Config, Debug)]
 pub struct MalojaConfig {
-
     /// Enable logging
     #[config(default = true)]
     pub logging: bool,
@@ -138,7 +140,6 @@ pub struct MalojaConfig {
     pub time_format: String,
 }
 
-
 fn get_config_file_path() -> PathBuf {
     let path = FOLDERS.config.join("maloja.toml");
     path
@@ -148,17 +149,17 @@ pub fn create_config_template() -> io::Result<()> {
     let example_config = toml::template::<MalojaConfig>(Default::default());
     let file_path = get_config_file_path();
     if file_path.exists() {
-        return Ok(())
+        return Ok(());
     }
     // TODO: should we maybe create a separate example file in case config gets updated later (and the existing user file doesnt have those keys)?
     match File::create(&file_path) {
         Ok(mut file) => {
             file.write_all(example_config.as_bytes())?;
-            return Ok(())
+            Ok(())
         }
         Err(_) => {
             // Read only config directory isn't an error
-            return Ok(())
+            Ok(())
         }
     }
 }

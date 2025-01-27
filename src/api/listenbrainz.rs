@@ -9,7 +9,7 @@ pub const API: ScrobbleAPI = ScrobbleAPI {
     prefix: "/listenbrainz/1",
     tag: "Listenbrainz",
     //endpoints: routes!(submit, validate),
-    register: register_routes
+    register: register_routes,
 };
 
 fn register_routes(mut router: OpenApiRouter) -> OpenApiRouter {
@@ -23,7 +23,6 @@ fn register_routes(mut router: OpenApiRouter) -> OpenApiRouter {
     info(title = "Listenbrainz API", version = "1")
 )]
 pub struct ApiDoc;
-
 
 #[utoipa::path(
     post,

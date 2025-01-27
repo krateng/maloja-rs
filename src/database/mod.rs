@@ -1,15 +1,19 @@
-use std::path::PathBuf;
-use sea_orm::{ConnectionTrait, Database, DatabaseConnection, DbBackend, DbConn, Schema};
 use crate::configuration::FOLDERS;
 use crate::database;
-use crate::entity::{scrobble::Entity as Scrobble, track::Entity as Track, artist::Entity as Artist, album::Entity as Album};
+use crate::entity::{
+    album::Entity as Album,
+    artist::Entity as Artist,
+    scrobble::Entity as Scrobble,
+    track::Entity as Track,
+};
+use sea_orm::{ConnectionTrait, Database, DatabaseConnection, DbBackend, DbConn, Schema};
+use std::path::PathBuf;
 
 fn get_database_path() -> PathBuf {
     FOLDERS.data.join("malojadb.sqlite")
 }
 
 pub async fn init_db() {
-
     let dbfile = get_database_path().display().to_string();
     let dbstring = format!("sqlite://{}?mode=rwc", dbfile);
 
@@ -28,5 +32,4 @@ pub async fn create_tables(db: &DbConn) {
     //println!("Statement: {:?}", statement);
     //db.execute(statement).await.unwrap();
     //println!("Done");
-
 }

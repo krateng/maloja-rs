@@ -24,7 +24,6 @@ fn register_routes(mut router: OpenApiRouter) -> OpenApiRouter {
 )]
 pub struct ApiDoc;
 
-
 #[utoipa::path(
     get,
     path = "",
@@ -52,4 +51,3 @@ pub async fn mainendpoint() -> Json<i32> {
 pub async fn mainendpoint_post() -> Json<i32> {
     Json(42)
 }
-

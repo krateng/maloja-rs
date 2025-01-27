@@ -1,7 +1,7 @@
-use std::path::PathBuf;
-use fern;
 use chrono::Utc;
 use colored::{ColoredString, Colorize};
+use fern;
+use std::path::PathBuf;
 
 use crate::configuration::FOLDERS;
 
@@ -13,7 +13,11 @@ pub fn setup_logger() -> Result<(), fern::InitError> {
     let logfile = match fern::log_file(get_logfile_path()) {
         Ok(logfile) => logfile,
         Err(e) => {
-            println!("Cannot set up log file {}: {}", display_path(&get_logfile_path()), e);
+            println!(
+                "Cannot set up log file {}: {}",
+                display_path(&get_logfile_path()),
+                e
+            );
             panic!("Failed to setup logging");
         }
     };

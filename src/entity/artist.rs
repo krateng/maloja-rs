@@ -12,8 +12,6 @@ pub struct Model {
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {
-
-}
+pub enum Relation {}
 
 impl ActiveModelBehavior for ActiveModel {}

@@ -1,18 +1,17 @@
 #![forbid(unsafe_code)]
 
-
-mod entity;
-mod database;
-mod configuration;
 mod api;
+mod configuration;
+mod database;
+mod entity;
 mod server;
 
+use crate::configuration::logging::{display_path, display_url};
+use colored::Colorize;
+use log::{debug, info, warn};
 use std::io;
 use std::io::Write;
 use tokio::time::{sleep, Duration};
-use colored::Colorize;
-use log::{info, debug, warn};
-use crate::configuration::logging::{display_path, display_url};
 
 #[tokio::main]
 async fn main() {
@@ -47,7 +46,10 @@ fn debug_info() {
     println!("Data directory:   {}", display_path(&folders.data));
     println!("Config directory: {}", display_path(&folders.config));
     println!("Log directory:    {}", display_path(&folders.logs));
-    println!("Bind:             {}", display_url(format!("{}:{}", conf.bind_address, conf.port).as_str()));
+    println!(
+        "Bind:             {}",
+        display_url(format!("{}:{}", conf.bind_address, conf.port).as_str())
+    );
     println!();
     println!();
 }

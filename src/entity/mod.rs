@@ -1,6 +1,4 @@
-pub mod artist;
 pub mod album;
-pub mod track;
+pub mod artist;
 pub mod scrobble;
-
-
+pub mod track;

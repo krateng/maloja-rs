@@ -15,7 +15,7 @@ pub struct Model {
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(has_one = "super::album::Entity")]
-    Album
+    Album,
 }
 
 impl Related<super::album::Entity> for Entity {
