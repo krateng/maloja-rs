@@ -1,0 +1,20 @@
+[package]
+name = "maloja-rs"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+sea-orm = { version = "1.1.0", features = [ "sqlx-sqlite", "runtime-tokio-rustls", "macros" ] }
+tokio = { version = "1.40.0", features = ["rt", "rt-multi-thread", "macros"] }
+confique = { version = "0.3.0", features = ["toml"] }
+colored = { version = "3.0.0" }
+log = {  version = "0.4.22" }
+fern = { version = "0.7.1" }
+chrono = { version = "0.4.39" }
+axum = { version = "0.8.1" }
+utoipa = { version = "5.3.1" }
+utoipa-axum = { version = "0.2.0" }
+tower-http = { version = "0.6.2", features = ["fs"] }
+serde = { version = "1.0.216", features = ["derive"] }
