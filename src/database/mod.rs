@@ -1,10 +1,11 @@
 use crate::configuration::FOLDERS;
-use crate::database;
 use crate::entity::{
     album::Entity as Album,
     artist::Entity as Artist,
     scrobble::Entity as Scrobble,
     track::Entity as Track,
+    track_artist::Entity as TrackArtist,
+    album_artist::Entity as AlbumArtist,
 };
 use sea_orm::{ConnectionTrait, Database, DatabaseConnection, DbBackend, DbConn, Schema};
 use std::path::PathBuf;
@@ -23,13 +24,22 @@ pub async fn init_db() {
 }
 
 pub async fn create_tables(db: &DbConn) {
-    //println!("Creating tables...");
-    let builder = db.get_database_backend();
-    let schema = Schema::new(builder);
-    //println!("Schema: {:?}", schema);
-    //let statement_builder = schema.create_table_from_entity(Album).if_not_exists();
-    //let statement = builder.build(statement_builder);
-    //println!("Statement: {:?}", statement);
-    //db.execute(statement).await.unwrap();
-    //println!("Done");
+
+    create_table(db, Scrobble).await;
+    create_table(db, Track).await;
+    create_table(db, Artist).await;
+    create_table(db, Album).await;
+    
+    create_table(db, TrackArtist).await;
+    create_table(db, AlbumArtist).await;
+}
+
+async fn create_table<E: sea_orm::EntityTrait>(db: &DbConn, entity: E) {
+    let backend = db.get_database_backend();
+    let schema = Schema::new(backend);
+    let stmt = schema.create_table_from_entity(entity).if_not_exists().to_owned();
+    // TODO: wtf is even going on here
+    let statement = backend.build(&stmt);
+    let result = db.execute(statement).await.expect("wut");
+
 }
