@@ -12,7 +12,7 @@ pub struct Model {
     pub id: u32,
 
     /// Canonical track title. Should be unique for the combination of artists
-    #[schema(examples("As If It's Your Last", "THE THE"))]
+    #[schema(examples("Whistle"))]
     pub title: String,
     
     /// Normalized track title for the database
@@ -21,10 +21,18 @@ pub struct Model {
     
     /// Duration of the full track in seconds
     #[schema(examples(195))]
-    pub length: u32,
+    pub length: Option<u32>,
     
     /// ID of the canonical album release that contains this track
-    pub album_id: u32,
+    pub album_id: Option<u32>,
+
+    #[sea_orm(unique)]
+    #[schema(examples("1d48f0c7-f65f-4e3d-8b3e-b066531b9a67"))]
+    pub mbid: Option<String>,
+
+    #[sea_orm(unique)]
+    #[schema(examples("6NEoeBLQbOMw92qMeLfI40"))]
+    pub spotify_id: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

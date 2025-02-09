@@ -13,12 +13,19 @@ pub struct Model {
     
     /// Canonical title of the album
     #[schema(examples("Square One"))]
-    pub albumtitle: String,
+    pub album_title: String,
     
     /// Normalized album title
-    #[sea_orm(unique)]
     #[serde(skip_serializing, skip_deserializing)]
-    pub albumtitle_normalized: String,
+    pub album_title_normalized: String,
+
+    #[sea_orm(unique)]
+    #[schema(examples("e05f3677-7708-4776-9159-5201559b62d3"))]
+    pub mbid: Option<String>,
+
+    #[sea_orm(unique)]
+    #[schema(examples("0FOOodYRlj7gzh7q7IjmNZ"))]
+    pub spotify_id: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

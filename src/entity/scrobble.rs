@@ -10,7 +10,7 @@ pub struct Model {
     
     #[sea_orm(primary_key, auto_increment = false)]
     pub timestamp: i64,
-    
+
     pub track_id: u32,
     
     /// Raw Json of the Scrobble for later reparsing
@@ -21,11 +21,11 @@ pub struct Model {
     
     /// Identifier of the scrobble source, as reported by the submitter
     #[schema(examples("navidrome"))]
-    pub origin: String,
+    pub origin: Option<String>,
     
     /// Duration of the scrobble in seconds
     #[schema(examples(174))]
-    pub duration: u32,
+    pub duration: Option<u32>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

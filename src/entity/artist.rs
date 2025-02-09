@@ -12,13 +12,21 @@ pub struct Model {
     pub id: i32,
     
     /// Canonical Artist name
-    #[schema(examples("Jennie Kim", "TWICE"))]
+    #[schema(examples("Blackpink"))]
     pub name: String,
     
     /// Normalized name for the database
     #[sea_orm(unique)]
     #[serde(skip_serializing, skip_deserializing)]
     pub name_normalized: String,
+
+    #[sea_orm(unique)]
+    #[schema(examples("48646387-1664-4c9a-9139-9bfd091b823c"))]
+    pub mbid: Option<String>,
+
+    #[sea_orm(unique)]
+    #[schema(examples("41MozSoPIsD1dJM0CLPjZF"))]
+    pub spotify_id: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
