@@ -1,6 +1,7 @@
 use sea_orm::entity::prelude::*;
 use serde::Serialize;
 use utoipa::ToSchema;
+use super::artist::ArtistRead;
 
 #[derive(Debug, Clone, DeriveEntityModel, Serialize, ToSchema)]
 #[schema(title = "Album", as = entity::album::Model)]
@@ -46,3 +47,17 @@ impl Related<super::artist::Entity> for Entity {
 }
 
 impl ActiveModelBehavior for ActiveModel {}
+
+#[derive(Clone, Eq, Hash, PartialEq, Debug)]
+pub struct AlbumWrite {
+    pub id: Option<u32>,
+    pub album_title: Option<String>,
+    pub mbid: Option<String>,
+    pub spotify_id: Option<String>,
+}
+
+pub struct AlbumRead {
+    pub id: u32,
+    pub album_title: String,
+    pub album_artists: Vec<ArtistRead>,
+}

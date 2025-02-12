@@ -1,6 +1,8 @@
 use sea_orm::entity::prelude::*;
 use serde::Serialize;
 use utoipa::ToSchema;
+use super::artist::{ArtistRead, ArtistWrite};
+use super::album::AlbumRead;
 
 #[derive(Debug, Clone, DeriveEntityModel, Serialize, ToSchema)]
 #[schema(title = "Track", as = entity::track::Model)]
@@ -40,6 +42,8 @@ pub enum Relation {
     #[sea_orm(belongs_to = "super::album::Entity", from = "Column::AlbumId", to = "super::album::Column::Id")]
     // TODO: disable this weird pascal case conversion
     Album,
+    #[sea_orm(has_many = "super::track_artist::Entity")]
+    TrackArtist,
 }
 
 impl Related<super::album::Entity> for Entity {
@@ -52,3 +56,25 @@ impl Related<super::artist::Entity> for Entity {
 }
 
 impl ActiveModelBehavior for ActiveModel {}
+
+#[derive(Clone, Eq, Hash, PartialEq, Debug)]
+pub struct TrackWrite {
+    pub id: Option<u32>,
+    pub title: Option<String>,
+    pub primary_artists: Option<Vec<ArtistWrite>>,
+    pub secondary_artists: Option<Vec<ArtistWrite>>,
+    pub length: Option<u32>,
+    pub mbid: Option<String>,
+    pub spotify_id: Option<String>,
+}
+
+pub struct TrackRead {
+    pub id: u32,
+    pub title: String,
+    pub primary_artists: Vec<ArtistRead>,
+    pub secondary_artists: Vec<ArtistRead>,
+    pub album: Option<AlbumRead>,
+    pub length: Option<u32>,
+    pub mbid: Option<String>,
+    pub spotify_id: Option<String>,
+}
