@@ -1,0 +1,306 @@
+use std::default::Default;
+use std::collections::HashMap;
+use log::info;
+use sea_orm::{sqlx, ColumnTrait, DbErr, EntityTrait, JoinType, NotSet, QueryFilter, QuerySelect, QueryTrait, RelationTrait};
+use sea_orm::ActiveValue::Set;
+use crate::database::connect;
+use crate::entity;
+use crate::entity::{
+    album::{Entity as Album, Model as AlbumModel, ActiveModel as AlbumActiveModel, Column as AlbumColumn, AlbumWrite},
+    track::{Entity as Track, Model as TrackModel, ActiveModel as TrackActiveModel, Column as TrackColumn, TrackWrite, Relation as TrackRelation},
+    artist::{Entity as Artist, Model as ArtistModel, ActiveModel as ArtistActiveModel, Column as ArtistColumn, ArtistWrite},
+    scrobble::{Entity as Scrobble, Model as ScrobbleModel, ActiveModel as ScrobbleActiveModel, Column as ScrobbleColumn},
+    track_artist::{Entity as TrackArtist, ActiveModel as TrackArtistActiveModel},
+};
+
+
+/// How many entities should be inserted into the Database in one go
+const BATCH_SIZE: usize = 250;
+
+fn normalize(input: &str) -> String {
+    input.to_lowercase().replace("_", "-").replace(" ", "-")
+}
+
+// alrighty this time we're doing it organized from the start unlike the python monstrosity
+// this is totally gonna work this time lmao
+// link the relevant xkcd here
+#[allow(clippy::collapsible_else_if)]
+pub async fn get_or_create_artists(input: Vec<ArtistWrite>) -> HashMap<ArtistWrite, ArtistModel> {
+    let db = connect().await;
+    let mut result: HashMap<ArtistWrite, Option<ArtistModel>> = HashMap::new();
+    input.clone().into_iter().for_each(|artist| {
+        result.insert(artist, None);
+    });
+
+    // internal ID means instant match - if id supplied but doesn't exist, error!
+    // if no ID supplied:
+    // - mbid match - use extra table so multiple mbids can match to same artist
+    // - spotfiy id match - same
+    // - normalized name
+
+    let mut id_map: HashMap<u32, Vec<&ArtistWrite>> = HashMap::new();
+    let mut name_map: HashMap<String, Vec<&ArtistWrite>> = HashMap::new();
+    for (index, inp) in input.iter().enumerate() {
+        if let Some(id) = &inp.id {
+            id_map.entry(*id).or_insert(vec![]).push(inp);
+        }
+        // if we have an ID supplied, we're not gonna use anything else, even if the ID doesn't work - so all other maps in else
+        else {
+            if let Some(name) = &inp.name {
+                name_map.entry(normalize(name)).or_insert(vec![]).push(inp);
+            }
+        }
+    }
+    let id_list: Vec<u32> = id_map.keys().cloned().collect();
+    let name_list: Vec<String> = name_map.keys().cloned().collect();
+
+    // IDs
+    let db_result = Artist::find()
+        .filter(ArtistColumn::Id.is_in(id_list))
+        .all(&db).await.unwrap();
+    for model in db_result {
+        let writes = &id_map[&model.id];
+        for write in writes {
+            result.insert(write.to_owned().clone(), Some(model.clone()));
+            // do NOT ask me what the fuck is happening with ownership here i just want it to compile
+        }
+
+    }
+    // TODO: make sure no supplied IDs are unused - this should be an error instead of just checking for other match methods
+
+    // TODO: mbid and spotify_id
+
+    // Names
+    let db_result = Artist::find()
+        .filter(ArtistColumn::NameNormalized.is_in(name_list))
+        .all(&db).await.unwrap();
+    for model in db_result {
+        let writes = &name_map[&model.name_normalized];
+        for write in writes {
+            result.insert(write.to_owned().clone(), Some(model.clone()));
+        }
+    }
+
+    // All remaining must be created new
+    // we dont need any maps here because they will be returned in the order they are supplied
+    let mut notfound: Vec<&ArtistWrite> = vec![];
+    for (write, opt) in result.iter() {
+        if opt.is_none() {
+            notfound.push(write);
+        }
+    }
+    if !notfound.is_empty() {
+        let inserts: Vec<ArtistActiveModel> = notfound.iter().map(|&x| {
+            assert!(x.name.is_some()); //TODO
+            let x = x.to_owned();
+            ArtistActiveModel {
+                id: NotSet,
+                name: Set(x.name.clone().unwrap()),
+                name_normalized: Set(normalize(&x.name.clone().unwrap())),
+                mbid: Set(x.mbid),
+                spotify_id: Set(x.spotify_id),
+            }
+        }).collect();
+
+        //let inserts = inserts.chunks(1).next().unwrap().to_vec();
+        let amount_inserts = &inserts.len();
+        // this doesnt seem to return all models
+        // https://github.com/SeaQL/sea-orm/discussions/2191
+        // so for now we just insert and call the whole thing again i guess?
+        //let db_result: Vec<ArtistModel> = Artist::insert_many(inserts).exec_with_returning(&db).await.unwrap();
+        for chunk in inserts.chunks(BATCH_SIZE) {
+            let chunk_inserts = chunk.to_vec();
+            let db_result = Artist::insert_many(chunk_inserts).exec(&db).await.unwrap();
+        } 
+        
+        info!("Inserted {:?} Artists", amount_inserts);
+        Box::pin(get_or_create_artists(input)).await
+    }
+    else {
+        let result: HashMap<ArtistWrite, ArtistModel> = result.into_iter().map(|(k,v)| (k,v.expect("This should not happen!").clone())).collect();
+        // There should no longer be None variants now
+        result
+    }
+}
+
+#[allow(clippy::collapsible_else_if)]
+pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> HashMap<TrackWrite, TrackModel> {
+    let db = connect().await;
+    let mut result: HashMap<TrackWrite, Option<TrackModel>> = HashMap::new();
+    input.clone().into_iter().for_each(|track| {
+        result.insert(track, None);
+    });
+
+    // make sure all artists exist
+    let artists = input.iter().map(|t| [t.primary_artists.clone().unwrap_or_default(), t.secondary_artists.clone().unwrap_or_default()].concat()).flatten().collect();
+    let artist_map = get_or_create_artists(artists).await;
+
+
+    // as above, but now the name alone isnt enough - we need name and artist exact set match (primary secondary doesnt matter)
+    let mut id_map: HashMap<u32, Vec<&TrackWrite>> = HashMap::new();
+    let mut title_artists_map: HashMap<(String, Vec<u32>), Vec<&TrackWrite>> = HashMap::new();
+    for (index, inp) in input.iter().enumerate() {
+        if let Some(id) = &inp.id {
+            id_map.entry(*id).or_insert(vec![]).push(inp);
+        }
+        // if we have an ID supplied, we're not gonna use anything else, even if the ID doesn't work - so all other maps in else
+        else {
+            if let Some(title) = &inp.title {
+                // artists should now all exist so we can get IDs
+                let artists = [inp.to_owned().primary_artists.unwrap_or_default(), inp.to_owned().secondary_artists.unwrap_or_default()]
+                    .concat();
+                let mut artist_ids = artists.into_iter().map(|x| artist_map[&x].id).collect::<Vec<u32>>();
+                artist_ids.sort();
+                title_artists_map.entry((normalize(title),artist_ids)).or_insert(vec![]).push(inp);
+            }
+        }
+    }
+    let id_list: Vec<u32> = id_map.keys().cloned().collect();
+    let title_artists_list: Vec<(String, Vec<u32>)> = title_artists_map.keys().cloned().collect();
+
+    // IDs
+    let db_result = Track::find()
+        .filter(TrackColumn::Id.is_in(id_list))
+        .all(&db).await.unwrap();
+    for model in db_result {
+        let writes = &id_map[&model.id];
+        for write in writes {
+            result.insert(write.to_owned().clone(), Some(model.clone()));
+        }
+
+    }
+    // TODO: make sure no supplied IDs are unused - this should be an error instead of just checking for other match methods
+
+    // TODO: mbid and spotify_id
+
+    // Titles + Artists
+    // we'll just ask the database for the matching titles to avoid some crazy super query.
+    // matching titles with different artists are already gonna be rare, we can just check in code after
+    let title_list: Vec<String> = title_artists_list.into_iter().map(|x| x.0).collect();
+    let db_result = Track::find()
+        .filter(TrackColumn::TitleNormalized.is_in(title_list))
+        //.join(JoinType::LeftJoin, TrackRelation::TrackArtist.def())
+        //.select_also(TrackArtistEntity)
+        .find_with_related(Artist)
+        .all(&db).await.unwrap();
+    for (track_model, artist_models) in db_result {
+        let mut artist_ids: Vec<u32> = artist_models.iter().map(|x| x.id).collect();
+        artist_ids.sort();
+        let potential_key = (track_model.title_normalized.clone(), artist_ids);
+        if title_artists_map.contains_key(&potential_key) {
+            let writes = &title_artists_map[&potential_key];
+            for write in writes {
+                result.insert(write.to_owned().clone(), Some(track_model.clone()));
+            }
+        }
+    }
+    // wtf am i even writing
+
+
+    // All remaining must be created new
+    // we dont need any maps here because they will be returned in the order they are supplied
+    let mut notfound: Vec<&TrackWrite> = vec![];
+    for (write, opt) in result.iter() {
+        if opt.is_none() {
+            notfound.push(write);
+        }
+    }
+    if !notfound.is_empty() {
+        let inserts: Vec<(TrackActiveModel, Vec<ArtistWrite>, Vec<ArtistWrite>)> = notfound.iter().map(|&x| {
+            assert!(x.title.is_some());
+            // TODO: do we enforce artists?
+            let x = x.to_owned();
+
+            (TrackActiveModel {
+                id: NotSet,
+                title: Set(x.title.clone().unwrap()),
+                title_normalized: Set(normalize(&x.title.clone().unwrap())),
+                length: Set(x.length),
+                album_id: NotSet, //TODO
+                mbid: Set(x.mbid),
+                spotify_id: Set(x.spotify_id),
+            },
+            x.primary_artists.unwrap_or_default(),
+            x.secondary_artists.unwrap_or_default())
+        }).collect();
+
+        let amount_inserts = &inserts.len();
+
+        // for now, insert each one individually so we can actually get the ID
+        // i really hope this isnt the permanent solution
+        for (insert, primary_artists, secondary_artists) in inserts {
+            let db_result = Track::insert(insert).exec_with_returning(&db).await.unwrap();
+
+
+            // TODO: MAKE THIS NOT SHIT
+            let track_id = db_result.id;
+            println!("Set track id to {}", track_id);
+
+            let track_artist_inserts_primary: Vec<TrackArtistActiveModel> = primary_artists.iter().map(|x| {
+                // get the mapped model that definitely has an ID now
+                let artist_model = &artist_map[x];
+                println!("Track ID is {}", track_id);
+                TrackArtistActiveModel {
+                    track_id: Set(track_id),
+                    artist_id: Set(artist_model.id),
+                    primary: Set(true),
+                    artist_alias: Default::default(),
+                }
+            }).collect();
+            let track_artist_inserts_secondary: Vec<TrackArtistActiveModel> = secondary_artists.iter().map(|x| {
+                let artist_model = &artist_map[x];
+                println!("Track ID is {}", track_id);
+                TrackArtistActiveModel {
+                    track_id: Set(track_id),
+                    artist_id: Set(artist_model.id),
+                    primary: Set(false),
+                    artist_alias: Default::default(),
+                }
+            }).collect();
+
+            println!("{:?}", track_artist_inserts_primary);
+            println!("{:?}", track_artist_inserts_secondary);
+            if !track_artist_inserts_primary.is_empty() {
+                let db_result = TrackArtist::insert_many(track_artist_inserts_primary).exec(&db).await.unwrap();
+            }
+            if !track_artist_inserts_secondary.is_empty() {
+                let db_result = TrackArtist::insert_many(track_artist_inserts_secondary).exec(&db).await.unwrap();
+            }
+
+
+        }
+
+        println!("Inserted {:?} Tracks", amount_inserts);
+        Box::pin(get_or_create_tracks(input)).await
+    }
+    else {
+        let result: HashMap<TrackWrite, TrackModel> = result.into_iter().map(|(k,v)| (k,v.expect("This should not happen!").clone())).collect();
+        // There should no longer be None variants now
+        result
+    }
+}
+
+
+pub async fn get_tracks() -> Result<Vec<entity::track::Model>, DbErr> {
+    let db = connect().await;
+    let tracks = Track::find().all(&db).await?;
+    Ok(tracks)
+}
+
+pub async fn get_artists() -> Result<Vec<entity::artist::Model>, DbErr> {
+    let db = connect().await;
+    let artists = Artist::find().all(&db).await?;
+    Ok(artists)
+}
+
+pub async fn get_albums() -> Result<Vec<entity::album::Model>, DbErr> {
+    let db = connect().await;
+    let albums = Album::find().all(&db).await?;
+    Ok(albums)
+}
+
+pub async fn get_scrobbles() -> Result<Vec<entity::scrobble::Model>, DbErr> {
+    let db = connect().await;
+    let scrobbles = Scrobble::find().all(&db).await?;
+    Ok(scrobbles)
+}
