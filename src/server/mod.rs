@@ -9,10 +9,8 @@ pub async fn run_server() {
 
     app = mount_apis(app);
     // TODO: files in package
-    app = app.nest_service(
-        "/api_explorer",
-        ServeFile::new("src/web/special/api_explorer.html"),
-    );
+    app = app
+        .nest_service("/api_explorer", ServeFile::new("src/web/special/api_explorer.html"));
     app = app.fallback_service(ServeDir::new("src/web/static"));
 
     let bind_address = format!("{}:{}", CONFIG.bind_address, CONFIG.port);

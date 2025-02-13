@@ -11,7 +11,7 @@ use crate::entity::{
     track_artist::Entity as TrackArtist,
     album_artist::Entity as AlbumArtist,
 };
-use sea_orm::{ConnectOptions, ConnectionTrait, Database, DatabaseConnection, DbBackend, DbConn, Schema};
+use sea_orm::{ConnectOptions, ConnectionTrait, Database, DatabaseConnection, DbBackend, DbConn, Schema, Statement};
 use std::path::PathBuf;
 
 fn get_database_path() -> PathBuf {
@@ -22,11 +22,25 @@ pub async fn init_db() {
 
     let db = connect().await;
     assert_eq!(db.get_database_backend(), DbBackend::Sqlite);
-    
+
+    let version: String = db.query_one(Statement::from_string(
+        sea_orm::DatabaseBackend::Sqlite,
+        "SELECT sqlite_version();".to_owned(),
+    )).await.unwrap().unwrap().try_get("", "sqlite_version()").unwrap();
+
+    log::info!("Using SQLite {}", version);
+
     log::info!("Checking Database schema...");
     create_tables(&db).await;
     log::info!("Checking imports...");
-    import::import().await;
+    match import::import().await {
+        Ok((imported, failed)) => {
+            log::info!("Imported {} files, failed {}.", imported, failed);
+        }
+        Err(_) => {
+            log::error!("Failed to check for imports...");
+        }
+    };
 }
 
 pub async fn connect() -> DatabaseConnection {

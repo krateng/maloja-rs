@@ -33,9 +33,11 @@ async fn main() {
     database::init_db().await;
 
     // SERVER
+    info!("Starting up server...");
     server::run_server().await;
-
-    sleep(Duration::from_secs(10)).await;
+    
+    info!("Shutting down...");
+    sleep(Duration::from_secs(2)).await;
     io::stdout().flush().unwrap();
 }
 

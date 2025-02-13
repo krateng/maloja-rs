@@ -29,7 +29,7 @@ pub static FOLDERS: LazyLock<ApplicationFolders> = LazyLock::new(|| {
         (&af.config, "MALOJA_CONFIG_PATH", "/etc/maloja", false),
         (&af.logs, "MALOJA_LOG_PATH", "/var/log/maloja", true),
     ];
-    for (folder, envvar, default, writable) in folder_logic.iter() {
+    for (folder, envvar, _default, writable) in folder_logic.iter() {
         match fs::create_dir_all(folder) {
             Ok(_) => {
                 if *writable {
