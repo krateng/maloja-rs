@@ -1,10 +1,8 @@
 pub mod logging;
 
 use crate::configuration::logging::{display_envvar, display_path};
-use colored::Colorize;
-use confique::serde::Deserialize;
-use confique::{toml, Config, Error};
-use log::{error, info, warn};
+use confique::{toml, Config};
+use log::warn;
 use std::fs::{remove_file, File, OpenOptions};
 use std::io::Write;
 use std::net::IpAddr;

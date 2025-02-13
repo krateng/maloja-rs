@@ -2,6 +2,7 @@ pub(crate) mod repository;
 pub(crate) mod views;
 pub(crate) mod import;
 
+use std::io::Error;
 use crate::configuration::FOLDERS;
 use crate::entity::{
     album::Entity as Album,
