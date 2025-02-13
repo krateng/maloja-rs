@@ -1,6 +1,6 @@
 use std::default::Default;
 use std::collections::HashMap;
-use log::info;
+use log::{debug, info};
 use sea_orm::{sqlx, ColumnTrait, DbErr, EntityTrait, JoinType, NotSet, QueryFilter, QuerySelect, QueryTrait, RelationTrait};
 use sea_orm::ActiveValue::Set;
 use crate::database::connect;
@@ -9,7 +9,7 @@ use crate::entity::{
     album::{Entity as Album, Model as AlbumModel, ActiveModel as AlbumActiveModel, Column as AlbumColumn, AlbumWrite},
     track::{Entity as Track, Model as TrackModel, ActiveModel as TrackActiveModel, Column as TrackColumn, TrackWrite, Relation as TrackRelation},
     artist::{Entity as Artist, Model as ArtistModel, ActiveModel as ArtistActiveModel, Column as ArtistColumn, ArtistWrite},
-    scrobble::{Entity as Scrobble, Model as ScrobbleModel, ActiveModel as ScrobbleActiveModel, Column as ScrobbleColumn},
+    scrobble::{Entity as Scrobble, Model as ScrobbleModel, ActiveModel as ScrobbleActiveModel, Column as ScrobbleColumn, ScrobbleWrite},
     track_artist::{Entity as TrackArtist, ActiveModel as TrackArtistActiveModel},
 };
 
@@ -37,6 +37,8 @@ pub async fn get_or_create_artists(input: Vec<ArtistWrite>) -> HashMap<ArtistWri
     // - mbid match - use extra table so multiple mbids can match to same artist
     // - spotfiy id match - same
     // - normalized name
+
+    // supplying an ID indicated the client wants to refer to an existing entity - mismatching other info is ignored
 
     let mut id_map: HashMap<u32, Vec<&ArtistWrite>> = HashMap::new();
     let mut name_map: HashMap<String, Vec<&ArtistWrite>> = HashMap::new();
@@ -111,9 +113,9 @@ pub async fn get_or_create_artists(input: Vec<ArtistWrite>) -> HashMap<ArtistWri
         for chunk in inserts.chunks(BATCH_SIZE) {
             let chunk_inserts = chunk.to_vec();
             let db_result = Artist::insert_many(chunk_inserts).exec(&db).await.unwrap();
-        } 
-        
-        info!("Inserted {:?} Artists", amount_inserts);
+        }
+
+        debug!("Inserted {:?} Artists", amount_inserts);
         Box::pin(get_or_create_artists(input)).await
     }
     else {
@@ -234,12 +236,10 @@ pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> HashMap<TrackWrite,
 
             // TODO: MAKE THIS NOT SHIT
             let track_id = db_result.id;
-            println!("Set track id to {}", track_id);
 
             let track_artist_inserts_primary: Vec<TrackArtistActiveModel> = primary_artists.iter().map(|x| {
                 // get the mapped model that definitely has an ID now
                 let artist_model = &artist_map[x];
-                println!("Track ID is {}", track_id);
                 TrackArtistActiveModel {
                     track_id: Set(track_id),
                     artist_id: Set(artist_model.id),
@@ -249,7 +249,6 @@ pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> HashMap<TrackWrite,
             }).collect();
             let track_artist_inserts_secondary: Vec<TrackArtistActiveModel> = secondary_artists.iter().map(|x| {
                 let artist_model = &artist_map[x];
-                println!("Track ID is {}", track_id);
                 TrackArtistActiveModel {
                     track_id: Set(track_id),
                     artist_id: Set(artist_model.id),
@@ -258,8 +257,6 @@ pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> HashMap<TrackWrite,
                 }
             }).collect();
 
-            println!("{:?}", track_artist_inserts_primary);
-            println!("{:?}", track_artist_inserts_secondary);
             if !track_artist_inserts_primary.is_empty() {
                 let db_result = TrackArtist::insert_many(track_artist_inserts_primary).exec(&db).await.unwrap();
             }
@@ -270,11 +267,90 @@ pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> HashMap<TrackWrite,
 
         }
 
-        println!("Inserted {:?} Tracks", amount_inserts);
+        debug!("Inserted {:?} Tracks", amount_inserts);
         Box::pin(get_or_create_tracks(input)).await
     }
     else {
         let result: HashMap<TrackWrite, TrackModel> = result.into_iter().map(|(k,v)| (k,v.expect("This should not happen!").clone())).collect();
+        // There should no longer be None variants now
+        result
+    }
+}
+
+
+#[allow(clippy::collapsible_else_if)]
+pub async fn create_scrobbles(input: Vec<ScrobbleWrite>, fail_on_existing: bool) -> HashMap<ScrobbleWrite, ScrobbleModel> {
+    // this one is a bit different that the other entity ones because we never supply a scrobblewrite
+    // as part of another entity to either create or fetch - scrobbles are only ever created (or patched?)
+    let db = connect().await;
+    let mut result: HashMap<ScrobbleWrite, Option<ScrobbleModel>> = HashMap::new();
+    input.clone().into_iter().for_each(|scrobble| {
+        result.insert(scrobble, None);
+    });
+
+    // make sure all tracks exist
+    let tracks = input.iter().map(|s| s.track.clone()).collect();
+    let track_map = get_or_create_tracks(tracks).await;
+
+
+    // here we have no matching. existing timestamp means existing scrobble, otherwise new
+    // normally supplying the ID is a clear indication someone is referring to an existing entity
+    // for scrobble, it is feasible to want to submit a new scrobble but use a timestamp that exists
+    // so TODO: distinguish between use cases? when do we even refer to existing scrobbles with a write?
+
+    let mut ts_map: HashMap<i64, Vec<&ScrobbleWrite>> = HashMap::new();
+    for (index, inp) in input.iter().enumerate() {
+        ts_map.entry(inp.timestamp).or_insert(vec![]).push(inp);
+    }
+    let ts_list: Vec<i64> = ts_map.keys().cloned().collect();
+
+    let db_result = Scrobble::find()
+        .filter(ScrobbleColumn::Timestamp.is_in(ts_list))
+        .all(&db).await.unwrap();
+    for model in db_result {
+        let writes = &ts_map[&model.timestamp];
+        for write in writes {
+            result.insert(write.to_owned().clone(), Some(model.clone()));
+        }
+
+    }
+
+    // TODO error on found
+
+
+    let mut notfound: Vec<&ScrobbleWrite> = vec![];
+    for (write, opt) in result.iter() {
+        if opt.is_none() {
+            notfound.push(write);
+        }
+    }
+    if !notfound.is_empty() {
+        let inserts: Vec<ScrobbleActiveModel> = notfound.iter().map(|&x| {
+            let x = x.to_owned();
+
+            ScrobbleActiveModel {
+                timestamp: Set(x.timestamp),
+                track_id: Set(track_map[&x.track].id),
+                rawscrobble: Default::default(),
+                origin: Set(x.origin),
+                duration: Set(x.duration),
+            }
+        }).collect();
+
+        let amount_inserts = &inserts.len();
+
+        // for now, insert each one individually so we can actually get the ID
+        // i really hope this isnt the permanent solution
+        for chunk in inserts.chunks(BATCH_SIZE) {
+            let chunk_inserts = chunk.to_vec();
+            let db_result = Scrobble::insert_many(chunk_inserts).exec(&db).await.unwrap();
+        }
+
+        debug!("Inserted {:?} Scrobbles", amount_inserts);
+        Box::pin(create_scrobbles(input, false)).await
+    }
+    else {
+        let result: HashMap<ScrobbleWrite, ScrobbleModel> = result.into_iter().map(|(k,v)| (k,v.expect("This should not happen!").clone())).collect();
         // There should no longer be None variants now
         result
     }

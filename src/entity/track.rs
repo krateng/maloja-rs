@@ -57,6 +57,9 @@ impl Related<super::artist::Entity> for Entity {
 
 impl ActiveModelBehavior for ActiveModel {}
 
+/// Representation of a track with the information that can be supplied from the outside.
+/// Used for creating or patching a track, or to identify a track within another entity which could
+/// exist or should be newly created
 #[derive(Clone, Eq, Hash, PartialEq, Debug)]
 pub struct TrackWrite {
     pub id: Option<u32>,
@@ -68,6 +71,7 @@ pub struct TrackWrite {
     pub spotify_id: Option<String>,
 }
 
+/// Representation of a track as it should be shown to the outside, for example in the API.
 pub struct TrackRead {
     pub id: u32,
     pub title: String,

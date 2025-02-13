@@ -1,7 +1,9 @@
+use std::time::Duration;
 use sea_orm::entity::prelude::*;
 use sea_orm::prelude::Json;
 use serde::Serialize;
 use utoipa::ToSchema;
+use crate::entity::track::TrackWrite;
 
 #[derive(Debug, Clone, DeriveEntityModel, Serialize, ToSchema)]
 #[schema(title = "Scrobble", as = entity::scrobble::Model)]
@@ -32,3 +34,13 @@ pub struct Model {
 pub enum Relation {}
 
 impl ActiveModelBehavior for ActiveModel {}
+
+/// Representation of a scrobble with the information that can be supplied from the outside.
+/// Used for creating or patching a scrobble
+#[derive(Clone, Eq, Hash, PartialEq, Debug)]
+pub struct ScrobbleWrite {
+    pub timestamp: i64,
+    pub track: TrackWrite,
+    pub origin: Option<String>,
+    pub duration: Option<u32>,
+}

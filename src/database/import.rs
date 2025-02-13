@@ -11,7 +11,7 @@ use serde::Deserialize;
 use crate::configuration::FOLDERS;
 use crate::configuration::logging::display_path;
 use crate::database::connect;
-use crate::database::repository::{get_or_create_artists, get_or_create_tracks};
+use crate::database::repository::create_scrobbles;
 use crate::entity::{
     scrobble::Entity as ScrobbleEntity, scrobble::ActiveModel as ScrobbleModel,
     track::Entity as TrackEntity, track::ActiveModel as TrackModel,
@@ -19,6 +19,7 @@ use crate::entity::{
     artist::Entity as ArtistEntity, artist::ActiveModel as ArtistModel,
 };
 use crate::entity::artist::ArtistWrite;
+use crate::entity::scrobble::ScrobbleWrite;
 use crate::entity::track::TrackWrite;
 
 pub async fn import() -> Result<(i32, i32), io::Error> {
@@ -77,28 +78,34 @@ pub async fn import_maloja(file: PathBuf) -> Result<(), io::Error> {
     )?;
 
     let db = connect().await;
-
-    // tracks
-    let tracks: Vec<TrackWrite> = parsed.scrobbles.clone().into_iter().map(|scrobble| {
-        TrackWrite {
-            id: None,
-            title: Some(scrobble.track.title),
-            primary_artists: Some(scrobble.track.artists.into_iter().map(|x| {
-                ArtistWrite {
-                    id: None,
-                    name: Some(x),
-                    mbid: None,
-                    spotify_id: None,
-                }
-            }).collect()),
-            secondary_artists: None,
-            length: scrobble.track.length,
-            mbid: None,
-            spotify_id: None,
+    
+    let scrobbles: Vec<ScrobbleWrite> = parsed.scrobbles.into_iter().map(|scrobble| {
+        ScrobbleWrite {
+            timestamp: scrobble.time,
+            track: TrackWrite {
+                id: None,
+                title: Some(scrobble.track.title),
+                primary_artists: Some(scrobble.track.artists.into_iter().map(|x| {
+                    ArtistWrite {
+                        id: None,
+                        name: Some(x),
+                        mbid: None,
+                        spotify_id: None,
+                    }
+                }).collect()),
+                secondary_artists: None,
+                length: scrobble.track.length,
+                mbid: None,
+                spotify_id: None,
+            },
+            origin: scrobble.origin,
+            duration: scrobble.duration,
         }
     }).collect();
+
+   
     
-    get_or_create_tracks(tracks).await;
+    create_scrobbles(scrobbles, false).await;
 
     Ok(())
     

@@ -49,7 +49,9 @@ impl Related<super::album::Entity> for Entity {
 impl ActiveModelBehavior for ActiveModel {}
 
 
-/// Artist info that can be input
+/// Representation of an artist with the information that can be supplied from the outside.
+/// Used for creating or patching an artist, or to identify an artist within another entity who could
+/// exist or should be newly created
 #[derive(Clone, Eq, Hash, PartialEq, Debug)]
 pub struct ArtistWrite {
     pub id: Option<u32>,
@@ -58,6 +60,7 @@ pub struct ArtistWrite {
     pub spotify_id: Option<String>,
 }
 
+/// Representation of an artist as they should be shown to the outside, for example in the API.
 pub struct ArtistRead {
     pub id: u32,
     pub name: String,
