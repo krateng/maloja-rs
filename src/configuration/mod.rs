@@ -14,6 +14,8 @@ use std::{env, fs, io};
 
 pub static FOLDERS: LazyLock<ApplicationFolders> = LazyLock::new(|| {
     let af = ApplicationFolders {
+        // we set the defaults to posix standards, even though maloja is container-oriented first
+        // the Containerfile overwrites these
         data: PathBuf::from(
             env::var("MALOJA_DATA_PATH").unwrap_or(String::from("/var/lib/maloja")),
         ),

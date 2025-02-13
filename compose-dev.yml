@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: Containerfile
+      args:
+        - CARGO_PROFILE=dev
     volumes:
       - ./testdata/state:/data
       - ./testdata/config:/config:ro
@@ -11,3 +13,5 @@ services:
       - "42010:42010"
     stdin_open: true
     tty: true
+    env_file:
+      - .env.dev
