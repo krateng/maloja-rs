@@ -19,7 +19,7 @@ pub struct Model {
     #[sea_orm(default_value = "{}")]
     #[schema(examples("{}"))]
     #[serde(skip_serializing, skip_deserializing)]
-    pub rawscrobble: Json,
+    pub raw_scrobble: Json,
     
     /// Identifier of the scrobble source, as reported by the submitter
     #[schema(examples("navidrome"))]
@@ -27,7 +27,7 @@ pub struct Model {
     
     /// Duration of the scrobble in seconds
     #[schema(examples(174))]
-    pub duration: Option<u32>,
+    pub listen_duration: Option<u32>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -42,5 +42,5 @@ pub struct ScrobbleWrite {
     pub timestamp: i64,
     pub track: TrackWrite,
     pub origin: Option<String>,
-    pub duration: Option<u32>,
+    pub listen_duration: Option<u32>,
 }

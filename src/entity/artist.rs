@@ -61,11 +61,10 @@ pub struct ArtistWrite {
 }
 
 /// Representation of an artist as they should be shown to the outside, for example in the API.
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
 pub struct ArtistRead {
     pub id: u32,
     pub name: String,
-    pub mbid: Option<String>,
-    pub spotify_id: Option<String>,
 }
 
 

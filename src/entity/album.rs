@@ -1,7 +1,7 @@
 use sea_orm::entity::prelude::*;
 use serde::Serialize;
 use utoipa::ToSchema;
-use super::artist::ArtistRead;
+use super::artist::{ArtistRead, ArtistWrite};
 
 #[derive(Debug, Clone, DeriveEntityModel, Serialize, ToSchema)]
 #[schema(title = "Album", as = entity::album::Model)]
@@ -55,11 +55,13 @@ impl ActiveModelBehavior for ActiveModel {}
 pub struct AlbumWrite {
     pub id: Option<u32>,
     pub album_title: Option<String>,
+    pub album_artists: Option<Vec<ArtistWrite>>,
     pub mbid: Option<String>,
     pub spotify_id: Option<String>,
 }
 
 /// Representation of an album as it should be shown to the outside, for example in the API.
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
 pub struct AlbumRead {
     pub id: u32,
     pub album_title: String,

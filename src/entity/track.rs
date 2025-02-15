@@ -2,7 +2,7 @@ use sea_orm::entity::prelude::*;
 use serde::Serialize;
 use utoipa::ToSchema;
 use super::artist::{ArtistRead, ArtistWrite};
-use super::album::AlbumRead;
+use super::album::{AlbumRead, AlbumWrite};
 
 #[derive(Debug, Clone, DeriveEntityModel, Serialize, ToSchema)]
 #[schema(title = "Track", as = entity::track::Model)]
@@ -23,7 +23,7 @@ pub struct Model {
     
     /// Duration of the full track in seconds
     #[schema(examples(195))]
-    pub length: Option<u32>,
+    pub track_length: Option<u32>,
     
     /// ID of the canonical album release that contains this track
     pub album_id: Option<u32>,
@@ -66,19 +66,19 @@ pub struct TrackWrite {
     pub title: Option<String>,
     pub primary_artists: Option<Vec<ArtistWrite>>,
     pub secondary_artists: Option<Vec<ArtistWrite>>,
-    pub length: Option<u32>,
+    pub track_length: Option<u32>,
+    pub album: Option<AlbumWrite>,
     pub mbid: Option<String>,
     pub spotify_id: Option<String>,
 }
 
 /// Representation of a track as it should be shown to the outside, for example in the API.
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
 pub struct TrackRead {
     pub id: u32,
     pub title: String,
     pub primary_artists: Vec<ArtistRead>,
     pub secondary_artists: Vec<ArtistRead>,
     pub album: Option<AlbumRead>,
-    pub length: Option<u32>,
-    pub mbid: Option<String>,
-    pub spotify_id: Option<String>,
+    pub track_length: Option<u32>,
 }
