@@ -26,4 +26,12 @@ pub enum Relation {
     Artist,
 }
 
+impl Related<super::album::Entity> for Entity {
+    fn to() -> RelationDef { Relation::Album.def() }
+}
+
+impl Related<super::artist::Entity> for Entity {
+    fn to() -> RelationDef { Relation::Artist.def() }
+}
+
 impl ActiveModelBehavior for ActiveModel {}

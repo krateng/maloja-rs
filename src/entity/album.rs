@@ -33,6 +33,8 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(has_many = "super::track::Entity")]
     Track,
+    #[sea_orm(has_many = "super::album_artist::Entity")]
+    AlbumArtist,
 }
 
 impl Related<super::track::Entity> for Entity {
