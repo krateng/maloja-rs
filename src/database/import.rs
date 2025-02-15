@@ -18,6 +18,7 @@ use crate::entity::{
     album::Entity as AlbumEntity, album::ActiveModel as AlbumModel,
     artist::Entity as ArtistEntity, artist::ActiveModel as ArtistModel,
 };
+use crate::entity::album::AlbumWrite;
 use crate::entity::artist::ArtistWrite;
 use crate::entity::scrobble::ScrobbleWrite;
 use crate::entity::track::TrackWrite;
@@ -85,21 +86,38 @@ pub async fn import_maloja(file: PathBuf) -> Result<(), io::Error> {
             track: TrackWrite {
                 id: None,
                 title: Some(scrobble.track.title),
-                primary_artists: Some(scrobble.track.artists.into_iter().map(|x| {
+                primary_artists: Some(scrobble.track.artists.into_iter().map(|a| {
                     ArtistWrite {
                         id: None,
-                        name: Some(x),
+                        name: Some(a),
                         mbid: None,
                         spotify_id: None,
                     }
                 }).collect()),
+                album: scrobble.track.album.map(|al| AlbumWrite {
+                        id: None,
+                        album_title: Some(al.albumtitle),
+                        album_artists: al.artists.map(|aas| {
+                            aas.iter().map(|aa| {
+                                // outer map is to unwrap the option, inner map an actual vector map
+                                ArtistWrite {
+                                    id: None,
+                                    name: Some(aa.to_owned()),
+                                    mbid: None,
+                                    spotify_id: None,
+                                }
+                            }).collect()
+                        }),
+                        mbid: None,
+                        spotify_id: None,
+                    }) ,
                 secondary_artists: None,
-                length: scrobble.track.length,
+                track_length: scrobble.track.length,
                 mbid: None,
                 spotify_id: None,
             },
             origin: scrobble.origin,
-            duration: scrobble.duration,
+            listen_duration: scrobble.duration,
         }
     }).collect();
 
