@@ -1,7 +1,7 @@
 use std::default::Default;
 use std::collections::HashMap;
 use log::{debug, info};
-use sea_orm::{ColumnTrait, DbErr, EntityTrait, NotSet, QueryFilter};
+use sea_orm::{ColumnTrait, DbErr, EntityTrait, JoinType, NotSet, QueryFilter, QuerySelect, RelationTrait};
 use sea_orm::ActiveValue::Set;
 use crate::database::connect;
 use crate::entity;
@@ -497,26 +497,77 @@ pub async fn create_scrobbles(input: Vec<ScrobbleWrite>, fail_on_existing: bool)
 }
 
 
-pub async fn get_tracks() -> Result<Vec<entity::track::Model>, DbErr> {
+pub async fn get_tracks() -> Result<Vec<TrackRead>, DbErr> {
     let db = connect().await;
-    let tracks = Track::find().all(&db).await?;
+    let result = Track::find().find_with_related(Artist).all(&db).await?;
+
+
+    // cant chain find_with_related, so custom fun
+    let mut result2 = vec![];
+    for (index, trackresult) in result.iter().enumerate() {
+        if let Some(album_id) = trackresult.0.album_id {
+            let albumresult = Album::find_by_id(album_id).find_with_related(Artist).all(&db).await?.first().unwrap().to_owned();
+            result2.push(Some(albumresult));
+        }
+        else {
+            result2.push(None);
+        }
+    }
+    let tracks = result.iter().zip(result2.iter()).map(|((track, artists), opt)| {
+        if let Some((album, albumartists)) = opt {
+            // TODO get primary and secondary
+            resolve_track(track.clone(), artists.clone(), vec![], Some(album.clone()), Some(albumartists.clone()))
+        }
+        else {
+            resolve_track(track.clone(), artists.clone(), vec![], None, None)
+        }
+
+    }).collect();
     Ok(tracks)
 }
 
-pub async fn get_artists() -> Result<Vec<entity::artist::Model>, DbErr> {
+pub async fn get_artists() -> Result<Vec<ArtistRead>, DbErr> {
     let db = connect().await;
-    let artists = Artist::find().all(&db).await?;
+    let result = Artist::find().all(&db).await?;
+    let artists = result.iter().map(|artist| resolve_artist(artist.clone())).collect();
     Ok(artists)
 }
 
-pub async fn get_albums() -> Result<Vec<entity::album::Model>, DbErr> {
+pub async fn get_albums() -> Result<Vec<AlbumRead>, DbErr> {
     let db = connect().await;
-    let albums = Album::find().all(&db).await?;
+    let result = Album::find().find_with_related(Artist).all(&db).await?;
+    let albums = result.iter().map(|(album, albumartists)| resolve_album(album.clone(), albumartists.clone())).collect();
     Ok(albums)
 }
 
 pub async fn get_scrobbles() -> Result<Vec<entity::scrobble::Model>, DbErr> {
     let db = connect().await;
-    let scrobbles = Scrobble::find().all(&db).await?;
-    Ok(scrobbles)
+    let result = Scrobble::find().all(&db).await?;
+    Ok(result)
+}
+
+pub fn resolve_track(track: TrackModel, primary_artists: Vec<ArtistModel>, secondary_artists: Vec<ArtistModel>, album: Option<AlbumModel>, album_artists: Option<Vec<ArtistModel>>) -> TrackRead {
+    TrackRead {
+        id: track.id,
+        title: track.title,
+        primary_artists: primary_artists.clone().iter().map(|x| x.to_owned()).map(resolve_artist).collect(),
+        secondary_artists: secondary_artists.clone().iter().map(|x| x.to_owned()).map(resolve_artist).collect(),
+        album: if let (Some(alb), Some(albart)) = (album, album_artists) { Some(resolve_album(alb, albart)) } else { None },
+        track_length: track.track_length,
+    }
+}
+
+pub fn resolve_artist(artist: ArtistModel) -> ArtistRead {
+    ArtistRead {
+        id: artist.id,
+        name: artist.name.clone(),
+    }
+}
+
+pub fn resolve_album(album: AlbumModel, album_artists: Vec<ArtistModel>) -> AlbumRead {
+    AlbumRead {
+        id: album.id,
+        album_title: album.album_title.clone(),
+        album_artists: album_artists.clone().iter().map(|x| x.to_owned()).map(resolve_artist).collect(),
+    }
 }
