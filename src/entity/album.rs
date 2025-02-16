@@ -3,17 +3,14 @@ use serde::Serialize;
 use utoipa::ToSchema;
 use super::artist::{ArtistRead, ArtistWrite};
 
-#[derive(Debug, Clone, DeriveEntityModel, Serialize, ToSchema)]
-#[schema(title = "Album", as = entity::album::Model)]
+#[derive(Debug, Clone, DeriveEntityModel, Serialize)]
 #[sea_orm(table_name = "albums")]
 pub struct Model {
     
     #[sea_orm(primary_key)]
-    #[schema(read_only)]
     pub id: u32,
     
     /// Canonical title of the album
-    #[schema(examples("Square One"))]
     pub album_title: String,
     
     /// Normalized album title
@@ -21,11 +18,9 @@ pub struct Model {
     pub album_title_normalized: String,
 
     #[sea_orm(unique)]
-    #[schema(examples("e05f3677-7708-4776-9159-5201559b62d3"))]
     pub mbid: Option<String>,
 
     #[sea_orm(unique)]
-    #[schema(examples("0FOOodYRlj7gzh7q7IjmNZ"))]
     pub spotify_id: Option<String>,
 }
 
@@ -53,19 +48,23 @@ impl ActiveModelBehavior for ActiveModel {}
 /// Representation of an album with the information that can be supplied from the outside.
 /// Used for creating or patching an album, or to identify an album within another entity which could
 /// exist or should be newly created
-#[derive(Clone, Eq, Hash, PartialEq, Debug)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
 pub struct AlbumWrite {
     pub id: Option<u32>,
     pub album_title: Option<String>,
     pub album_artists: Option<Vec<ArtistWrite>>,
+    #[schema(examples("e05f3677-7708-4776-9159-5201559b62d3"))]
     pub mbid: Option<String>,
+    #[schema(examples("0FOOodYRlj7gzh7q7IjmNZ"))]
     pub spotify_id: Option<String>,
 }
 
 /// Representation of an album as it should be shown to the outside, for example in the API.
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
+#[schema(title = "Album", as = entity::album::AlbumRead)]
 pub struct AlbumRead {
     pub id: u32,
+    #[schema(examples("Square One"))]
     pub album_title: String,
     pub album_artists: Vec<ArtistRead>,
 }

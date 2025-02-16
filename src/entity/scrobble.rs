@@ -1,3 +1,4 @@
+use crate::entity::track::TrackRead;
 use std::time::Duration;
 use sea_orm::entity::prelude::*;
 use sea_orm::prelude::Json;
@@ -5,8 +6,7 @@ use serde::Serialize;
 use utoipa::ToSchema;
 use crate::entity::track::TrackWrite;
 
-#[derive(Debug, Clone, DeriveEntityModel, Serialize, ToSchema)]
-#[schema(title = "Scrobble", as = entity::scrobble::Model)]
+#[derive(Debug, Clone, DeriveEntityModel, Serialize)]
 #[sea_orm(table_name = "scrobbles")]
 pub struct Model {
     
@@ -16,31 +16,42 @@ pub struct Model {
     pub track_id: u32,
     
     /// Raw Json of the Scrobble for later reparsing
-    #[sea_orm(default_value = "{}")]
-    #[schema(examples("{}"))]
-    #[serde(skip_serializing, skip_deserializing)]
     pub raw_scrobble: Json,
     
     /// Identifier of the scrobble source, as reported by the submitter
-    #[schema(examples("navidrome"))]
     pub origin: Option<String>,
     
     /// Duration of the scrobble in seconds
-    #[schema(examples(174))]
     pub listen_duration: Option<u32>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}
+pub enum Relation {
+    #[sea_orm(belongs_to = "super::track::Entity", from = "Column::TrackId", to = "super::track::Column::Id")]
+    Track,
+}
+
+impl Related<super::track::Entity> for Entity {
+    fn to() -> RelationDef { Relation::Track.def() }
+}
 
 impl ActiveModelBehavior for ActiveModel {}
 
 /// Representation of a scrobble with the information that can be supplied from the outside.
 /// Used for creating or patching a scrobble
-#[derive(Clone, Eq, Hash, PartialEq, Debug)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
 pub struct ScrobbleWrite {
     pub timestamp: i64,
     pub track: TrackWrite,
+    #[schema(examples("navidrome"))]
     pub origin: Option<String>,
+    #[schema(examples(174))]
     pub listen_duration: Option<u32>,
+}
+
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
+#[schema(title = "Scrobble", as = entity::scrobble::ScrobbleRead)]
+pub struct ScrobbleRead {
+    pub timestamp: i64,
+    pub track: TrackRead,
 }
