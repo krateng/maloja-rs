@@ -50,7 +50,7 @@ pub struct ScrobbleWrite {
 }
 
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
-#[schema(title = "Scrobble", as = entity::scrobble::ScrobbleRead)]
+#[schema(title = "Scrobble", as = entity::scrobble::ScrobbleRead, description = "Instance of user listening to a track")]
 pub struct ScrobbleRead {
     pub timestamp: i64,
     pub track: TrackRead,

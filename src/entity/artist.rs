@@ -58,7 +58,7 @@ pub struct ArtistWrite {
 
 /// Representation of an artist as they should be shown to the outside, for example in the API.
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
-#[schema(title = "Artist", as = entity::artist::ArtistRead)]
+#[schema(title = "Artist", as = entity::artist::ArtistRead, description = "Performer, composer or otherwise credited entity")]
 pub struct ArtistRead {
     pub id: u32,
     #[schema(examples("Blackpink"))]

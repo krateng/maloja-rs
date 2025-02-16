@@ -61,7 +61,7 @@ pub struct AlbumWrite {
 
 /// Representation of an album as it should be shown to the outside, for example in the API.
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
-#[schema(title = "Album", as = entity::album::AlbumRead)]
+#[schema(title = "Album", as = entity::album::AlbumRead, description = "Studio album / EP / Single a track canonically belongs to")]
 pub struct AlbumRead {
     pub id: u32,
     #[schema(examples("Square One"))]

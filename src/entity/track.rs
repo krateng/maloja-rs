@@ -78,7 +78,7 @@ pub struct TrackWrite {
 
 /// Representation of a track as it should be shown to the outside, for example in the API.
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
-#[schema(title = "Track", as = entity::track::TrackRead)]
+#[schema(title = "Track", as = entity::track::TrackRead, description = "Musical work")]
 pub struct TrackRead {
     pub id: u32,
     #[schema(examples("Whistle"))]
