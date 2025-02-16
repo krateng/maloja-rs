@@ -41,6 +41,7 @@ impl ActiveModelBehavior for ActiveModel {}
 /// Used for creating or patching a scrobble
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
 pub struct ScrobbleWrite {
+    #[schema(examples(904098042))]
     pub timestamp: i64,
     pub track: TrackWrite,
     #[schema(examples("navidrome"))]
@@ -52,6 +53,7 @@ pub struct ScrobbleWrite {
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
 #[schema(title = "Scrobble", as = entity::scrobble::ScrobbleRead, description = "Instance of user listening to a track")]
 pub struct ScrobbleRead {
+    #[schema(examples(904098042))]
     pub timestamp: i64,
     pub track: TrackRead,
 }

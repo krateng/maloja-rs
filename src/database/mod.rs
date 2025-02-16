@@ -1,6 +1,6 @@
-pub(crate) mod repository;
-pub(crate) mod views;
-pub(crate) mod import;
+pub mod repository;
+pub mod views;
+pub mod import;
 
 use std::io::Error;
 use crate::configuration::FOLDERS;

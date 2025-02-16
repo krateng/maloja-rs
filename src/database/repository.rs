@@ -473,7 +473,7 @@ pub async fn create_scrobbles(input: Vec<ScrobbleWrite>, fail_on_existing: bool)
             ScrobbleActiveModel {
                 timestamp: Set(x.timestamp),
                 track_id: Set(track_map[&x.track].id),
-                raw_scrobble: Default::default(),
+                raw_scrobble: Set("{}".into()),
                 origin: Set(x.origin),
                 listen_duration: Set(x.listen_duration),
             }

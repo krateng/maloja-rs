@@ -5,6 +5,7 @@ mod configuration;
 mod database;
 mod entity;
 mod server;
+mod timeranges;
 
 use crate::configuration::logging::{display_path, display_url};
 use colored::Colorize;

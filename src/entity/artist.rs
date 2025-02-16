@@ -48,7 +48,9 @@ impl ActiveModelBehavior for ActiveModel {}
 /// exist or should be newly created
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
 pub struct ArtistWrite {
+    #[schema(minimum = 1)]
     pub id: Option<u32>,
+    #[schema(examples("Blackpink"))]
     pub name: Option<String>,
     #[schema(examples("48646387-1664-4c9a-9139-9bfd091b823c"))]
     pub mbid: Option<String>,
@@ -60,6 +62,7 @@ pub struct ArtistWrite {
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
 #[schema(title = "Artist", as = entity::artist::ArtistRead, description = "Performer, composer or otherwise credited entity")]
 pub struct ArtistRead {
+    #[schema(minimum = 1)]
     pub id: u32,
     #[schema(examples("Blackpink"))]
     pub name: String,

@@ -21,21 +21,21 @@ pub struct Top<T: Clone> {
 }
 
 
-#[derive(Serialize, ToSchema, Clone)]
+#[derive(Serialize, ToSchema, Clone, Debug)]
 pub struct PaginationInfo {
     pub page: u32,
     pub pages: u32,
     pub items_per_page: u32,
     pub items_total: u32,
 }
-#[derive(Serialize, ToSchema, Clone)]
+#[derive(Serialize, ToSchema, Clone, Debug)]
 pub struct ChartsEntry<T> {
     pub rank: u32,
     pub entry: T,
     pub scrobbles: u32,
     //pub seconds: u32
 }
-#[derive(Serialize, ToSchema, Clone)]
+#[derive(Serialize, ToSchema, Clone, Debug)]
 pub struct TopEntry<T> {
     pub time_range: u32,
     pub entry: T,
