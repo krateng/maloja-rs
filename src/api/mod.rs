@@ -1,13 +1,16 @@
 use axum::routing::get;
-use axum::Router;
-use sea_orm::sea_query::ExprTrait;
+use axum::{Json, Router};
+use axum::http::header;
+use axum::response::{IntoResponse, Response};
+use serde_json::json;
 use utoipa::OpenApi;
-use utoipa_axum::router::{OpenApiRouter, UtoipaMethodRouter};
+use utoipa_axum::router::OpenApiRouter;
 
 mod audioscrobbler;
 mod listenbrainz;
+mod maloja_2;
 
-const APIS: [ScrobbleAPI; 2] = [listenbrainz::API, audioscrobbler::API];
+const APIS: [ScrobbleAPI; 3] = [listenbrainz::API, audioscrobbler::API, maloja_2::API];
 
 pub struct ScrobbleAPI {
     pub prefix: &'static str,
@@ -29,6 +32,7 @@ impl ScrobbleAPI {
     nest(
         (path = listenbrainz::API.prefix, api = listenbrainz::ApiDoc, tags = [listenbrainz::API.tag]),
         (path = audioscrobbler::API.prefix, api = audioscrobbler::ApiDoc, tags = [audioscrobbler::API.tag]),
+        (path = maloja_2::API.prefix, api = maloja_2::ApiDoc, tags = [maloja_2::API.tag]),
     ),
     servers(
         (url = "/apis")
@@ -52,13 +56,18 @@ pub fn mount_apis(root_router: Router) -> Router {
         api_router = api_router.nest(&api.prefix, specific_api_router);
     }
 
-    let (api_router_r, api_router_oapi) = api_router.split_for_parts();
+    let (api_router_r, _api_router_oapi) = api_router.split_for_parts();
 
-    let mut root_router = root_router.nest("/apis", api_router_r);
+    let root_router = root_router.nest("/apis", api_router_r);
     //root_router = root_router.merge(api_explorer);
     root_router
 }
 
-async fn openapi() -> String {
-    ApiDoc::openapi().to_pretty_json().unwrap()
+async fn openapi() -> Response {
+    let json_openapi = json!(
+        ApiDoc::openapi()
+    );
+    let mut resp = Json(json_openapi).into_response();
+    resp.headers_mut().insert(header::CONTENT_TYPE, "application/json".parse().unwrap());
+    resp
 }
