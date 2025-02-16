@@ -1,6 +1,7 @@
-pub mod repository;
+
 pub mod views;
 pub mod import;
+pub mod repository;
 
 use std::io::Error;
 use crate::configuration::FOLDERS;
@@ -42,7 +43,7 @@ pub async fn init_db() -> Result<(), DbErr> {
             log::error!("Failed to check for imports...");
         }
     };
-    
+
     Ok(())
 }
 
@@ -56,6 +57,8 @@ pub async fn connect() -> Result<DatabaseConnection, DbErr> {
 }
 
 pub async fn create_tables(db: &DbConn) {
+
+    // TODO: proper migrations
 
     create_table(db, Scrobble).await;
     create_table(db, Track).await;
@@ -75,3 +78,4 @@ async fn create_table<E: sea_orm::EntityTrait>(db: &DbConn, entity: E) {
     let result = db.execute(statement).await.expect("wut");
 
 }
+

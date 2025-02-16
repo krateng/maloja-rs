@@ -1,12 +1,8 @@
-use std::default::Default;
 use std::collections::HashMap;
-use log::{debug, info};
-use sea_orm::{ColumnTrait, DatabaseConnection, DbErr, EntityTrait, JoinType, NotSet, QueryFilter, QueryOrder, QuerySelect, RelationTrait};
+use log::debug;
+use sea_orm::{ColumnTrait, DbErr, EntityTrait, NotSet, QueryFilter};
 use sea_orm::ActiveValue::Set;
-use sea_orm::sea_query::{Expr, Func};
 use crate::database::connect;
-use crate::database::views::{Charts, ChartsEntry};
-use crate::entity;
 use crate::entity::{
     album::{Entity as Album, Model as AlbumModel, ActiveModel as AlbumActiveModel, Column as AlbumColumn, AlbumWrite, AlbumRead},
     track::{Entity as Track, Model as TrackModel, ActiveModel as TrackActiveModel, Column as TrackColumn, TrackWrite, TrackRead},
@@ -121,7 +117,7 @@ pub async fn get_or_create_artists(input: Vec<ArtistWrite>) -> Result<HashMap<Ar
         Box::pin(get_or_create_artists(input)).await
     }
     else {
-        let result: HashMap<ArtistWrite, ArtistModel> = result.into_iter().map(|(k,v)| (k,v.expect("This should not happen!").clone())).collect();
+        let result: HashMap<ArtistWrite, ArtistModel> = result.into_iter().map(|(k,v)| (k, v.expect("This should not happen!").clone())).collect();
         // There should no longer be None variants now
         Ok(result)
     }
@@ -228,8 +224,8 @@ pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> Result<HashMap<Trac
                 mbid: Set(x.mbid.clone()),
                 spotify_id: Set(x.spotify_id.clone()),
             },
-            x.primary_artists.unwrap_or_default(),
-            x.secondary_artists.unwrap_or_default())
+             x.primary_artists.unwrap_or_default(),
+             x.secondary_artists.unwrap_or_default())
         }).collect();
 
         let amount_inserts = &inserts.len();
@@ -278,7 +274,7 @@ pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> Result<HashMap<Trac
         Box::pin(get_or_create_tracks(input)).await
     }
     else {
-        let result: HashMap<TrackWrite, TrackModel> = result.into_iter().map(|(k,v)| (k,v.expect("This should not happen!").clone())).collect();
+        let result: HashMap<TrackWrite, TrackModel> = result.into_iter().map(|(k,v)| (k, v.expect("This should not happen!").clone())).collect();
         // There should no longer be None variants now
         Ok(result)
     }
@@ -413,7 +409,7 @@ pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> Result<HashMap<Albu
         Box::pin(get_or_create_albums(input)).await
     }
     else {
-        let result: HashMap<AlbumWrite, AlbumModel> = result.into_iter().map(|(k,v)| (k,v.expect("This should not happen!").clone())).collect();
+        let result: HashMap<AlbumWrite, AlbumModel> = result.into_iter().map(|(k,v)| (k, v.expect("This should not happen!").clone())).collect();
         // There should no longer be None variants now
         Ok(result)
     }
@@ -492,139 +488,8 @@ pub async fn create_scrobbles(input: Vec<ScrobbleWrite>, fail_on_existing: bool)
         Box::pin(create_scrobbles(input, false)).await
     }
     else {
-        let result: HashMap<ScrobbleWrite, ScrobbleModel> = result.into_iter().map(|(k,v)| (k,v.expect("This should not happen!").clone())).collect();
+        let result: HashMap<ScrobbleWrite, ScrobbleModel> = result.into_iter().map(|(k,v)| (k, v.expect("This should not happen!").clone())).collect();
         // There should no longer be None variants now
         Ok(result)
     }
-}
-
-// Alright for all selections, we dont join with additional information - modularity over query performance for now
-// we generate stats over IDs and use batch resolve with id maps
-
-pub async fn charts_tracks() -> Result<Vec<ChartsEntry<TrackRead>>, DbErr> {
-    let db = connect().await?;
-    let result: Vec<(u32, u32)> = Track::find()
-        .select_only()
-        .join(JoinType::LeftJoin, entity::track::Relation::Scrobble.def())
-        .column_as(TrackColumn::Id, "track_id")
-        .column_as(ScrobbleColumn::Timestamp.count(), "scrobbles")
-        .group_by(TrackColumn::Id)
-        .order_by_desc(ScrobbleColumn::Timestamp.count())
-        .into_tuple()
-        .all(&db).await?;
-
-    let id_list = result.iter().map(|(id, scrobbles)| id.to_owned()).collect();
-    let id_map = resolve_track_ids(id_list, &db).await;
-    
-    let charts: Vec<ChartsEntry<TrackRead>> = result.into_iter().map(|(id, scrobbles)| {
-        ChartsEntry {
-            rank: 1,
-            scrobbles: scrobbles,
-            entry: id_map[&id].clone()
-        }
-    }).collect();
-    
-    Ok(charts)
-}
-
-pub async fn charts_artists() -> Result<Vec<ChartsEntry<ArtistRead>>, DbErr> {
-    let db = connect().await?;
-    let result: Vec<(u32, u32)> = Artist::find()
-        .select_only()
-        .join(JoinType::LeftJoin, entity::artist::Relation::TrackArtist.def())
-        .join(JoinType::LeftJoin, entity::track_artist::Relation::Track.def())
-        .join(JoinType::LeftJoin, entity::track::Relation::Scrobble.def())
-        .column_as(ArtistColumn::Id, "artist_id")
-        .column_as(ScrobbleColumn::Timestamp.count(), "scrobbles")
-        .group_by(ArtistColumn::Id)
-        .order_by_desc(ScrobbleColumn::Timestamp.count())
-        .into_tuple()
-        .all(&db).await?;
-
-    let id_list = result.iter().map(|(id, scrobbles)| id.to_owned()).collect();
-    let id_map = resolve_artist_ids(id_list, &db).await;
-    
-    let charts: Vec<ChartsEntry<ArtistRead>> = result.into_iter().map(|(id, scrobbles)| {
-        ChartsEntry {
-            rank: 1,
-            scrobbles: scrobbles,
-            entry: id_map[&id].clone()
-        }
-    }).collect();
-    
-    Ok(charts)
-}
-
-pub async fn resolve_track_ids(ids: Vec<u32>, db: &DatabaseConnection) -> HashMap<u32,TrackRead> {
-    // we can resolve one relation directly with a db call instead of the function
-    let db_result = Track::find()
-        .filter(TrackColumn::Id.is_in(ids))
-        .find_with_related(Artist)
-        .all(db).await.unwrap();
-    
-    let album_ids: Vec<u32> = db_result.iter().filter_map(|(track, _)| track.album_id).collect();
-    let album_map = resolve_album_ids(album_ids, db).await;
-    
-    let mut result: HashMap<u32, TrackRead> = HashMap::new();
-    
-    for (track, artists) in db_result {
-        result.insert(track.id, TrackRead {
-            id: track.id,
-            title: track.title,
-            primary_artists: artists.into_iter().map(|a| {
-                ArtistRead {
-                    id: a.id,
-                    name: a.name,
-                }
-            }).collect(),
-            secondary_artists: vec![],
-            album: if let Some(album_id) = track.album_id { Some(album_map[&album_id].clone()) } else { None },
-            track_length: track.track_length,
-        });
-    }
-    
-    result
-    
-}
-
-pub async fn resolve_album_ids(ids: Vec<u32>, db: &DatabaseConnection) -> HashMap<u32, AlbumRead> {
-    let db_result = Album::find()
-        .filter(AlbumColumn::Id.is_in(ids))
-        .find_with_related(Artist)
-        .all(db).await.unwrap();
-    
-    let mut result: HashMap<u32, AlbumRead> = HashMap::new();
-    
-    for (album, artists) in db_result {
-        result.insert(album.id, AlbumRead {
-            id: album.id,
-            album_title: album.album_title,
-            album_artists: artists.into_iter().map(|a| {
-                ArtistRead {
-                    id: a.id,
-                    name: a.name,
-                }
-            }).collect(),
-        });
-    }
-    
-    result
-    
-}
-
-pub async fn resolve_artist_ids(ids: Vec<u32>, db: &DatabaseConnection) -> HashMap<u32, ArtistRead> {
-    let db_result = Artist::find()
-        .filter(ArtistColumn::Id.is_in(ids))
-        .all(db).await.unwrap();
-    
-    let mut result: HashMap<u32, ArtistRead> = HashMap::new();
-    
-    for artist in db_result {
-        result.insert(artist.id, ArtistRead {
-            id: artist.id,
-            name: artist.name,
-        });
-    }
-    
-    result
 }
