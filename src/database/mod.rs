@@ -12,22 +12,22 @@ use crate::entity::{
     track_artist::Entity as TrackArtist,
     album_artist::Entity as AlbumArtist,
 };
-use sea_orm::{ConnectOptions, ConnectionTrait, Database, DatabaseConnection, DbBackend, DbConn, Schema, Statement};
+use sea_orm::{ConnectOptions, ConnectionTrait, Database, DatabaseConnection, DbBackend, DbConn, DbErr, Schema, Statement};
 use std::path::PathBuf;
 
 fn get_database_path() -> PathBuf {
     FOLDERS.data.join("maloja.sqlite")
 }
 
-pub async fn init_db() {
+pub async fn init_db() -> Result<(), DbErr> {
 
-    let db = connect().await;
+    let db = connect().await?;
     assert_eq!(db.get_database_backend(), DbBackend::Sqlite);
 
     let version: String = db.query_one(Statement::from_string(
         sea_orm::DatabaseBackend::Sqlite,
         "SELECT sqlite_version();".to_owned(),
-    )).await.unwrap().unwrap().try_get("", "sqlite_version()").unwrap();
+    )).await?.unwrap().try_get("", "sqlite_version()")?;
 
     log::info!("Using SQLite {}", version);
 
@@ -42,16 +42,17 @@ pub async fn init_db() {
             log::error!("Failed to check for imports...");
         }
     };
+    
+    Ok(())
 }
 
-pub async fn connect() -> DatabaseConnection {
+pub async fn connect() -> Result<DatabaseConnection, DbErr> {
     let dbfile = get_database_path().display().to_string();
     let dbstring = format!("sqlite://{}?mode=rwc", dbfile);
     let mut dboptions = ConnectOptions::new(dbstring);
     dboptions.sqlx_logging(false);
-    let db: DatabaseConnection = Database::connect(dboptions).await.unwrap();
-    db
-
+    let db: DatabaseConnection = Database::connect(dboptions).await?;
+    Ok(db)
 }
 
 pub async fn create_tables(db: &DbConn) {
