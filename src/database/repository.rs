@@ -1,9 +1,11 @@
 use std::default::Default;
 use std::collections::HashMap;
 use log::{debug, info};
-use sea_orm::{ColumnTrait, DbErr, EntityTrait, JoinType, NotSet, QueryFilter, QuerySelect, RelationTrait};
+use sea_orm::{ColumnTrait, DatabaseConnection, DbErr, EntityTrait, JoinType, NotSet, QueryFilter, QueryOrder, QuerySelect, RelationTrait};
 use sea_orm::ActiveValue::Set;
+use sea_orm::sea_query::{Expr, Func};
 use crate::database::connect;
+use crate::database::views::{Charts, ChartsEntry};
 use crate::entity;
 use crate::entity::{
     album::{Entity as Album, Model as AlbumModel, ActiveModel as AlbumActiveModel, Column as AlbumColumn, AlbumWrite, AlbumRead},
@@ -25,8 +27,8 @@ fn normalize(input: &str) -> String {
 // this is totally gonna work this time lmao
 // link the relevant xkcd here
 #[allow(clippy::collapsible_else_if)]
-pub async fn get_or_create_artists(input: Vec<ArtistWrite>) -> HashMap<ArtistWrite, ArtistModel> {
-    let db = connect().await;
+pub async fn get_or_create_artists(input: Vec<ArtistWrite>) -> Result<HashMap<ArtistWrite, ArtistModel>, DbErr> {
+    let db = connect().await?;
     let mut result: HashMap<ArtistWrite, Option<ArtistModel>> = HashMap::new();
     input.clone().into_iter().for_each(|artist| {
         result.insert(artist, None);
@@ -121,13 +123,13 @@ pub async fn get_or_create_artists(input: Vec<ArtistWrite>) -> HashMap<ArtistWri
     else {
         let result: HashMap<ArtistWrite, ArtistModel> = result.into_iter().map(|(k,v)| (k,v.expect("This should not happen!").clone())).collect();
         // There should no longer be None variants now
-        result
+        Ok(result)
     }
 }
 
 #[allow(clippy::collapsible_else_if)]
-pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> HashMap<TrackWrite, TrackModel> {
-    let db = connect().await;
+pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> Result<HashMap<TrackWrite, TrackModel>, DbErr> {
+    let db = connect().await?;
     let mut result: HashMap<TrackWrite, Option<TrackModel>> = HashMap::new();
     input.clone().into_iter().for_each(|track| {
         result.insert(track, None);
@@ -135,11 +137,11 @@ pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> HashMap<TrackWrite,
 
     // make sure all artists exist
     let artists = input.iter().map(|t| [t.primary_artists.clone().unwrap_or_default(), t.secondary_artists.clone().unwrap_or_default()].concat()).flatten().collect();
-    let artist_map = get_or_create_artists(artists).await;
+    let artist_map = get_or_create_artists(artists).await?;
 
     // make sure all albums exist
     let albums: Vec<AlbumWrite> = input.iter().filter_map(|t| t.album.clone()).collect();
-    let album_map = get_or_create_albums(albums).await;
+    let album_map = get_or_create_albums(albums).await?;
 
 
     // as above, but now the name alone isnt enough - we need name and artist exact set match (primary secondary doesnt matter)
@@ -278,15 +280,15 @@ pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> HashMap<TrackWrite,
     else {
         let result: HashMap<TrackWrite, TrackModel> = result.into_iter().map(|(k,v)| (k,v.expect("This should not happen!").clone())).collect();
         // There should no longer be None variants now
-        result
+        Ok(result)
     }
 }
 
 
 
 #[allow(clippy::collapsible_else_if)]
-pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> HashMap<AlbumWrite, AlbumModel> {
-    let db = connect().await;
+pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> Result<HashMap<AlbumWrite, AlbumModel>, DbErr> {
+    let db = connect().await?;
     let mut result: HashMap<AlbumWrite, Option<AlbumModel>> = HashMap::new();
     input.clone().into_iter().for_each(|album| {
         result.insert(album, None);
@@ -294,7 +296,7 @@ pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> HashMap<AlbumWrite,
 
     // make sure all artists exist
     let artists = input.iter().map(|a| a.album_artists.clone().unwrap_or_default()).flatten().collect();
-    let artist_map = get_or_create_artists(artists).await;
+    let artist_map = get_or_create_artists(artists).await?;
 
 
     // as above, but now the name alone isnt enough - we need name and artist exact set match (primary secondary doesnt matter)
@@ -413,16 +415,16 @@ pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> HashMap<AlbumWrite,
     else {
         let result: HashMap<AlbumWrite, AlbumModel> = result.into_iter().map(|(k,v)| (k,v.expect("This should not happen!").clone())).collect();
         // There should no longer be None variants now
-        result
+        Ok(result)
     }
 }
 
 
 #[allow(clippy::collapsible_else_if)]
-pub async fn create_scrobbles(input: Vec<ScrobbleWrite>, fail_on_existing: bool) -> HashMap<ScrobbleWrite, ScrobbleModel> {
+pub async fn create_scrobbles(input: Vec<ScrobbleWrite>, fail_on_existing: bool) -> Result<HashMap<ScrobbleWrite, ScrobbleModel>, DbErr> {
     // this one is a bit different that the other entity ones because we never supply a scrobblewrite
     // as part of another entity to either create or fetch - scrobbles are only ever created (or patched?)
-    let db = connect().await;
+    let db = connect().await?;
     let mut result: HashMap<ScrobbleWrite, Option<ScrobbleModel>> = HashMap::new();
     input.clone().into_iter().for_each(|scrobble| {
         result.insert(scrobble, None);
@@ -430,7 +432,7 @@ pub async fn create_scrobbles(input: Vec<ScrobbleWrite>, fail_on_existing: bool)
 
     // make sure all tracks exist
     let tracks = input.iter().map(|s| s.track.clone()).collect();
-    let track_map = get_or_create_tracks(tracks).await;
+    let track_map = get_or_create_tracks(tracks).await?;
 
 
     // here we have no matching. existing timestamp means existing scrobble, otherwise new
@@ -492,82 +494,137 @@ pub async fn create_scrobbles(input: Vec<ScrobbleWrite>, fail_on_existing: bool)
     else {
         let result: HashMap<ScrobbleWrite, ScrobbleModel> = result.into_iter().map(|(k,v)| (k,v.expect("This should not happen!").clone())).collect();
         // There should no longer be None variants now
-        result
+        Ok(result)
     }
 }
 
+// Alright for all selections, we dont join with additional information - modularity over query performance for now
+// we generate stats over IDs and use batch resolve with id maps
 
-pub async fn get_tracks() -> Result<Vec<TrackRead>, DbErr> {
-    let db = connect().await;
-    let result = Track::find().find_with_related(Artist).all(&db).await?;
+pub async fn charts_tracks() -> Result<Vec<ChartsEntry<TrackRead>>, DbErr> {
+    let db = connect().await?;
+    let result: Vec<(u32, u32)> = Track::find()
+        .select_only()
+        .join(JoinType::LeftJoin, entity::track::Relation::Scrobble.def())
+        .column_as(TrackColumn::Id, "track_id")
+        .column_as(ScrobbleColumn::Timestamp.count(), "scrobbles")
+        .group_by(TrackColumn::Id)
+        .order_by_desc(ScrobbleColumn::Timestamp.count())
+        .into_tuple()
+        .all(&db).await?;
 
-
-    // cant chain find_with_related, so custom fun
-    let mut result2 = vec![];
-    for (index, trackresult) in result.iter().enumerate() {
-        if let Some(album_id) = trackresult.0.album_id {
-            let albumresult = Album::find_by_id(album_id).find_with_related(Artist).all(&db).await?.first().unwrap().to_owned();
-            result2.push(Some(albumresult));
+    let id_list = result.iter().map(|(id, scrobbles)| id.to_owned()).collect();
+    let id_map = resolve_track_ids(id_list, &db).await;
+    
+    let charts: Vec<ChartsEntry<TrackRead>> = result.into_iter().map(|(id, scrobbles)| {
+        ChartsEntry {
+            rank: 1,
+            scrobbles: scrobbles,
+            entry: id_map[&id].clone()
         }
-        else {
-            result2.push(None);
-        }
-    }
-    let tracks = result.iter().zip(result2.iter()).map(|((track, artists), opt)| {
-        if let Some((album, albumartists)) = opt {
-            // TODO get primary and secondary
-            resolve_track(track.clone(), artists.clone(), vec![], Some(album.clone()), Some(albumartists.clone()))
-        }
-        else {
-            resolve_track(track.clone(), artists.clone(), vec![], None, None)
-        }
-
     }).collect();
-    Ok(tracks)
+    
+    Ok(charts)
 }
 
-pub async fn get_artists() -> Result<Vec<ArtistRead>, DbErr> {
-    let db = connect().await;
-    let result = Artist::find().all(&db).await?;
-    let artists = result.iter().map(|artist| resolve_artist(artist.clone())).collect();
-    Ok(artists)
+pub async fn charts_artists() -> Result<Vec<ChartsEntry<ArtistRead>>, DbErr> {
+    let db = connect().await?;
+    let result: Vec<(u32, u32)> = Artist::find()
+        .select_only()
+        .join(JoinType::LeftJoin, entity::artist::Relation::TrackArtist.def())
+        .join(JoinType::LeftJoin, entity::track_artist::Relation::Track.def())
+        .join(JoinType::LeftJoin, entity::track::Relation::Scrobble.def())
+        .column_as(ArtistColumn::Id, "artist_id")
+        .column_as(ScrobbleColumn::Timestamp.count(), "scrobbles")
+        .group_by(ArtistColumn::Id)
+        .order_by_desc(ScrobbleColumn::Timestamp.count())
+        .into_tuple()
+        .all(&db).await?;
+
+    let id_list = result.iter().map(|(id, scrobbles)| id.to_owned()).collect();
+    let id_map = resolve_artist_ids(id_list, &db).await;
+    
+    let charts: Vec<ChartsEntry<ArtistRead>> = result.into_iter().map(|(id, scrobbles)| {
+        ChartsEntry {
+            rank: 1,
+            scrobbles: scrobbles,
+            entry: id_map[&id].clone()
+        }
+    }).collect();
+    
+    Ok(charts)
 }
 
-pub async fn get_albums() -> Result<Vec<AlbumRead>, DbErr> {
-    let db = connect().await;
-    let result = Album::find().find_with_related(Artist).all(&db).await?;
-    let albums = result.iter().map(|(album, albumartists)| resolve_album(album.clone(), albumartists.clone())).collect();
-    Ok(albums)
-}
-
-pub async fn get_scrobbles() -> Result<Vec<entity::scrobble::Model>, DbErr> {
-    let db = connect().await;
-    let result = Scrobble::find().all(&db).await?;
-    Ok(result)
-}
-
-pub fn resolve_track(track: TrackModel, primary_artists: Vec<ArtistModel>, secondary_artists: Vec<ArtistModel>, album: Option<AlbumModel>, album_artists: Option<Vec<ArtistModel>>) -> TrackRead {
-    TrackRead {
-        id: track.id,
-        title: track.title,
-        primary_artists: primary_artists.clone().iter().map(|x| x.to_owned()).map(resolve_artist).collect(),
-        secondary_artists: secondary_artists.clone().iter().map(|x| x.to_owned()).map(resolve_artist).collect(),
-        album: if let (Some(alb), Some(albart)) = (album, album_artists) { Some(resolve_album(alb, albart)) } else { None },
-        track_length: track.track_length,
+pub async fn resolve_track_ids(ids: Vec<u32>, db: &DatabaseConnection) -> HashMap<u32,TrackRead> {
+    // we can resolve one relation directly with a db call instead of the function
+    let db_result = Track::find()
+        .filter(TrackColumn::Id.is_in(ids))
+        .find_with_related(Artist)
+        .all(db).await.unwrap();
+    
+    let album_ids: Vec<u32> = db_result.iter().filter_map(|(track, _)| track.album_id).collect();
+    let album_map = resolve_album_ids(album_ids, db).await;
+    
+    let mut result: HashMap<u32, TrackRead> = HashMap::new();
+    
+    for (track, artists) in db_result {
+        result.insert(track.id, TrackRead {
+            id: track.id,
+            title: track.title,
+            primary_artists: artists.into_iter().map(|a| {
+                ArtistRead {
+                    id: a.id,
+                    name: a.name,
+                }
+            }).collect(),
+            secondary_artists: vec![],
+            album: if let Some(album_id) = track.album_id { Some(album_map[&album_id].clone()) } else { None },
+            track_length: track.track_length,
+        });
     }
+    
+    result
+    
 }
 
-pub fn resolve_artist(artist: ArtistModel) -> ArtistRead {
-    ArtistRead {
-        id: artist.id,
-        name: artist.name.clone(),
+pub async fn resolve_album_ids(ids: Vec<u32>, db: &DatabaseConnection) -> HashMap<u32, AlbumRead> {
+    let db_result = Album::find()
+        .filter(AlbumColumn::Id.is_in(ids))
+        .find_with_related(Artist)
+        .all(db).await.unwrap();
+    
+    let mut result: HashMap<u32, AlbumRead> = HashMap::new();
+    
+    for (album, artists) in db_result {
+        result.insert(album.id, AlbumRead {
+            id: album.id,
+            album_title: album.album_title,
+            album_artists: artists.into_iter().map(|a| {
+                ArtistRead {
+                    id: a.id,
+                    name: a.name,
+                }
+            }).collect(),
+        });
     }
+    
+    result
+    
 }
 
-pub fn resolve_album(album: AlbumModel, album_artists: Vec<ArtistModel>) -> AlbumRead {
-    AlbumRead {
-        id: album.id,
-        album_title: album.album_title.clone(),
-        album_artists: album_artists.clone().iter().map(|x| x.to_owned()).map(resolve_artist).collect(),
+pub async fn resolve_artist_ids(ids: Vec<u32>, db: &DatabaseConnection) -> HashMap<u32, ArtistRead> {
+    let db_result = Artist::find()
+        .filter(ArtistColumn::Id.is_in(ids))
+        .all(db).await.unwrap();
+    
+    let mut result: HashMap<u32, ArtistRead> = HashMap::new();
+    
+    for artist in db_result {
+        result.insert(artist.id, ArtistRead {
+            id: artist.id,
+            name: artist.name,
+        });
     }
+    
+    result
 }

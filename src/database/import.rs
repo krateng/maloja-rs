@@ -69,7 +69,7 @@ struct MalojaExportAlbum {
 }
 
 
-pub async fn import_maloja(file: PathBuf) -> Result<(), io::Error> {
+pub async fn import_maloja(file: PathBuf) -> Result<(), Box<dyn Error>> {
 
 
     info!("Importing from Maloja export {}. This could take a while...", display_path(&file));
@@ -78,7 +78,7 @@ pub async fn import_maloja(file: PathBuf) -> Result<(), io::Error> {
         fs::File::open(file)?
     )?;
 
-    let db = connect().await;
+    let db = connect().await?;
     
     let scrobbles: Vec<ScrobbleWrite> = parsed.scrobbles.into_iter().map(|scrobble| {
         ScrobbleWrite {
