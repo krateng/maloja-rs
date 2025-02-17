@@ -36,16 +36,16 @@ impl QueryTimerange {
 
     fn match_string(input: &str) -> TimeRange {
         if let Some(caps) = Regex::new(r"^(\d{3,4})$").unwrap().captures(input) {
-            return TimeRange::Simple { unit: BaseTimeRange::Year { year: caps[1].parse().unwrap() } };
+            return TimeRange::Simple(BaseTimeRange::Year { year: caps[1].parse().unwrap() });
         }
         if let Some(caps) = Regex::new(r"^(\d{3,4})/(1[0-2]|0?[1-9])$").unwrap().captures(input) {
-            return TimeRange::Simple { unit: BaseTimeRange::Month { year: caps[1].parse().unwrap(), month: caps[2].parse().unwrap() } };
+            return TimeRange::Simple(BaseTimeRange::Month { year: caps[1].parse().unwrap(), month: caps[2].parse().unwrap() });
         }
         if let Some(caps) = Regex::new(r"^(\d{3,4})/(1[0-2]|0?[1-9])/(3[01]|[12][0-9]|0?[1-9])$").unwrap().captures(input) {
-            return TimeRange::Simple { unit: BaseTimeRange::Day { year: caps[1].parse().unwrap(), month: caps[2].parse().unwrap(), day: caps[3].parse().unwrap() } };
+            return TimeRange::Simple(BaseTimeRange::Day { year: caps[1].parse().unwrap(), month: caps[2].parse().unwrap(), day: caps[3].parse().unwrap() });
         }
         if let Some(caps) = Regex::new(r"^(\d{3,4})w(5[0-2]|[1-4][0-9]|[1-9])$").unwrap().captures(input) {
-            return TimeRange::Simple { unit: BaseTimeRange::Week { year: caps[1].parse().unwrap(), week: caps[2].parse().unwrap() } };
+            return TimeRange::Simple(BaseTimeRange::Week { year: caps[1].parse().unwrap(), week: caps[2].parse().unwrap() });
         }
         ALL_TIME
 

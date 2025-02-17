@@ -17,9 +17,9 @@ pub enum BaseTimeRange {
 }
 
 pub enum TimeRange {
-    Simple { unit: BaseTimeRange },
+    Simple(BaseTimeRange),
     Composite { start: BaseTimeRange, end: BaseTimeRange },
-    Infinite {},
+    Infinite,
 }
 
 
@@ -44,7 +44,7 @@ impl BaseTimeRange {
                     first_day_this_year.checked_add_days(Days::new(use_offset as u64)).unwrap()
                 } else {
                     first_day_this_year.checked_sub_days(Days::new(-use_offset as u64)).unwrap()
-                };                
+                };
                 let firstday = first_week_start.checked_add_days(Days::new((7 * week) as u64)).unwrap();
                 let lastday = firstday.checked_add_days(Days::new(6)).unwrap();
                 (
@@ -68,7 +68,7 @@ impl BaseTimeRange {
                     firstday.and_hms_opt(0, 0, 0).unwrap().and_local_timezone(TIMEZONE).unwrap(),
                     lastday.and_hms_opt(23, 59, 59).unwrap().and_local_timezone(TIMEZONE).unwrap(),
                 )
-           
+
             }
         }
     }
@@ -133,16 +133,16 @@ impl TimeRange {
         let (a, b) = self.datetime_boundaries();
         (a.timestamp(), b.timestamp())
     }
-    
+
     fn datetime_boundaries(&self) -> (DateTime<Tz>, DateTime<Tz>) {
         match self {
-            TimeRange::Simple { unit } => {
-                unit.datetime_boundaries()
+            TimeRange::Simple(base) => {
+                base.datetime_boundaries()
             }
             TimeRange::Composite { start, end } => {
                 (start.datetime_boundaries().0, end.datetime_boundaries().1)
             }
-            TimeRange::Infinite {} => {
+            TimeRange::Infinite => {
                 (
                     DateTime::from_timestamp(i32::MIN as i64, 0).unwrap().with_timezone(&TIMEZONE),
                     DateTime::from_timestamp(i32::MAX as i64, 0).unwrap().with_timezone(&TIMEZONE)
@@ -150,11 +150,11 @@ impl TimeRange {
             }
         }
     }
-    
+
     fn previous(&self) -> Option<Self> {
         match self {
-            TimeRange::Simple { unit } => {
-                Some(TimeRange::Simple { unit: unit.previous() })
+            TimeRange::Simple(base) => {
+                Some(TimeRange::Simple(base.previous()))
             }
             TimeRange::Composite { start, end } => {
                 todo!()
@@ -167,8 +167,8 @@ impl TimeRange {
 
     fn next(&self) -> Option<Self> {
         match self {
-            TimeRange::Simple { unit } => {
-                Some(TimeRange::Simple { unit: unit.next() })
+            TimeRange::Simple(base) => {
+                Some(TimeRange::Simple(base.next()))
             }
             TimeRange::Composite { start, end } => {
                 todo!()
