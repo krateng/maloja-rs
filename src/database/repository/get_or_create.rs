@@ -89,6 +89,7 @@ pub async fn get_or_create_artists(input: Vec<ArtistWrite>) -> Result<HashMap<Ar
             notfound.push(write);
         }
     }
+    // TODO: deduplicate!
     if !notfound.is_empty() {
         let inserts: Vec<ArtistActiveModel> = notfound.iter().map(|&x| {
             assert!(x.name.is_some()); //TODO

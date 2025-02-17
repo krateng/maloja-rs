@@ -14,6 +14,8 @@ use crate::entity::scrobble::{Model as Scrobble, ScrobbleRead};
 use crate::entity::album::{Model as Album, AlbumRead};
 use crate::database::repository::*;
 use crate::database::views::{Charts, PaginationInfo, Top};
+use crate::timeranges::{TimeRange, BaseTimeRange, ALL_TIME};
+
 
 
 pub const API: ScrobbleAPI = ScrobbleAPI {
@@ -25,13 +27,14 @@ pub const API: ScrobbleAPI = ScrobbleAPI {
 fn register_routes(mut router: OpenApiRouter) -> OpenApiRouter {
     router = router
         .routes(routes!(charts_tracks))
-        .routes(routes!(charts_artists));
+        .routes(routes!(charts_artists))
+        .routes(routes!(charts_albums));
     router
 }
 
 #[derive(OpenApi)]
 #[openapi(
-    paths(charts_tracks, charts_artists),
+    paths(charts_tracks, charts_artists, charts_albums),
     info(title = "Maloja API", version = "2"),
     components(schemas(ScrobbleRead,TrackRead,ArtistRead,AlbumRead))
 )]
@@ -59,7 +62,7 @@ impl APIError {
     )
 )]
 pub async fn charts_tracks() -> Response {
-    match database::repository::charts_tracks().await {
+    match database::repository::charts_tracks(ALL_TIME).await {
         Ok(tracks) => (StatusCode::OK, Json(Charts {
             pagination: PaginationInfo {
                 page: 1,
@@ -82,7 +85,7 @@ pub async fn charts_tracks() -> Response {
     )
 )]
 pub async fn charts_artists() -> Response {
-    match database::repository::charts_artists().await {
+    match database::repository::charts_artists(ALL_TIME).await {
         Ok(artists) => (StatusCode::OK, Json(Charts {
             pagination: PaginationInfo {
                 page: 1,
@@ -91,6 +94,29 @@ pub async fn charts_artists() -> Response {
                 items_total: artists.len() as u32,
             },
             result: artists
+        })).into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(APIError { description: format!("{}", e) })).into_response(),
+    }
+}
+
+#[utoipa::path(
+    get,
+    path = "/charts_albums",
+    responses(
+        (status = OK, body = inline(Charts<AlbumRead>)),
+        (status = INTERNAL_SERVER_ERROR, body = inline(APIError))
+    )
+)]
+pub async fn charts_albums() -> Response {
+    match database::repository::charts_albums(ALL_TIME).await {
+        Ok(albums) => (StatusCode::OK, Json(Charts {
+            pagination: PaginationInfo {
+                page: 1,
+                pages: 1,
+                items_per_page: albums.len() as u32,
+                items_total: albums.len() as u32,
+            },
+            result: albums
         })).into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(APIError { description: format!("{}", e) })).into_response(),
     }

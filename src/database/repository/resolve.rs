@@ -33,7 +33,7 @@ pub async fn resolve_track_ids(ids: Vec<u32>, db: &DatabaseConnection) -> HashMa
                 }
             }).collect(),
             secondary_artists: vec![],
-            album: if let Some(album_id) = track.album_id { Some(album_map[&album_id].clone()) } else { None },
+            album: track.album_id.map(|album_id| album_map[&album_id].clone()),
             track_length: track.track_length,
         });
     }
