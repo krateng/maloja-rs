@@ -40,7 +40,11 @@ impl BaseTimeRange {
                 let weekoffset: i32 = ((7 + first_day_this_year.weekday().num_days_from_sunday() - WEEK_BEGIN.num_days_from_sunday()) % 7) as i32;
                 let weekoffset2: i32 = 7 - weekoffset;
                 let use_offset = if weekoffset > weekoffset2 { weekoffset2 } else { -weekoffset };
-                let first_week_start = first_day_this_year.checked_add_days(Days::new(use_offset as u64)).unwrap();
+                let first_week_start = if (use_offset >= 0) {
+                    first_day_this_year.checked_add_days(Days::new(use_offset as u64)).unwrap()
+                } else {
+                    first_day_this_year.checked_sub_days(Days::new(-use_offset as u64)).unwrap()
+                };                
                 let firstday = first_week_start.checked_add_days(Days::new((7 * week) as u64)).unwrap();
                 let lastday = firstday.checked_add_days(Days::new(6)).unwrap();
                 (
@@ -140,8 +144,8 @@ impl TimeRange {
             }
             TimeRange::Infinite {} => {
                 (
-                    DateTime::from_timestamp(i64::MIN, 0).unwrap().with_timezone(&TIMEZONE),
-                    DateTime::from_timestamp(i64::MAX, 0).unwrap().with_timezone(&TIMEZONE)
+                    DateTime::from_timestamp(i32::MIN as i64, 0).unwrap().with_timezone(&TIMEZONE),
+                    DateTime::from_timestamp(i32::MAX as i64, 0).unwrap().with_timezone(&TIMEZONE)
                 )
             }
         }

@@ -19,4 +19,6 @@ utoipa = { version = "5.3.1" }
 utoipa-axum = { version = "0.2.0" }
 tower-http = { version = "0.6.2", features = ["fs"] }
 serde = { version = "1.0.216", features = ["derive"] }
-serde_json = "1.0.134"
+serde_json = {  version = "1.0.134" }
+rand = { version = "0.8.5" }
+regex = { version = "1.11.1" }

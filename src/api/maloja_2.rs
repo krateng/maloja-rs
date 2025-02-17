@@ -1,3 +1,4 @@
+use axum::extract::Query;
 use axum::http::StatusCode;
 use axum::Json;
 use axum::response::{IntoResponse, Response};
@@ -15,8 +16,7 @@ use crate::entity::album::{Model as Album, AlbumRead};
 use crate::database::repository::*;
 use crate::database::views::{Charts, PaginationInfo, Top};
 use crate::timeranges::{TimeRange, BaseTimeRange, ALL_TIME};
-
-
+use crate::uri::{QueryLimitArtist, QueryTimerange};
 
 pub const API: ScrobbleAPI = ScrobbleAPI {
     prefix: "/maloja_2",
@@ -56,13 +56,15 @@ impl APIError {
 #[utoipa::path(
     get,
     path = "/charts_tracks",
+    params(QueryTimerange, QueryLimitArtist),
     responses(
         (status = OK, body = inline(Charts<TrackRead>)),
         (status = INTERNAL_SERVER_ERROR, body = inline(APIError))
     )
 )]
-pub async fn charts_tracks() -> Response {
-    match database::repository::charts_tracks(ALL_TIME).await {
+pub async fn charts_tracks(Query(params_time): Query<QueryTimerange>, Query(params_limit): Query<QueryLimitArtist>) -> Response {
+    let timerange = params_time.to_timerange();
+    match database::repository::charts_tracks(timerange).await {
         Ok(tracks) => (StatusCode::OK, Json(Charts {
             pagination: PaginationInfo {
                 page: 1,
@@ -79,13 +81,15 @@ pub async fn charts_tracks() -> Response {
 #[utoipa::path(
     get,
     path = "/charts_artists",
+    params(QueryTimerange),
     responses(
         (status = OK, body = inline(Charts<ArtistRead>)),
         (status = INTERNAL_SERVER_ERROR, body = inline(APIError))
     )
 )]
-pub async fn charts_artists() -> Response {
-    match database::repository::charts_artists(ALL_TIME).await {
+pub async fn charts_artists(Query(params_time): Query<QueryTimerange>) -> Response {
+    let timerange = params_time.to_timerange();
+    match database::repository::charts_artists(timerange).await {
         Ok(artists) => (StatusCode::OK, Json(Charts {
             pagination: PaginationInfo {
                 page: 1,
@@ -102,13 +106,15 @@ pub async fn charts_artists() -> Response {
 #[utoipa::path(
     get,
     path = "/charts_albums",
+    params(QueryTimerange, QueryLimitArtist),
     responses(
         (status = OK, body = inline(Charts<AlbumRead>)),
         (status = INTERNAL_SERVER_ERROR, body = inline(APIError))
     )
 )]
-pub async fn charts_albums() -> Response {
-    match database::repository::charts_albums(ALL_TIME).await {
+pub async fn charts_albums(Query(params_time): Query<QueryTimerange>, Query(params_limit): Query<QueryLimitArtist>) -> Response {
+    let timerange = params_time.to_timerange();
+    match database::repository::charts_albums(timerange).await {
         Ok(albums) => (StatusCode::OK, Json(Charts {
             pagination: PaginationInfo {
                 page: 1,

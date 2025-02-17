@@ -1176,6 +1176,8 @@ dependencies = [
  "confique",
  "fern",
  "log",
+ "rand",
+ "regex",
  "sea-orm",
  "serde",
  "serde_json",
