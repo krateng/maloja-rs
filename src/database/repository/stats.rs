@@ -9,8 +9,8 @@ use crate::entity::{
     track::{Entity as Track, Model as TrackModel, ActiveModel as TrackActiveModel, Column as TrackColumn, TrackWrite, TrackRead},
     artist::{Entity as Artist, Model as ArtistModel, ActiveModel as ArtistActiveModel, Column as ArtistColumn, ArtistWrite, ArtistRead},
     scrobble::{Entity as Scrobble, Model as ScrobbleModel, ActiveModel as ScrobbleActiveModel, Column as ScrobbleColumn, ScrobbleWrite},
-    track_artist::{Entity as TrackArtist, ActiveModel as TrackArtistActiveModel},
-    album_artist::{Entity as AlbumArtist, ActiveModel as AlbumArtistActiveModel},
+    track_artist::{Entity as TrackArtist, ActiveModel as TrackArtistActiveModel, Column as TrackArtistColumn},
+    album_artist::{Entity as AlbumArtist, ActiveModel as AlbumArtistActiveModel, Column as AlbumArtistColumn},
 };
 use crate::timeranges::TimeRange;
 // Alright for all selections, we dont join with additional information - modularity over query performance for now
@@ -18,10 +18,10 @@ use crate::timeranges::TimeRange;
 
 
 
-pub async fn charts_tracks(timerange: TimeRange) -> Result<Vec<ChartsEntry<TrackRead>>, DbErr> {
+pub async fn charts_tracks(timerange: TimeRange, artist_id: Option<u32>, album_id: Option<u32>) -> Result<Vec<ChartsEntry<TrackRead>>, DbErr> {
     let db = connect().await?;
     let (from_ts, to_ts) = timerange.timestamp_boundaries();
-    let result: Vec<(u32, u32, u32)> = Track::find()
+    let mut query = Track::find()
         .select_only()
         .join(JoinType::LeftJoin, entity::track::Relation::Scrobble.def())
         .column_as(TrackColumn::Id, "track_id")
@@ -30,11 +30,23 @@ pub async fn charts_tracks(timerange: TimeRange) -> Result<Vec<ChartsEntry<Track
             Expr::cust("RANK() OVER (ORDER BY COUNT(scrobbles.timestamp) DESC)"),
             "rank"
         )
+        .group_by(TrackColumn::Id);
+        
+    
+    if let Some(artist_id) = artist_id {
+        query = query
+            .join(JoinType::LeftJoin, entity::track::Relation::TrackArtist.def())
+            .filter(TrackArtistColumn::ArtistId.eq(artist_id));
+    }
+    if let Some(album_id) = album_id {
+        query = query
+            .filter(TrackColumn::AlbumId.eq(album_id));
+    }
+    query = query
         .filter(ScrobbleColumn::Timestamp.between(from_ts, to_ts))
-        .group_by(TrackColumn::Id)
-        .order_by_desc(ScrobbleColumn::Timestamp.count())
-        .into_tuple()
-        .all(&db).await?;
+        .order_by_desc(ScrobbleColumn::Timestamp.count());
+    
+    let result: Vec<(u32, u32, u32)> = query.into_tuple().all(&db).await?;
 
     let id_list = result.iter().map(|(id, scrobbles, rank)| id.to_owned()).collect();
     let id_map = resolve_track_ids(id_list, &db).await;
@@ -53,7 +65,7 @@ pub async fn charts_tracks(timerange: TimeRange) -> Result<Vec<ChartsEntry<Track
 pub async fn charts_artists(timerange: TimeRange) -> Result<Vec<ChartsEntry<ArtistRead>>, DbErr> {
     let db = connect().await?;
     let (from_ts, to_ts) = timerange.timestamp_boundaries();
-    let result: Vec<(u32, u32, u32)> = Artist::find()
+    let mut query = Artist::find()
         .select_only()
         .join(JoinType::LeftJoin, entity::artist::Relation::TrackArtist.def())
         .join(JoinType::LeftJoin, entity::track_artist::Relation::Track.def())
@@ -66,9 +78,9 @@ pub async fn charts_artists(timerange: TimeRange) -> Result<Vec<ChartsEntry<Arti
         )
         .filter(ScrobbleColumn::Timestamp.between(from_ts, to_ts))
         .group_by(ArtistColumn::Id)
-        .order_by_desc(ScrobbleColumn::Timestamp.count())
-        .into_tuple()
-        .all(&db).await?;
+        .order_by_desc(ScrobbleColumn::Timestamp.count());
+    
+    let result: Vec<(u32, u32, u32)> = query.into_tuple().all(&db).await?;
 
     let id_list = result.iter().map(|(id, scrobbles, rank)| id.to_owned()).collect();
     let id_map = resolve_artist_ids(id_list, &db).await;
@@ -84,10 +96,10 @@ pub async fn charts_artists(timerange: TimeRange) -> Result<Vec<ChartsEntry<Arti
     Ok(charts)
 }
 
-pub async fn charts_albums(timerange: TimeRange) -> Result<Vec<ChartsEntry<AlbumRead>>, DbErr> {
+pub async fn charts_albums(timerange: TimeRange, artist_id: Option<u32>) -> Result<Vec<ChartsEntry<AlbumRead>>, DbErr> {
     let db = connect().await?;
     let (from_ts, to_ts) = timerange.timestamp_boundaries();
-    let result: Vec<(u32, u32, u32)> = Album::find()
+    let mut query = Album::find()
         .select_only()
         .join(JoinType::LeftJoin, entity::album::Relation::Track.def())
         .join(JoinType::LeftJoin, entity::track::Relation::Scrobble.def())
@@ -98,10 +110,18 @@ pub async fn charts_albums(timerange: TimeRange) -> Result<Vec<ChartsEntry<Album
             "rank"
         )
         .filter(ScrobbleColumn::Timestamp.between(from_ts, to_ts))
-        .group_by(AlbumColumn::Id)
-        .order_by_desc(ScrobbleColumn::Timestamp.count())
-        .into_tuple()
-        .all(&db).await?;
+        .group_by(AlbumColumn::Id);
+    
+    if let Some(artist_id) = artist_id {
+        query = query
+            .join(JoinType::LeftJoin, entity::album::Relation::AlbumArtist.def())
+            .filter(AlbumArtistColumn::ArtistId.eq(artist_id));
+    }
+        
+    query = query
+        .order_by_desc(ScrobbleColumn::Timestamp.count());
+    
+    let result: Vec<(u32, u32, u32)> = query.into_tuple().all(&db).await?;
 
     let id_list = result.iter().map(|(id, scrobbles, rank)| id.to_owned()).collect();
     let id_map = resolve_album_ids(id_list, &db).await;

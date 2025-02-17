@@ -60,10 +60,22 @@ pub struct QueryLimitArtist {
     artist: Option<u32>
 }
 
+impl QueryLimitArtist {
+    pub fn to_artist_id(&self) -> Option<u32> {
+        self.artist //do we really want an extra function here
+    }
+}
+
 #[derive(Deserialize, IntoParams, Debug)]
 #[into_params(parameter_in=Query)]
 pub struct QueryLimitAlbum {
     /// Limit the output to this album
     #[param(example=42)]
     album: Option<u32>
+}
+
+impl QueryLimitAlbum {
+    pub fn to_album_id(&self) -> Option<u32> {
+        self.album
+    }
 }

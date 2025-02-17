@@ -16,7 +16,7 @@ use crate::entity::album::{Model as Album, AlbumRead};
 use crate::database::repository::*;
 use crate::database::views::{Charts, PaginationInfo, Top};
 use crate::timeranges::{TimeRange, BaseTimeRange, ALL_TIME};
-use crate::uri::{QueryLimitArtist, QueryTimerange};
+use crate::uri::{QueryLimitAlbum, QueryLimitArtist, QueryTimerange};
 
 pub const API: ScrobbleAPI = ScrobbleAPI {
     prefix: "/maloja_2",
@@ -56,15 +56,17 @@ impl APIError {
 #[utoipa::path(
     get,
     path = "/charts_tracks",
-    params(QueryTimerange, QueryLimitArtist),
+    params(QueryTimerange, QueryLimitArtist, QueryLimitAlbum),
     responses(
         (status = OK, body = inline(Charts<TrackRead>)),
         (status = INTERNAL_SERVER_ERROR, body = inline(APIError))
     )
 )]
-pub async fn charts_tracks(Query(params_time): Query<QueryTimerange>, Query(params_limit): Query<QueryLimitArtist>) -> Response {
+pub async fn charts_tracks(Query(params_time): Query<QueryTimerange>, Query(params_limit_artist): Query<QueryLimitArtist>, Query(params_limit_album): Query<QueryLimitAlbum>) -> Response {
     let timerange = params_time.to_timerange();
-    match database::repository::charts_tracks(timerange).await {
+    let artist_id = params_limit_artist.to_artist_id();
+    let album_id = params_limit_album.to_album_id();
+    match database::repository::charts_tracks(timerange, artist_id, album_id).await {
         Ok(tracks) => (StatusCode::OK, Json(Charts {
             pagination: PaginationInfo {
                 page: 1,
@@ -112,9 +114,10 @@ pub async fn charts_artists(Query(params_time): Query<QueryTimerange>) -> Respon
         (status = INTERNAL_SERVER_ERROR, body = inline(APIError))
     )
 )]
-pub async fn charts_albums(Query(params_time): Query<QueryTimerange>, Query(params_limit): Query<QueryLimitArtist>) -> Response {
+pub async fn charts_albums(Query(params_time): Query<QueryTimerange>, Query(params_limit_artist): Query<QueryLimitArtist>) -> Response {
     let timerange = params_time.to_timerange();
-    match database::repository::charts_albums(timerange).await {
+    let artist_id = params_limit_artist.to_artist_id();
+    match database::repository::charts_albums(timerange, artist_id).await {
         Ok(albums) => (StatusCode::OK, Json(Charts {
             pagination: PaginationInfo {
                 page: 1,
