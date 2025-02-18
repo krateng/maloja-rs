@@ -22,4 +22,6 @@ serde = { version = "1.0.216", features = ["derive"] }
 serde_json = {  version = "1.0.134" }
 rand = { version = "0.8.5" }
 regex = { version = "1.11.1" }
-sea-query = "0.32.1"
+sea-query = { version = "0.32.1" }
+strum_macros = "0.27.1"
+strum = { version = "0.27.1" }

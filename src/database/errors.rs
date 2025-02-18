@@ -1,8 +1,12 @@
 use axum::http::StatusCode;
 use axum::Json;
 use axum::response::{IntoResponse, Response};
+use serde::Serialize;
+use strum;
+use strum_macros::{Display, EnumString};
+use utoipa::ToSchema;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, ToSchema, Clone, EnumString, Display)]
 pub enum MalojaError {
     ArtistNotFound { id: u32 },
     TrackNotFound { id: u32 },
