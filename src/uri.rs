@@ -79,3 +79,9 @@ impl QueryLimitAlbum {
         self.album
     }
 }
+
+#[derive(Deserialize, IntoParams, Debug)]
+#[into_params(parameter_in=Path)]
+pub struct PathEntity {
+    pub id: u32
+}

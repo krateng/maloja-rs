@@ -2,6 +2,7 @@
 pub mod views;
 pub mod import;
 pub mod repository;
+pub mod errors;
 
 use std::io::Error;
 use crate::configuration::FOLDERS;
@@ -15,12 +16,13 @@ use crate::entity::{
 };
 use sea_orm::{ConnectOptions, ConnectionTrait, Database, DatabaseConnection, DbBackend, DbConn, DbErr, Schema, Statement};
 use std::path::PathBuf;
+use crate::database::errors::MalojaError;
 
 fn get_database_path() -> PathBuf {
     FOLDERS.data.join("maloja.sqlite")
 }
 
-pub async fn init_db() -> Result<(), DbErr> {
+pub async fn init_db() -> Result<(), MalojaError> {
 
     let db = connect().await?;
     assert_eq!(db.get_database_backend(), DbBackend::Sqlite);
@@ -47,13 +49,24 @@ pub async fn init_db() -> Result<(), DbErr> {
     Ok(())
 }
 
-pub async fn connect() -> Result<DatabaseConnection, DbErr> {
+/// This function should be called every time the database has been written to and is in a new consistent state
+/// (so not after every single atomic write, but logical write operations)
+pub fn mark_db_write() {
+    // for the future
+}
+
+pub async fn connect() -> Result<DatabaseConnection, MalojaError> {
     let dbfile = get_database_path().display().to_string();
     let dbstring = format!("sqlite://{}?mode=rwc", dbfile);
     let mut dboptions = ConnectOptions::new(dbstring);
     dboptions.sqlx_logging(false);
-    let db: DatabaseConnection = Database::connect(dboptions).await?;
-    Ok(db)
+    match Database::connect(dboptions).await {
+        Ok(c) => Ok(c),
+        Err(e) => {
+            Err(MalojaError::DatabaseConnectionError { message: e.to_string() })
+        }
+    }
+    
 }
 
 pub async fn create_tables(db: &DbConn) {

@@ -2,7 +2,8 @@ use std::collections::HashMap;
 use log::debug;
 use sea_orm::{ColumnTrait, DbErr, EntityTrait, NotSet, QueryFilter};
 use sea_orm::ActiveValue::Set;
-use crate::database::connect;
+use crate::database::{connect, mark_db_write};
+use crate::database::errors::MalojaError;
 use crate::entity::{
     album::{Entity as Album, Model as AlbumModel, ActiveModel as AlbumActiveModel, Column as AlbumColumn, AlbumWrite, AlbumRead},
     track::{Entity as Track, Model as TrackModel, ActiveModel as TrackActiveModel, Column as TrackColumn, TrackWrite, TrackRead},
@@ -23,7 +24,7 @@ fn normalize(input: &str) -> String {
 // this is totally gonna work this time lmao
 // link the relevant xkcd here
 #[allow(clippy::collapsible_else_if)]
-pub async fn get_or_create_artists(input: Vec<ArtistWrite>) -> Result<HashMap<ArtistWrite, ArtistModel>, DbErr> {
+pub async fn get_or_create_artists(input: Vec<ArtistWrite>) -> Result<HashMap<ArtistWrite, ArtistModel>, MalojaError> {
     let db = connect().await?;
     let mut result: HashMap<ArtistWrite, Option<ArtistModel>> = HashMap::new();
     input.clone().into_iter().for_each(|artist| {
@@ -114,6 +115,8 @@ pub async fn get_or_create_artists(input: Vec<ArtistWrite>) -> Result<HashMap<Ar
             let db_result = Artist::insert_many(chunk_inserts).exec(&db).await.unwrap();
         }
 
+        mark_db_write();
+
         debug!("Inserted {:?} Artists", amount_inserts);
         Box::pin(get_or_create_artists(input)).await
     }
@@ -125,7 +128,7 @@ pub async fn get_or_create_artists(input: Vec<ArtistWrite>) -> Result<HashMap<Ar
 }
 
 #[allow(clippy::collapsible_else_if)]
-pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> Result<HashMap<TrackWrite, TrackModel>, DbErr> {
+pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> Result<HashMap<TrackWrite, TrackModel>, MalojaError> {
     let db = connect().await?;
     let mut result: HashMap<TrackWrite, Option<TrackModel>> = HashMap::new();
     input.clone().into_iter().for_each(|track| {
@@ -271,6 +274,8 @@ pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> Result<HashMap<Trac
 
         }
 
+        mark_db_write();
+
         debug!("Inserted {:?} Tracks", amount_inserts);
         Box::pin(get_or_create_tracks(input)).await
     }
@@ -284,7 +289,7 @@ pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> Result<HashMap<Trac
 
 
 #[allow(clippy::collapsible_else_if)]
-pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> Result<HashMap<AlbumWrite, AlbumModel>, DbErr> {
+pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> Result<HashMap<AlbumWrite, AlbumModel>, MalojaError> {
     let db = connect().await?;
     let mut result: HashMap<AlbumWrite, Option<AlbumModel>> = HashMap::new();
     input.clone().into_iter().for_each(|album| {
@@ -406,6 +411,8 @@ pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> Result<HashMap<Albu
 
         }
 
+        mark_db_write();
+
         debug!("Inserted {:?} Albums", amount_inserts);
         Box::pin(get_or_create_albums(input)).await
     }
@@ -418,7 +425,7 @@ pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> Result<HashMap<Albu
 
 
 #[allow(clippy::collapsible_else_if)]
-pub async fn create_scrobbles(input: Vec<ScrobbleWrite>, fail_on_existing: bool) -> Result<HashMap<ScrobbleWrite, ScrobbleModel>, DbErr> {
+pub async fn create_scrobbles(input: Vec<ScrobbleWrite>, fail_on_existing: bool) -> Result<HashMap<ScrobbleWrite, ScrobbleModel>, MalojaError> {
     // this one is a bit different that the other entity ones because we never supply a scrobblewrite
     // as part of another entity to either create or fetch - scrobbles are only ever created (or patched?)
     let db = connect().await?;
@@ -484,6 +491,8 @@ pub async fn create_scrobbles(input: Vec<ScrobbleWrite>, fail_on_existing: bool)
             let chunk_inserts = chunk.to_vec();
             let db_result = Scrobble::insert_many(chunk_inserts).exec(&db).await.unwrap();
         }
+
+        mark_db_write();
 
         debug!("Inserted {:?} Scrobbles", amount_inserts);
         Box::pin(create_scrobbles(input, false)).await

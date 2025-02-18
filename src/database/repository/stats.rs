@@ -1,6 +1,7 @@
 use sea_orm::{ColumnTrait, DbErr, EntityTrait, JoinType, QueryFilter, QueryOrder, QuerySelect, RelationTrait};
 use sea_query::Expr;
 use crate::database::connect;
+use crate::database::errors::MalojaError;
 use crate::database::repository::{resolve_artist_ids, resolve_track_ids, resolve_album_ids};
 use crate::database::views::ChartsEntry;
 use crate::entity;
@@ -18,7 +19,7 @@ use crate::timeranges::TimeRange;
 
 
 
-pub async fn charts_tracks(timerange: TimeRange, artist_id: Option<u32>, album_id: Option<u32>) -> Result<Vec<ChartsEntry<TrackRead>>, DbErr> {
+pub async fn charts_tracks(timerange: TimeRange, artist_id: Option<u32>, album_id: Option<u32>) -> Result<Vec<ChartsEntry<TrackRead>>, MalojaError> {
     let db = connect().await?;
     let (from_ts, to_ts) = timerange.timestamp_boundaries();
     let mut query = Track::find()
@@ -62,7 +63,7 @@ pub async fn charts_tracks(timerange: TimeRange, artist_id: Option<u32>, album_i
     Ok(charts)
 }
 
-pub async fn charts_artists(timerange: TimeRange) -> Result<Vec<ChartsEntry<ArtistRead>>, DbErr> {
+pub async fn charts_artists(timerange: TimeRange) -> Result<Vec<ChartsEntry<ArtistRead>>, MalojaError> {
     let db = connect().await?;
     let (from_ts, to_ts) = timerange.timestamp_boundaries();
     let mut query = Artist::find()
@@ -96,7 +97,7 @@ pub async fn charts_artists(timerange: TimeRange) -> Result<Vec<ChartsEntry<Arti
     Ok(charts)
 }
 
-pub async fn charts_albums(timerange: TimeRange, artist_id: Option<u32>) -> Result<Vec<ChartsEntry<AlbumRead>>, DbErr> {
+pub async fn charts_albums(timerange: TimeRange, artist_id: Option<u32>) -> Result<Vec<ChartsEntry<AlbumRead>>, MalojaError> {
     let db = connect().await?;
     let (from_ts, to_ts) = timerange.timestamp_boundaries();
     let mut query = Album::find()

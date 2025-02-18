@@ -11,6 +11,7 @@ use serde::Deserialize;
 use crate::configuration::FOLDERS;
 use crate::configuration::logging::display_path;
 use crate::database::connect;
+use crate::database::errors::MalojaError;
 use crate::database::repository::create_scrobbles;
 use crate::entity::{
     scrobble::Entity as ScrobbleEntity, scrobble::ActiveModel as ScrobbleModel,
@@ -69,7 +70,7 @@ struct MalojaExportAlbum {
 }
 
 
-pub async fn import_maloja(file: PathBuf) -> Result<(), Box<dyn Error>> {
+pub async fn import_maloja(file: PathBuf) -> Result<(), MalojaError> {
 
 
     info!("Importing from Maloja export {}. This could take a while...", display_path(&file));
