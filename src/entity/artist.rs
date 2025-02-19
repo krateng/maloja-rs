@@ -68,4 +68,16 @@ pub struct ArtistRead {
     pub name: String,
 }
 
+/// Representation of an artist as they should be shown to the outside when within the context of a related entity (track or album)
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
+#[schema(title = "Artist (Context)", as = entity::artist::ArtistReadContext, description = "Performer, composer or otherwise credited entity in relation to a specific album or track")]
+pub struct ArtistReadContext {
+    #[schema(minimum = 1)]
+    pub id: u32,
+    #[schema(examples("Tom Holkenborg"))]
+    pub name: String,
+    #[schema(examples("Junkie XL"))]
+    pub alias: Option<String>,
+    pub primary: bool,
+}
 

@@ -3,7 +3,7 @@ use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use crate::entity::{
     album::{Entity as Album, Model as AlbumModel, ActiveModel as AlbumActiveModel, Column as AlbumColumn, AlbumWrite, AlbumRead},
     track::{Entity as Track, Model as TrackModel, ActiveModel as TrackActiveModel, Column as TrackColumn, TrackWrite, TrackRead},
-    artist::{Entity as Artist, Model as ArtistModel, ActiveModel as ArtistActiveModel, Column as ArtistColumn, ArtistWrite, ArtistRead},
+    artist::{Entity as Artist, Model as ArtistModel, ActiveModel as ArtistActiveModel, Column as ArtistColumn, ArtistWrite, ArtistRead, ArtistReadContext},
     scrobble::{Entity as Scrobble, Model as ScrobbleModel, ActiveModel as ScrobbleActiveModel, Column as ScrobbleColumn, ScrobbleWrite},
     track_artist::{Entity as TrackArtist, ActiveModel as TrackArtistActiveModel},
     album_artist::{Entity as AlbumArtist, ActiveModel as AlbumArtistActiveModel},
@@ -26,13 +26,14 @@ pub async fn resolve_track_ids(ids: Vec<u32>, db: &DatabaseConnection) -> HashMa
         result.insert(track.id, TrackRead {
             id: track.id,
             title: track.title,
-            primary_artists: artists.into_iter().map(|a| {
-                ArtistRead {
+            artists: artists.into_iter().map(|a| {
+                ArtistReadContext {
                     id: a.id,
                     name: a.name,
+                    alias: None,
+                    primary: true
                 }
             }).collect(),
-            secondary_artists: vec![],
             album: track.album_id.map(|album_id| album_map[&album_id].clone()),
             track_length: track.track_length,
         });
@@ -55,9 +56,11 @@ pub async fn resolve_album_ids(ids: Vec<u32>, db: &DatabaseConnection) -> HashMa
             id: album.id,
             album_title: album.album_title,
             album_artists: artists.into_iter().map(|a| {
-                ArtistRead {
+                ArtistReadContext {
                     id: a.id,
                     name: a.name,
+                    alias: None,
+                    primary: true,
                 }
             }).collect(),
         });

@@ -1,7 +1,7 @@
 use sea_orm::entity::prelude::*;
 use serde::Serialize;
 use utoipa::ToSchema;
-use super::artist::{ArtistRead, ArtistWrite};
+use super::artist::{ArtistRead, ArtistReadContext, ArtistWrite};
 use super::album::{AlbumRead, AlbumWrite};
 
 #[derive(Debug, Clone, DeriveEntityModel, Serialize)]
@@ -87,8 +87,7 @@ pub struct TrackRead {
     pub id: u32,
     #[schema(examples("Whistle"))]
     pub title: String,
-    pub primary_artists: Vec<ArtistRead>,
-    pub secondary_artists: Vec<ArtistRead>,
+    pub artists: Vec<ArtistReadContext>,
     pub album: Option<AlbumRead>,
     #[schema(examples(195))]
     pub track_length: Option<u32>,
