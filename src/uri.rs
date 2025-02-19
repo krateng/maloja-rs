@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use utoipa::IntoParams;
 use regex::Regex;
+use crate::database::errors::MalojaError;
 use crate::timeranges::{TimeRange, BaseTimeRange, ALL_TIME};
 
 // Query args
@@ -24,32 +25,56 @@ pub struct QueryTimerange {
 }
 
 impl QueryTimerange {
-    pub fn to_timerange(&self) -> TimeRange {
+    pub fn to_timerange(&self) -> Result<TimeRange, MalojaError> {
+        if self.during.is_some() && (self.from.is_some() || self.to.is_some()) {
+            return Err(MalojaError::ParseError {
+                message: "Can either specify a timerange with during, or start and end with from and to; not combine them".to_string(),
+            })
+        }
+        if self.during.is_none() && self.from.is_none() && self.to.is_none() {
+            return Ok(ALL_TIME);
+        }
         if let Some(during) = &self.during {
-            let timerange = Self::match_string(during);
-            timerange
+            Ok(TimeRange::Simple(Self::match_string(during)?))
         }
         else {
-            ALL_TIME
+            let tr = TimeRange::Composite {
+                start: if let Some(from) = &self.from { Some(Self::match_string(from)?) } else { None },
+                end: if let Some(to) = &self.to { Some(Self::match_string(to)?) } else { None },
+            };
+            if tr.validate() {
+                Ok(tr)
+            }
+            else {
+                Err(MalojaError::ParseError {
+                    message: "From range must be before to range".to_string()
+                })
+            }
         }
     }
 
-    fn match_string(input: &str) -> TimeRange {
+    fn match_string(input: &str) -> Result<BaseTimeRange, MalojaError> {
         if let Some(caps) = Regex::new(r"^(\d{3,4})$").unwrap().captures(input) {
-            return TimeRange::Simple(BaseTimeRange::Year { year: caps[1].parse().unwrap() });
+            return Ok(BaseTimeRange::Year { year: caps[1].parse().unwrap() });
         }
         if let Some(caps) = Regex::new(r"^(\d{3,4})/(1[0-2]|0?[1-9])$").unwrap().captures(input) {
-            return TimeRange::Simple(BaseTimeRange::Month { year: caps[1].parse().unwrap(), month: caps[2].parse().unwrap() });
+            return Ok(BaseTimeRange::Month { year: caps[1].parse().unwrap(), month: caps[2].parse().unwrap() });
         }
         if let Some(caps) = Regex::new(r"^(\d{3,4})/(1[0-2]|0?[1-9])/(3[01]|[12][0-9]|0?[1-9])$").unwrap().captures(input) {
-            return TimeRange::Simple(BaseTimeRange::Day { year: caps[1].parse().unwrap(), month: caps[2].parse().unwrap(), day: caps[3].parse().unwrap() });
+            return Ok(BaseTimeRange::Day { year: caps[1].parse().unwrap(), month: caps[2].parse().unwrap(), day: caps[3].parse().unwrap() });
         }
         if let Some(caps) = Regex::new(r"^(\d{3,4})w(5[0-2]|[1-4][0-9]|[1-9])$").unwrap().captures(input) {
-            return TimeRange::Simple(BaseTimeRange::Week { year: caps[1].parse().unwrap(), week: caps[2].parse().unwrap() });
+            return Ok(BaseTimeRange::Week { year: caps[1].parse().unwrap(), week: caps[2].parse().unwrap() });
         }
-        ALL_TIME
+        Err(MalojaError::ParseError {
+            message: "Timerange could not be parsed".to_string(),
+        })
 
     }
+}
+
+struct QueryTimesteps {
+
 }
 
 #[derive(Deserialize, IntoParams, Debug)]

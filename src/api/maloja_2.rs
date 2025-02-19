@@ -1,3 +1,4 @@
+use std::error::Error;
 use std::future::Future;
 use axum::extract::{FromRequestParts, Query};
 use axum::extract::path::ErrorKind;
@@ -81,7 +82,8 @@ impl IntoResponse for MalojaError {
             MalojaError::TrackNotFound { id } => create_response(&self, StatusCode::NOT_FOUND, format!("Track {} not found", id)),
             MalojaError::AlbumNotFound { id } => create_response(&self, StatusCode::NOT_FOUND, format!("Album {} not found", id)),
             MalojaError::DatabaseConnectionError { message } => create_response(&self, StatusCode::INTERNAL_SERVER_ERROR, message.clone()),
-            e => create_response(&self, StatusCode::INTERNAL_SERVER_ERROR, String::from("Unspecified Server Error")),
+            MalojaError::ParseError { message } => create_response(&self, StatusCode::BAD_REQUEST, message.clone()),
+            e => create_response(&self, StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
         }
     }
 }
@@ -207,7 +209,7 @@ async fn charts_tracks(
     Query(params_limit_artist): Query<QueryLimitArtist>,
     Query(params_limit_album): Query<QueryLimitAlbum>
 ) -> Result<(StatusCode, Json<Charts<TrackRead>>), MalojaError> {
-    let timerange = params_time.to_timerange();
+    let timerange = params_time.to_timerange()?;
     let artist_id = params_limit_artist.to_artist_id();
     let album_id = params_limit_album.to_album_id();
     let tracks = database::repository::charts_tracks(timerange, artist_id, album_id).await?;
@@ -234,7 +236,7 @@ async fn charts_tracks(
 async fn charts_artists(
     Query(params_time): Query<QueryTimerange>
 ) -> Result<(StatusCode, Json<Charts<ArtistRead>>), MalojaError> {
-    let timerange = params_time.to_timerange();
+    let timerange = params_time.to_timerange()?;
     let artists = database::repository::charts_artists(timerange).await?;
     Ok((StatusCode::OK, Json(Charts {
         pagination: PaginationInfo {
@@ -260,7 +262,7 @@ async fn charts_albums(
     Query(params_time): Query<QueryTimerange>,
     Query(params_limit_artist): Query<QueryLimitArtist>
 ) -> Result<(StatusCode, Json<Charts<AlbumRead>>), MalojaError> {
-    let timerange = params_time.to_timerange();
+    let timerange = params_time.to_timerange()?;
     let artist_id = params_limit_artist.to_artist_id();
     let albums = database::repository::charts_albums(timerange, artist_id).await?;
     Ok((StatusCode::OK, Json(Charts {

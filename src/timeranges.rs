@@ -18,8 +18,8 @@ pub enum BaseTimeRange {
 
 pub enum TimeRange {
     Simple(BaseTimeRange),
-    Composite { start: BaseTimeRange, end: BaseTimeRange },
-    Infinite,
+    Composite { start: Option<BaseTimeRange>, end: Option<BaseTimeRange> },
+    Infinite, //represented by Composite { None, None } as well, remove?
 }
 
 
@@ -135,18 +135,20 @@ impl TimeRange {
     }
 
     fn datetime_boundaries(&self) -> (DateTime<Tz>, DateTime<Tz>) {
+        let min: DateTime<Tz> = DateTime::from_timestamp(i32::MIN as i64, 0).unwrap().with_timezone(&TIMEZONE);
+        let max: DateTime<Tz> = DateTime::from_timestamp(i32::MAX as i64, 0).unwrap().with_timezone(&TIMEZONE);
         match self {
             TimeRange::Simple(base) => {
                 base.datetime_boundaries()
             }
             TimeRange::Composite { start, end } => {
-                (start.datetime_boundaries().0, end.datetime_boundaries().1)
+                (
+                    if let Some(start) = start { start.datetime_boundaries().0 } else { min },
+                    if let Some(end) = end { end.datetime_boundaries().1 } else { max }
+                )
             }
             TimeRange::Infinite => {
-                (
-                    DateTime::from_timestamp(i32::MIN as i64, 0).unwrap().with_timezone(&TIMEZONE),
-                    DateTime::from_timestamp(i32::MAX as i64, 0).unwrap().with_timezone(&TIMEZONE)
-                )
+                (min,max)
             }
         }
     }
@@ -176,6 +178,18 @@ impl TimeRange {
             TimeRange::Infinite {} => {
                 None
             }
+        }
+    }
+    
+    pub(crate) fn validate(&self) -> bool {
+        // TODO: i don't really like this being done here
+        match self {
+            TimeRange::Simple(base) => true,
+            TimeRange::Composite { start, end } => {
+                let (s,e) = &self.timestamp_boundaries();
+                (s < e)
+            }
+            TimeRange::Infinite {} => true,
         }
     }
 }
