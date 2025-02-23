@@ -1,0 +1,195 @@
+:root {
+    --base-color: #232327;
+    --base-color-dark: #090909;
+    --base-color-light: #343437;
+    --base-color-accent: #26262A;
+    --base-color-accent-dark: #1d1d21;
+    --base-color-accent-light: #404044;
+
+    --text-color: beige;
+    --text-color-selected: rgba(245, 245, 220, 0.72);
+    --text-color-secondary: #bbb;
+    --text-color-tertiary: grey;
+    --text-color-focus: yellow;
+
+    --ctrl-element-color-bg: rgba(0,255,255,0.1);
+    --ctrl-element-color-main: rgba(103,85,0,0.7);
+    --ctrl-element-color-focus: gold;
+
+    --button-color-bg: var(--text-color);
+    --button-color-bg-focus: var(--text-color-focus);
+    --button-color-fg: var(--base-color);
+    --button-color-fg-focus: var(--base-color);
+
+    --color-certified-diamond: 103, 161, 253;
+    --color-certified-platinum: 229, 228, 226;
+    --color-certified-gold: 255, 215, 0;
+
+    --color-rank-gold: var(--color-certified-gold);
+    --color-rank-silver: 192, 192, 192;
+    --color-rank-bronze: 205, 127, 50;
+}
+
+body {
+    --current-bg-color: var(--base-color); /* drag this information through inheritances */
+    background-color: var(--current-bg-color);
+    color: var(--text-color);
+    font-family: "Ubuntu", sans-serif;
+}
+
+/** Links **/
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+a:hover {
+    text-decoration: underline;
+}
+
+/** Inputs **/
+
+input[type="text"], input[type="number"] {
+    background-color: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--text-color);
+    color: white;
+}
+
+input:focus {
+    outline: 0;
+    background-color: var(--base-color-accent-light);
+}
+
+/* for links in running text */
+a.textlink {
+    color: var(--text-color-focus);
+}
+a.hidelink:hover {
+    /* for linked images etc */
+    text-decoration: none;
+}
+
+/** Scrollbar **/
+
+::-webkit-scrollbar {
+    width: 8px;
+    cursor: pointer;
+}
+::-webkit-scrollbar-track {
+    background-color: var(--ctrl-element-color-bg);
+}
+::-webkit-scrollbar-thumb {
+    background-color: var(--ctrl-element-color-main);
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--ctrl-element-color-focus);
+}
+
+
+
+/** BASE LAYOUT **/
+
+main {
+    display: grid;
+    padding: 20px;
+}
+main section#top_info {
+    grid-row: 1;
+    grid-column: 1 / -1;
+
+    display: grid;
+    grid-template-columns: 230px 1fr;
+
+    padding-bottom: 30px;
+}
+main section#top_info #top_image {
+    grid-row: 1;
+    grid-column: 1;
+    height: 200px;
+    width: 200px;
+    object-fit: cover;
+}
+main section#top_info #top_textblock {
+    grid-row: 1;
+    grid-column: 2;
+}
+
+footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding-left: 20px;
+    padding-right: 20px;
+    height: 50px;
+
+    background-color: var(--base-color-dark);
+
+    display: flex;
+    align-items: center;
+
+    opacity:1;
+}
+
+footer #left-side, footer #right-side {
+    flex: 1 1 0;
+}
+
+footer #left-side {
+    text-align: left;
+    padding-left: 10px;
+}
+
+footer #right-side {
+    text-align: right;
+    padding-right: 10px;
+}
+
+footer #notch {
+
+    --notch-size: 70px;
+    background-color: var(--base-color-dark);
+    width: var(--notch-size);
+    height: var(--notch-size);
+    position: relative;
+    margin-top: -5px;
+    z-index: 1;
+
+    border-radius: 50%;
+    transform: translate(0%, -40%);
+}
+
+footer #notch img {
+    --notch-img-size: 80px;
+    position: absolute;
+    top: calc((var(--notch-size) - var(--notch-img-size)) / 2);
+    left: calc((var(--notch-size) - var(--notch-img-size)) / 2);
+
+    width: var(--notch-img-size);
+    height: auto;
+
+}
+footer #notch img:hover {
+    /*transform: scale(1.1);*/
+    animation: spin 4s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    } to {
+          transform: rotate(360deg);
+      }
+}
+
+
+
+/* head section */
+h1#heading {
+    font-size: 35px;
+    margin: 0;
+}
+span#pre_heading, span#post_heading {
+    font-size: 19px;
+}

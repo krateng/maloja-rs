@@ -181,6 +181,11 @@ impl TimeRange {
         }
     }
     
+    pub fn includes(&self, timestamp: i64) -> bool {
+        let (start, end) = self.timestamp_boundaries();
+        (start <= timestamp) && (timestamp <= end)
+    }
+    
     pub(crate) fn validate(&self) -> bool {
         // TODO: i don't really like this being done here
         match self {

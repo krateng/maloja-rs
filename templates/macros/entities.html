@@ -1,0 +1,18 @@
+{% macro artist_link(artistread) -%}
+<a href="/artist/{{ artistread.id }}">{{ artistread.name }}</a>
+{%- endmacro %}
+
+{% macro track_link(trackread) -%}
+<a href="/track/{{ trackread.id }}">{{ trackread.title }}</a>
+{%- endmacro %}
+
+{% macro album_link(albumread) -%}
+<a href="/album/{{ albumread.id }}">{{ albumread.album_title }}</a>
+{%- endmacro %}
+
+{% macro artist_links(artistreads) -%}
+    {% for artistread in artistreads -%}
+        {% call artist_link(artistread) -%}
+        {% if !loop.last %}, {% endif %}
+    {%- endfor %}
+{%- endmacro %}

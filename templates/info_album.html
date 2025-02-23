@@ -1,0 +1,13 @@
+{% extends "abstracts/base.html" %}
+{% import "macros/entities.html" as entities %}
+
+{% block title %}{{ album.album_title }} - Maloja{% endblock title %}
+
+{% block pre_heading %}
+    {% call entities::artist_links(album.album_artists) %}
+{% endblock pre_heading %}
+{% block heading %}{{ album.album_title }}{% endblock heading %}
+
+{% block top_info %}
+
+{% endblock top_info%}

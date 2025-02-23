@@ -1,0 +1,27 @@
+{% extends "abstracts/base.html" %}
+{% block title %}Maloja - About{% endblock title %}
+
+{% block heading %}Maloja{% endblock heading %}
+
+{% block top_info %}
+<span>Version {{ version }}</span>
+{% endblock top_info%}
+
+
+{% block body_sections %}
+<section>
+	Get your own Maloja server:
+	<br/><br/>
+	<a href="https://github.com/krateng/maloja" class="hidelink">
+		<img src="https://img.shields.io/github/v/tag/krateng/maloja?label=GitHub&style=for-the-badge"  alt="GitHub Badge"/>
+	</a>
+	<a href="https://hub.docker.com/r/krateng/maloja" class="hidelink">
+		<img src="https://img.shields.io/docker/v/krateng/maloja?label=Docker&style=for-the-badge"  alt="Dockerhub Badge"/>
+	</a>
+	<br/><br/>
+	Maloja is released under the <a class='textlink' href='https://github.com/krateng/maloja/blob/master/LICENSE'>GNU General Public License v3.0</a>.
+
+</section>
+
+
+{% endblock body_sections %}

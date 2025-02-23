@@ -25,3 +25,6 @@ regex = { version = "1.11.1" }
 sea-query = { version = "0.32.1" }
 strum_macros = "0.27.1"
 strum = { version = "0.27.1" }
+askama = { version = "0.12.1", features = ["with-axum"] }
+askama_axum = { version = "0.4.0" }
+dynja = { version = "0.4.1", features = ["askama_release"] }
