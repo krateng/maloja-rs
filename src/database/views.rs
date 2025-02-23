@@ -20,6 +20,14 @@ pub struct Top<T: Clone> {
     result: Vec<TopEntry<T>>
 }
 
+#[derive(Serialize, ToSchema)]
+pub struct Paginated<T: Clone> {
+    #[schema(inline)]
+    pub(crate) pagination: PaginationInfo,
+    #[schema(inline)]
+    pub(crate) result: Vec<T>
+}
+
 
 #[derive(Serialize, ToSchema, Clone, Debug)]
 pub struct PaginationInfo {

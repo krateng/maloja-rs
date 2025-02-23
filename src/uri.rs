@@ -3,13 +3,36 @@ use serde::{Deserialize, Serialize};
 use utoipa::IntoParams;
 use regex::Regex;
 use crate::database::errors::MalojaError;
+use crate::database::views::{Paginated, PaginationInfo};
 use crate::timeranges::{TimeRange, BaseTimeRange, ALL_TIME};
 
 // Query args
+#[derive(Deserialize, IntoParams, Debug)]
+#[into_params(parameter_in=Query)]
 pub struct QueryPagination {
     page: Option<u32>,
     per_page: Option<u32>,
 }
+impl QueryPagination {
+    pub fn paginate_results<T: Clone>(&self, results: Vec<T>) -> Paginated<T> {
+        let page = self.page.unwrap_or(1);
+        let per_page = self.per_page.unwrap_or(50);
+        let start_index = ((page-1) * per_page) as usize;
+        let end_index = (start_index + per_page as usize);
+        let results_slice = results[start_index..end_index].to_owned();
+        let pages = (results.len() + (per_page as usize) - 1) / (per_page as usize); // Division that rounds up
+        Paginated {
+            pagination: PaginationInfo {
+                page: page,
+                pages: pages as u32,
+                items_per_page: per_page,
+                items_total: results.len() as u32,
+            },
+            result: results_slice
+        }
+    }
+}
+
 #[derive(Deserialize, IntoParams, Debug)]
 #[into_params(parameter_in=Query)]
 pub struct QueryTimerange {

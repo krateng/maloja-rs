@@ -22,9 +22,9 @@ use crate::entity::artist::{Model as Artist, ArtistRead};
 use crate::entity::track::{Model as Track, TrackRead};
 use crate::entity::scrobble::{Model as Scrobble, ScrobbleRead};
 use crate::entity::album::{Model as Album, AlbumRead};
-use crate::database::views::{Charts, PaginationInfo, Top};
+use crate::database::views::{Charts, Paginated, PaginationInfo, Top};
 use crate::timeranges::{TimeRange, BaseTimeRange, ALL_TIME};
-use crate::uri::{PathEntity, QueryLimitAlbum, QueryLimitArtist, QueryLimitTrack, QueryTimerange};
+use crate::uri::{PathEntity, QueryLimitAlbum, QueryLimitArtist, QueryLimitTrack, QueryPagination, QueryTimerange};
 
 pub const API: ScrobbleAPI = ScrobbleAPI {
     prefix: "/maloja_2",
@@ -282,9 +282,9 @@ async fn charts_albums(
 #[utoipa::path(
     get,
     path = "/scrobbles",
-    params(QueryTimerange, QueryLimitArtist, QueryLimitAlbum, QueryLimitTrack),
+    params(QueryTimerange, QueryLimitArtist, QueryLimitAlbum, QueryLimitTrack, QueryPagination),
     responses(
-        (status = OK, body = inline(Vec<ScrobbleRead>), description = "Successful request"),
+        (status = OK, body = inline(Paginated<ScrobbleRead>), description = "Successful request"),
         (status = INTERNAL_SERVER_ERROR, body = inline(APIError), description = "Server error while handling the request"),
     )
 )]
@@ -292,12 +292,14 @@ async fn scrobbles(
     Query(params_time): Query<QueryTimerange>,
     Query(params_limit_artist): Query<QueryLimitArtist>,
     Query(params_limit_album): Query<QueryLimitAlbum>,
-    Query(params_limit_track): Query<QueryLimitTrack>
-) -> Result<(StatusCode, Json<Vec<ScrobbleRead>>), MalojaError> {
+    Query(params_limit_track): Query<QueryLimitTrack>,
+    Query(params_pagination): Query<QueryPagination>
+) -> Result<(StatusCode, Json<Paginated<ScrobbleRead>>), MalojaError> {
     let timerange = params_time.to_timerange()?;
     let artist_id = params_limit_artist.to_artist_id();
     let album_id = params_limit_album.to_album_id();
     let track_id = params_limit_track.to_track_id();
     let scrobbles = database::repository::scrobbles(timerange, artist_id, album_id, track_id, true).await?;
-    Ok((StatusCode::OK, Json(scrobbles)))
+    let paginated_scrobbles = params_pagination.paginate_results(scrobbles);
+    Ok((StatusCode::OK, Json(paginated_scrobbles)))
 }
