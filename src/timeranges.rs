@@ -1,26 +1,41 @@
-use chrono::{naive::Days, DateTime, Datelike, TimeZone, Weekday, NaiveDate, NaiveDateTime, Months};
+use std::fmt::{Display, Formatter};
+use chrono::{naive::Days, DateTime, Datelike, TimeZone, Weekday, NaiveDate, NaiveDateTime, Months, Utc};
 use chrono_tz::Tz;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use utoipa::{PartialSchema, ToSchema};
+use utoipa::openapi::{RefOr, Schema};
 
 const TIMEZONE: Tz = Tz::Europe__Vienna; //AEIOU
 const WEEK_BEGIN: Weekday = Weekday::Sun;
+const FIRST_STAMP: i64 = 825092900; //TODO
 
 pub const ALL_TIME: TimeRange = TimeRange::Infinite {};
 
 
-// Each time range needs to offer previous / next, its first and last timestamp
 
+/// The basic time range types that correspond to gregorian units
+#[derive(Clone, Debug, Serialize, ToSchema)]
 pub enum BaseTimeRange {
     Day { year: i32, month: u8, day: u8 },
     Week { year: i32, week: u8 },
     Month { year: i32, month: u8 },
     Year { year: i32 },
 }
+/// A fieldless enum simply to select the different types of time ranges as used by [`BaseTimeRange`]
+#[derive(Clone, Debug)]
+pub enum RangeType {
+    Day, Week, Month, Year
+}
 
+#[derive(Clone, Debug)]
+// TODO better toschema
 pub enum TimeRange {
     Simple(BaseTimeRange),
     Composite { start: Option<BaseTimeRange>, end: Option<BaseTimeRange> },
     Infinite, //represented by Composite { None, None } as well, remove?
 }
+
+
 
 
 impl BaseTimeRange {
@@ -125,6 +140,24 @@ impl BaseTimeRange {
             }
         }
     }
+
+    fn describe(&self) -> String {
+        match &self {
+            BaseTimeRange::Day { year, month, day } => { format!("{} {} {}", day, month, year) }
+            BaseTimeRange::Week { year, week } => { format!("W{} {}", week, year) }
+            BaseTimeRange::Month { year, month } => { format!("{} {}", month, year) }
+            BaseTimeRange::Year { year } => { format!("{}", year) }
+        }
+    }
+
+    fn describe_simple(&self) -> String {
+        match &self {
+            BaseTimeRange::Day { year, month, day } => { format!("{}/{}/{}", year, month, day) }
+            BaseTimeRange::Week { year, week } => { format!("{}w{}", year, week) }
+            BaseTimeRange::Month { year, month } => { format!("{}/{}", year, month) }
+            BaseTimeRange::Year { year } => { format!("{}", year) }
+        }
+    }
 }
 
 impl TimeRange {
@@ -135,8 +168,12 @@ impl TimeRange {
     }
 
     fn datetime_boundaries(&self) -> (DateTime<Tz>, DateTime<Tz>) {
-        let min: DateTime<Tz> = DateTime::from_timestamp(i32::MIN as i64, 0).unwrap().with_timezone(&TIMEZONE);
-        let max: DateTime<Tz> = DateTime::from_timestamp(i32::MAX as i64, 0).unwrap().with_timezone(&TIMEZONE);
+        // let min: DateTime<Tz> = DateTime::from_timestamp(i32::MIN as i64, 0).unwrap().with_timezone(&TIMEZONE);
+        // let max: DateTime<Tz> = DateTime::from_timestamp(i32::MAX as i64, 0).unwrap().with_timezone(&TIMEZONE);
+
+        let min: DateTime<Tz> = DateTime::from_timestamp(FIRST_STAMP, 0).unwrap().with_timezone(&TIMEZONE);
+        let max: DateTime<Tz> = Utc::now().with_timezone(&TIMEZONE).date_naive().and_hms_opt(0,0,0).unwrap().and_local_timezone(TIMEZONE).unwrap();
+
         match self {
             TimeRange::Simple(base) => {
                 base.datetime_boundaries()
@@ -180,13 +217,13 @@ impl TimeRange {
             }
         }
     }
-    
+
     pub fn includes(&self, timestamp: i64) -> bool {
         let (start, end) = self.timestamp_boundaries();
         (start <= timestamp) && (timestamp <= end)
     }
     
-    pub(crate) fn validate(&self) -> bool {
+    pub fn validate(&self) -> bool {
         // TODO: i don't really like this being done here
         match self {
             TimeRange::Simple(base) => true,
@@ -197,4 +234,80 @@ impl TimeRange {
             TimeRange::Infinite {} => true,
         }
     }
+
+    pub fn get_subranges(&self, subrange_type: RangeType) -> Vec<TimeRange> {
+        let (first, last) = self.datetime_boundaries();
+        let mut result = vec![];
+        let first_base_obj = match subrange_type {
+            RangeType::Day => BaseTimeRange::Day { year: first.year(), month: first.month() as u8, day: first.day() as u8 },
+            RangeType::Week => BaseTimeRange::Week { year: first.year(), week: first.iso_week().week() as u8 }, //TODO actual week logic
+            RangeType::Month => BaseTimeRange::Month { year: first.year(), month: first.month() as u8 },
+            RangeType::Year => BaseTimeRange::Year { year: first.year() },
+        };
+        let mut next = TimeRange::Simple(first_base_obj);
+        loop {
+            result.push(next.clone());
+            if next.includes(last.timestamp()) {
+                break;
+            }
+            next = next.next().unwrap();
+        }
+        result
+    }
+
+    fn describe(&self) -> String {
+        match &self {
+            TimeRange::Simple(base) => { format!("{}", base) }
+            TimeRange::Composite { start, end } => {
+                match (start, end) {
+                    (Some(start), Some(end)) => { format!("{} to {}", start, end) }
+                    (Some(start), None) => { format!("From {}", start) }
+                    (None, Some(end)) => { format!("Until {}", end) }
+                    (None, None) => { format!("{}", "All Time") }
+                }
+
+            }
+            TimeRange::Infinite => { format!("{}", "All Time") }
+        }
+    }
+    fn describe_simple(&self) -> String {
+        match &self {
+            TimeRange::Simple(base) => { format!("{}", base.describe_simple()) }
+            TimeRange::Composite { start, end } => {
+                match (start, end) {
+                    (Some(start), Some(end)) => { format!("{} - {}", start.describe_simple(), end.describe_simple()) }
+                    (Some(start), None) => { format!("{} -", start.describe_simple()) }
+                    (None, Some(end)) => { format!("- {}", end.describe_simple()) }
+                    (None, None) => { format!("{}", "ALL") }
+                }
+
+            }
+            TimeRange::Infinite => { format!("{}", "All Time") }
+        }
+    }
 }
+
+// This is used for the askama rendering
+impl Display for BaseTimeRange {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", &self.describe())
+
+    }
+}
+impl Display for TimeRange {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", &self.describe())
+    }
+}
+
+// This is used in the API
+impl Serialize for TimeRange {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer
+    {
+        self.describe_simple().serialize(serializer)
+    }
+}
+
+

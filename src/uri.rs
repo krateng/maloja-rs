@@ -1,10 +1,11 @@
+use std::cmp::min;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use utoipa::IntoParams;
 use regex::Regex;
 use crate::database::errors::MalojaError;
 use crate::database::views::{Paginated, PaginationInfo};
-use crate::timeranges::{TimeRange, BaseTimeRange, ALL_TIME};
+use crate::timeranges::{TimeRange, BaseTimeRange, ALL_TIME, RangeType};
 
 // Query args
 #[derive(Deserialize, IntoParams, Debug)]
@@ -19,6 +20,7 @@ impl QueryPagination {
         let per_page = self.per_page.unwrap_or(50);
         let start_index = ((page-1) * per_page) as usize;
         let end_index = (start_index + per_page as usize);
+        let end_index = min(end_index, results.len());
         let results_slice = results[start_index..end_index].to_owned();
         let pages = (results.len() + (per_page as usize) - 1) / (per_page as usize); // Division that rounds up
         Paginated {
@@ -96,8 +98,23 @@ impl QueryTimerange {
     }
 }
 
-struct QueryTimesteps {
-
+#[derive(Deserialize, IntoParams, Debug)]
+#[into_params(parameter_in=Query)]
+pub struct QueryTimesteps {
+    /// `day`, `week`, `month` or `year`
+    #[param(example="day")]
+    pub step: String
+}
+impl QueryTimesteps {
+    pub fn to_type(&self) -> Result<RangeType, MalojaError> {
+        match self.step.as_str() {
+            "day" => Ok(RangeType::Day),
+            "week" => Ok(RangeType::Week),
+            "month" => Ok(RangeType::Month),
+            "year" => Ok(RangeType::Year),
+            _ => Err(MalojaError::ParseError { message: "Unknown range type".to_string() }),
+        }
+    }
 }
 
 #[derive(Deserialize, IntoParams, Debug)]
@@ -125,6 +142,20 @@ pub struct QueryLimitAlbum {
 impl QueryLimitAlbum {
     pub fn to_album_id(&self) -> Option<u32> {
         self.album
+    }
+}
+
+#[derive(Deserialize, IntoParams, Debug)]
+#[into_params(parameter_in=Query)]
+pub struct QueryLimitTrack{
+    /// Limit the output to this track
+    #[param(example=1337)]
+    track: Option<u32>
+}
+
+impl QueryLimitTrack {
+    pub fn to_track_id(&self) -> Option<u32> {
+        self.track
     }
 }
 

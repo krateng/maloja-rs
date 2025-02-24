@@ -3,7 +3,7 @@
 use std::time::Duration;
 use serde::Serialize;
 use utoipa::ToSchema;
-
+use crate::timeranges::TimeRange;
 
 #[derive(Serialize, ToSchema)]
 pub struct Charts<T: Clone> {
@@ -31,22 +31,46 @@ pub struct Paginated<T: Clone> {
 
 #[derive(Serialize, ToSchema, Clone, Debug)]
 pub struct PaginationInfo {
+    #[schema(examples(2))]
     pub page: u32,
+    #[schema(examples(5))]
     pub pages: u32,
+    #[schema(examples(50))]
     pub items_per_page: u32,
+    #[schema(examples(244))]
     pub items_total: u32,
 }
 #[derive(Serialize, ToSchema, Clone, Debug)]
 pub struct ChartsEntry<T> {
-    pub rank: u32,
+    #[schema(examples(3))]
+    pub rank: usize, //usize for the loop comparison in askama
     pub entry: T,
+    #[schema(examples(1337))]
     pub scrobbles: u32,
     //pub seconds: u32
 }
 #[derive(Serialize, ToSchema, Clone, Debug)]
 pub struct TopEntry<T> {
-    pub time_range: u32,
+    #[schema(value_type = String, examples("2024"))]
+    pub time_range: TimeRange,
     pub entry: T,
+    #[schema(examples(313))]
     pub scrobbles: u32,
     //pub seconds: u32
+}
+
+#[derive(Serialize, ToSchema, Clone, Debug)]
+pub struct PulseEntry {
+    #[schema(value_type = String, examples("2024"))]
+    pub time_range: TimeRange,
+    #[schema(examples(313))]
+    pub scrobbles: u32,
+}
+
+#[derive(Serialize, ToSchema, Clone, Debug)]
+pub struct PerformanceEntry {
+    #[schema(value_type = String, examples("2024"))]
+    pub time_range: TimeRange,
+    #[schema(examples(3))]
+    pub rank: u32,
 }

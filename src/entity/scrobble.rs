@@ -55,5 +55,6 @@ pub struct ScrobbleWrite {
 pub struct ScrobbleRead {
     #[schema(examples(904098042))]
     pub timestamp: i64,
+    pub time_local: String, //TODO generate in template instead?
     pub track: TrackRead,
 }

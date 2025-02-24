@@ -54,7 +54,7 @@ pub async fn charts_tracks(timerange: TimeRange, artist_id: Option<u32>, album_i
 
     let charts: Vec<ChartsEntry<TrackRead>> = result.into_iter().map(|(id, scrobbles, rank)| {
         ChartsEntry {
-            rank: rank,
+            rank: rank as usize,
             scrobbles: scrobbles,
             entry: id_map[&id].clone()
         }
@@ -88,7 +88,7 @@ pub async fn charts_artists(timerange: TimeRange) -> Result<Vec<ChartsEntry<Arti
 
     let charts: Vec<ChartsEntry<ArtistRead>> = result.into_iter().map(|(id, scrobbles, rank)| {
         ChartsEntry {
-            rank: rank,
+            rank: rank as usize,
             scrobbles: scrobbles,
             entry: id_map[&id].clone()
         }
@@ -129,7 +129,7 @@ pub async fn charts_albums(timerange: TimeRange, artist_id: Option<u32>) -> Resu
 
     let charts: Vec<ChartsEntry<AlbumRead>> = result.into_iter().map(|(id, scrobbles, rank)| {
         ChartsEntry {
-            rank: rank,
+            rank: rank as usize,
             scrobbles: scrobbles,
             entry: id_map[&id].clone()
         }

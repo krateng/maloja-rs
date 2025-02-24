@@ -45,8 +45,14 @@ pub async fn scrobbles(timerange: TimeRange, artist_id: Option<u32>, album_id: O
 
 
     let result = result.into_iter().map(|s| {
+        let tz = chrono_tz::Tz::Europe__Vienna; //TODO
+        let time = chrono::DateTime::from_timestamp(s.timestamp.clone(), 0).unwrap();
+        let fmt = "%d. %b %Y %H:%M %Z";
+        let local_time = time.with_timezone(&tz);
+        
         ScrobbleRead {
             timestamp: s.timestamp.clone(),
+            time_local: local_time.format(fmt).to_string(),
             track: track_map[&s.track_id].clone(),
         }
     }).collect();
