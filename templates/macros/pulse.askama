@@ -1,0 +1,18 @@
+{% import "macros/entities.askama" as entities %}
+
+{% macro pulse(pulse) %}
+<table class="entity_table">
+    {% for entry in pulse %}
+    <tr>
+        <td class="timerange">{{ entry.time_range }}</td>
+        <td class="amount">{{ entry.scrobbles }}</td>
+        <td class="bar">
+            {% let percent = 100 * entry.scrobbles / 400 %} {# TODO find max #}
+            <a href="/scrobbles">
+            <div style='width:{{ percent }}%;'></div>
+            </a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% endmacro %}

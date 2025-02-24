@@ -1,0 +1,61 @@
+{% import "macros/entities.askama" as entities %}
+
+{% macro track_charts(charts) -%}
+<table class="entity_table">
+    {% for entry in charts %}
+        <tr>
+            <td class="rank">{% if loop.index == entry.rank %}#{{ entry.rank }}{% endif %}</td> {# TODO: this only works for first page #}
+            {% call entities::track_cell(entry.entry.clone()) %}
+            <td class="amount">
+                <a href="/scrobbles">{{ entry.scrobbles }}</a>
+            </td>
+            <td class="bar">
+                {% let percent = 100 * entry.scrobbles / charts[0].scrobbles %}
+                <a href="/scrobbles">
+                <div style='width:{{ percent }}%;'></div>
+                </a>
+            </td>
+        </tr>
+    {% endfor %}
+</table>
+{% endmacro %}
+
+{% macro artist_charts(charts) -%}
+<table class="entity_table">
+    {% for entry in charts %}
+    <tr>
+        <td class="rank">{% if loop.index == entry.rank %}#{{ entry.rank }}{% endif %}</td> {# TODO: this only works for first page #}
+        {% call entities::artist_cell(entry.entry.clone()) %}
+        <td class="amount">
+            <a href="/scrobbles">{{ entry.scrobbles }}</a>
+        </td>
+        <td class="bar">
+            {% let percent = 100 * entry.scrobbles / charts[0].scrobbles %}
+            <a href="/scrobbles">
+                <div style='width:{{ percent }}%;'></div>
+            </a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% endmacro %}
+
+{% macro album_charts(charts) -%}
+<table class="entity_table">
+    {% for entry in charts %}
+    <tr>
+        <td class="rank">{% if loop.index == entry.rank %}#{{ entry.rank }}{% endif %}</td> {# TODO: this only works for first page #}
+        {% call entities::album_cell(entry.entry.clone()) %}
+        <td class="amount">
+            <a href="/scrobbles">{{ entry.scrobbles }}</a>
+        </td>
+        <td class="bar">
+            {% let percent = 100 * entry.scrobbles / charts[0].scrobbles %}
+            <a href="/scrobbles">
+                <div style='width:{{ percent }}%;'></div>
+            </a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% endmacro %}

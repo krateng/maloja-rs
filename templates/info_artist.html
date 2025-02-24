@@ -1,9 +1,31 @@
 {% extends "abstracts/base.html" %}
-{% block title %}{{ artist.name }} - Maloja{% endblock title %}
 
+{% import "macros/charts.askama" as charts %}
+{% import "macros/lists.askama" as lists %}
+{% import "macros/pulse.askama" as pulse %}
+
+{% block title %}{{ artist.name }} - Maloja{% endblock title %}
 
 {% block heading %}{{ artist.name }}{% endblock heading %}
 
 {% block top_info %}
 
 {% endblock top_info%}
+
+{% block body_sections %}
+<section>
+    <h2><a href="/charts_tracks?artist={{ artist.id }}">Track Charts</a></h2>
+    {% call charts::track_charts(track_charts[..track_charts.len().min(16)]) %}
+</section>
+<section>
+    <h2><a href="/scrobbles?artist={{ artist.id }}">Scrobbles</a></h2>
+    {% call lists::list_scrobbles(scrobbles[..scrobbles.len().min(16)]) %}
+</section>
+<section>
+    <h2><a href="/pulse?artist={{ artist.id }}">Pulse</a></h2>
+    {% call pulse::pulse(pulse) %}
+</section>
+<section>
+    <h2><a href="/performance?artist={{ artist.id }}">Performance</a></h2>
+</section>
+{% endblock body_sections %}

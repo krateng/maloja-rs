@@ -87,12 +87,82 @@ a.hidelink:hover {
 }
 
 
+/* TABLES */
+table.entity_table {
+    --current-bg-color: transparent;
+    white-space: nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    border-collapse:collapse;
+    table-layout: fixed;
+    width: 90%;
+}
+table.entity_table tr:nth-child(even) {
+    --current-bg-color: rgba(255,255,255,0.05);
+    /* make rows distinguishable with respect to any bg color */
+}
+table.entity_table tr:hover {
+    --current-bg-color: rgba(255,255,255,0.2);
+}
+table.entity_table tr {
+    background-color: var(--current-bg-color);
+    border-color: var(--current-bg-color);
+}
+table.entity_table tr td {
+    padding-top: 2px;
+    padding-bottom: 2px;
+    padding-right: 3px;
+    padding-left: 3px;
+    height: 1.4em;
+    white-space: nowrap;
+    position: relative;
+}
+
+table.entity_table span.secondary_cell_info {
+    color: var(--text-color-secondary);
+}
+table.entity_table td.time {
+    font-size: 90%;
+    color: var(--text-color-tertiary);
+    width: 11em;
+}
+table.entity_table td.timerange {
+    width: 6em;
+}
+table.entity_table td.rank {
+    text-align: right;
+    color: var(--text-color-tertiary);
+    width: 2em;
+}
+table.entity_table td.amount {
+    text-align: right;
+    width: 2em;
+    padding-right: 1em;
+}
+table.entity_table td.bar {
+    width: 30em;
+}
+table.entity_table td.bar div {
+    background-color: var(--text-color);
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    display:inline-block;
+}
+table.entity_table tr:hover td.bar div {
+    background-color: var(--text-color-focus);
+}
+
+
 
 /** BASE LAYOUT **/
 
 main {
     display: grid;
     padding: 20px;
+    grid-template-columns: 50% 50%;
+    grid-template-rows: 350px 500px 500px;
+    min-height: 99%;
 }
 main section#top_info {
     grid-row: 1;

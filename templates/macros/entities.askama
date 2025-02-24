@@ -2,12 +2,33 @@
 <a href="/artist/{{ artistread.id }}">{{ artistread.name }}</a>
 {%- endmacro %}
 
+{% macro artist_cell(artistread) -%}
+<td>
+    {% call artist_link(artistread) %}
+</td>
+{%- endmacro %}
+
 {% macro track_link(trackread) -%}
 <a href="/track/{{ trackread.id }}">{{ trackread.title }}</a>
 {%- endmacro %}
 
+{% macro track_cell(trackread) -%}
+<td>
+    <span class="secondary_cell_info">{% call artist_links(trackread.artists) %}</span> –
+    {% call track_link(trackread) %}
+</td>
+{%- endmacro %}
+
+
 {% macro album_link(albumread) -%}
 <a href="/album/{{ albumread.id }}">{{ albumread.album_title }}</a>
+{%- endmacro %}
+
+{% macro album_cell(albumread) -%}
+<td>
+    <span class="secondary_cell_info">{% call artist_links(albumread.artists) %}</span> –
+    {% call album_link(albumread) %}
+</td>
 {%- endmacro %}
 
 {% macro artist_links(artistreads) -%}

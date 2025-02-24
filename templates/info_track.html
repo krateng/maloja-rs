@@ -1,5 +1,8 @@
 {% extends "abstracts/base.html" %}
-{% import "macros/entities.html" as entities %}
+
+{% import "macros/entities.askama" as entities %}
+{% import "macros/lists.askama" as lists %}
+{% import "macros/pulse.askama" as pulse %}
 
 {% block title %}{{ track.title }} - Maloja{% endblock title %}
 
@@ -17,4 +20,21 @@
 
 {% block top_info %}
 
-{% endblock top_info%}
+{% endblock top_info %}
+
+{% block body_sections %}
+<section>
+    <h2><a href="/scrobbles?track={{ track.id }}">Scrobbles</a></h2>
+    {% call lists::list_scrobbles(scrobbles[..scrobbles.len().min(16)]) %}
+</section>
+<section>
+    <!-- Empty section, we always want pulse and performance on one level -->
+</section>
+<section>
+    <h2><a href="/pulse?track={{ track.id }}">Pulse</a></h2>
+    {% call pulse::pulse(pulse) %}
+</section>
+<section>
+    <h2><a href="/performance?track={{ track.id }}">Performance</a></h2>
+</section>
+{% endblock %}

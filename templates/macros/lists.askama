@@ -1,0 +1,13 @@
+{% import "macros/entities.askama" as entities %}
+
+{% macro list_scrobbles(scrobbles) -%}
+<table class="entity_table">
+    {% for scrobble in scrobbles %}
+    <tr>
+        <td class="time">{{ scrobble.time_local }}</td>
+        {% call entities::track_cell(scrobble.track.clone()) %}
+    </tr>
+
+    {% endfor %}
+</table>
+{% endmacro %}
