@@ -22,9 +22,9 @@ use crate::entity::artist::{Model as Artist, ArtistRead};
 use crate::entity::track::{Model as Track, TrackRead};
 use crate::entity::scrobble::{Model as Scrobble, ScrobbleRead};
 use crate::entity::album::{Model as Album, AlbumRead};
-use crate::database::views::{Charts, Paginated, PaginationInfo, Top};
+use crate::database::views::{Charts, Paginated, PaginationInfo, PulseEntry, Top};
 use crate::timeranges::{TimeRange, BaseTimeRange, ALL_TIME};
-use crate::uri::{PathEntity, QueryLimitAlbum, QueryLimitArtist, QueryLimitTrack, QueryPagination, QueryTimerange};
+use crate::uri::{PathEntity, QueryLimitAlbum, QueryLimitArtist, QueryLimitTrack, QueryPagination, QueryTimerange, QueryTimesteps};
 
 pub const API: ScrobbleAPI = ScrobbleAPI {
     prefix: "/maloja_2",
@@ -41,6 +41,7 @@ fn register_routes(mut router: OpenApiRouter) -> OpenApiRouter {
         .routes(routes!(charts_artists))
         .routes(routes!(charts_albums))
         .routes(routes!(scrobbles))
+        .routes(routes!(pulse))
         //.fallback(notfound); // TODO: https://github.com/tokio-rs/axum/issues/3138
         .route("/{*rest}", any(notfound));
     router
@@ -49,7 +50,7 @@ fn register_routes(mut router: OpenApiRouter) -> OpenApiRouter {
 
 #[derive(OpenApi)]
 #[openapi(
-    paths(charts_tracks, charts_artists, charts_albums, info_artist, info_album, info_track, scrobbles),
+    paths(charts_tracks, charts_artists, charts_albums, info_artist, info_album, info_track, scrobbles, pulse),
     info(title = "Maloja API", version = "2"),
     components(schemas(ScrobbleRead,TrackRead,ArtistRead,AlbumRead))
 )]
@@ -302,4 +303,33 @@ async fn scrobbles(
     let scrobbles = database::repository::scrobbles(timerange, artist_id, album_id, track_id, true).await?;
     let paginated_scrobbles = params_pagination.paginate_results(scrobbles);
     Ok((StatusCode::OK, Json(paginated_scrobbles)))
+}
+
+#[utoipa::path(
+    get,
+    path = "/pulse",
+    params(QueryTimerange, QueryTimesteps, QueryLimitArtist, QueryLimitAlbum, QueryLimitTrack, QueryPagination),
+    responses(
+        (status = OK, body = inline(Paginated<PulseEntry>), description = "Successful request"),
+        (status = INTERNAL_SERVER_ERROR, body = inline(APIError), description = "Server error while handling the request"),
+    )
+)]
+async fn pulse(
+    Query(params_time): Query<QueryTimerange>,
+    Query(params_timesteps): Query<QueryTimesteps>,
+    Query(params_limit_artist): Query<QueryLimitArtist>,
+    Query(params_limit_album): Query<QueryLimitAlbum>,
+    Query(params_limit_track): Query<QueryLimitTrack>,
+    Query(params_pagination): Query<QueryPagination>
+) -> Result<(StatusCode, Json<Paginated<PulseEntry>>), MalojaError> {
+    let timerange = params_time.to_timerange()?;
+    let subranges = timerange.get_subranges(params_timesteps.to_type()?);
+    let artist_id = params_limit_artist.to_artist_id();
+    let album_id = params_limit_album.to_album_id();
+    let track_id = params_limit_track.to_track_id();
+
+    let result = database::repository::pulse(subranges, artist_id, album_id, track_id).await?;
+    let paginated_pulse = params_pagination.paginate_results(result);
+    Ok((StatusCode::OK, Json(paginated_pulse)))
+
 }
