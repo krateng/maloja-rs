@@ -21,6 +21,8 @@ impl QueryPagination {
         let start_index = ((page-1) * per_page) as usize;
         let end_index = (start_index + per_page as usize);
         let end_index = min(end_index, results.len());
+        // avoid errors if we request non existent pages - just show empty
+        let start_index = min(start_index, end_index);
         let results_slice = results[start_index..end_index].to_owned();
         let pages = (results.len() + (per_page as usize) - 1) / (per_page as usize); // Division that rounds up
         Paginated {
@@ -102,7 +104,7 @@ impl QueryTimerange {
 #[into_params(parameter_in=Query)]
 pub struct QueryTimesteps {
     /// `day`, `week`, `month` or `year`
-    #[param(example="day")]
+    #[param(example="month")]
     pub step: String
 }
 impl QueryTimesteps {

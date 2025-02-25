@@ -56,7 +56,7 @@
     {% for entry in performance %}
     <tr>
         <td class="timerange">{{ entry.time_range }}</td>
-        <td class="amount">{% if entry.rank != 0 %}{{ entry.rank }}{% else %}-{% endif %}</td>
+        <td class="amount">{% if entry.rank != 0 %}#{{ entry.rank }}{% else %}-{% endif %}</td>
         <td class="rank_bar">
 
             {% let percent = 390 / (3+entry.rank) %} {# TODO find max #}

@@ -1,8 +1,7 @@
 use std::error::Error;
-use std::future::Future;
 use axum::extract::{FromRequestParts, Query};
 use axum::extract::path::ErrorKind;
-use axum::extract::rejection::{JsonRejection, PathRejection, QueryRejection};
+use axum::extract::rejection::{PathRejection};
 use axum::http::request::Parts;
 use axum::http::StatusCode;
 use axum::Json;
@@ -13,17 +12,15 @@ use serde::Serialize;
 use utoipa::{OpenApi, ToSchema};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
-use strum_macros::{EnumString, Display};
 
 use crate::api::ScrobbleAPI;
 use crate::database;
 use crate::database::errors::MalojaError;
-use crate::entity::artist::{Model as Artist, ArtistRead};
-use crate::entity::track::{Model as Track, TrackRead};
-use crate::entity::scrobble::{Model as Scrobble, ScrobbleRead};
-use crate::entity::album::{Model as Album, AlbumRead};
-use crate::database::views::{Charts, Paginated, PaginationInfo, PulseEntry, Top};
-use crate::timeranges::{TimeRange, BaseTimeRange, ALL_TIME};
+use crate::entity::artist::{ArtistRead};
+use crate::entity::track::{TrackRead};
+use crate::entity::scrobble::{ScrobbleRead};
+use crate::entity::album::{AlbumRead};
+use crate::database::views::{Charts, Paginated, PaginationInfo, PerformanceEntry, PulseEntry};
 use crate::uri::{PathEntity, QueryLimitAlbum, QueryLimitArtist, QueryLimitTrack, QueryPagination, QueryTimerange, QueryTimesteps};
 
 pub const API: ScrobbleAPI = ScrobbleAPI {
@@ -42,6 +39,7 @@ fn register_routes(mut router: OpenApiRouter) -> OpenApiRouter {
         .routes(routes!(charts_albums))
         .routes(routes!(scrobbles))
         .routes(routes!(pulse))
+        .routes(routes!(performance))
         //.fallback(notfound); // TODO: https://github.com/tokio-rs/axum/issues/3138
         .route("/{*rest}", any(notfound));
     router
@@ -50,7 +48,7 @@ fn register_routes(mut router: OpenApiRouter) -> OpenApiRouter {
 
 #[derive(OpenApi)]
 #[openapi(
-    paths(charts_tracks, charts_artists, charts_albums, info_artist, info_album, info_track, scrobbles, pulse),
+    paths(charts_tracks, charts_artists, charts_albums, info_artist, info_album, info_track, scrobbles, pulse, performance),
     info(title = "Maloja API", version = "2"),
     components(schemas(ScrobbleRead,TrackRead,ArtistRead,AlbumRead))
 )]
@@ -329,6 +327,35 @@ async fn pulse(
     let track_id = params_limit_track.to_track_id();
 
     let result = database::repository::pulse(subranges, artist_id, album_id, track_id).await?;
+    let paginated_pulse = params_pagination.paginate_results(result);
+    Ok((StatusCode::OK, Json(paginated_pulse)))
+
+}
+
+#[utoipa::path(
+    get,
+    path = "/performance",
+    params(QueryTimerange, QueryTimesteps, QueryLimitArtist, QueryLimitAlbum, QueryLimitTrack, QueryPagination),
+    responses(
+        (status = OK, body = inline(Paginated<PerformanceEntry>), description = "Successful request"),
+        (status = INTERNAL_SERVER_ERROR, body = inline(APIError), description = "Server error while handling the request"),
+    )
+)]
+async fn performance(
+    Query(params_time): Query<QueryTimerange>,
+    Query(params_timesteps): Query<QueryTimesteps>,
+    Query(params_limit_artist): Query<QueryLimitArtist>,
+    Query(params_limit_album): Query<QueryLimitAlbum>,
+    Query(params_limit_track): Query<QueryLimitTrack>,
+    Query(params_pagination): Query<QueryPagination>
+) -> Result<(StatusCode, Json<Paginated<PerformanceEntry>>), MalojaError> {
+    let timerange = params_time.to_timerange()?;
+    let subranges = timerange.get_subranges(params_timesteps.to_type()?);
+    let artist_id = params_limit_artist.to_artist_id();
+    let album_id = params_limit_album.to_album_id();
+    let track_id = params_limit_track.to_track_id();
+
+    let result = database::repository::performance(subranges, artist_id, album_id, track_id).await?;
     let paginated_pulse = params_pagination.paginate_results(result);
     Ok((StatusCode::OK, Json(paginated_pulse)))
 
