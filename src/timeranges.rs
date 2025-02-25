@@ -2,6 +2,7 @@ use std::fmt::{Display, Formatter};
 use chrono::{naive::Days, DateTime, Datelike, TimeZone, Weekday, NaiveDate, NaiveDateTime, Months, Utc};
 use chrono_tz::Tz;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use strum_macros::Display;
 use utoipa::{PartialSchema, ToSchema};
 use utoipa::openapi::{RefOr, Schema};
 
@@ -22,7 +23,7 @@ pub enum BaseTimeRange {
     Year { year: i32 },
 }
 /// A fieldless enum simply to select the different types of time ranges as used by [`BaseTimeRange`]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Display)]
 pub enum RangeType {
     Day, Week, Month, Year
 }
@@ -60,7 +61,7 @@ impl BaseTimeRange {
                 } else {
                     first_day_this_year.checked_sub_days(Days::new(-use_offset as u64)).unwrap()
                 };
-                let firstday = first_week_start.checked_add_days(Days::new((7 * week) as u64)).unwrap();
+                let firstday = first_week_start.checked_add_days(Days::new(7u64 * *week as u64)).unwrap();
                 let lastday = firstday.checked_add_days(Days::new(6)).unwrap();
                 (
                     firstday.and_hms_opt(0, 0, 0).unwrap().and_local_timezone(TIMEZONE).unwrap(),
@@ -142,11 +143,12 @@ impl BaseTimeRange {
     }
 
     fn describe(&self) -> String {
+        let dt = self.datetime_boundaries().0;
         match &self {
-            BaseTimeRange::Day { year, month, day } => { format!("{} {} {}", day, month, year) }
-            BaseTimeRange::Week { year, week } => { format!("W{} {}", week, year) }
-            BaseTimeRange::Month { year, month } => { format!("{} {}", month, year) }
-            BaseTimeRange::Year { year } => { format!("{}", year) }
+            BaseTimeRange::Day { year, month, day } => {  dt.format("%d. %B %Y").to_string() }
+            BaseTimeRange::Week { year, week } => { dt.format("Week %-V %Y").to_string() }
+            BaseTimeRange::Month { year, month } => { dt.format("%B %Y").to_string() }
+            BaseTimeRange::Year { year } => { dt.format("%Y").to_string() }
         }
     }
 

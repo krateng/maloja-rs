@@ -23,9 +23,10 @@
 </section>
 <section>
     <h2><a href="/pulse?artist={{ artist.id }}">Pulse</a></h2>
-    {% call pulse::pulse(pulse) %}
+    {% call pulse::multi_pulse(pulses) %}
 </section>
 <section>
     <h2><a href="/performance?artist={{ artist.id }}">Performance</a></h2>
+    {% call pulse::multi_performance(performances) %}
 </section>
 {% endblock body_sections %}

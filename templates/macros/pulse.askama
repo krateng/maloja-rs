@@ -1,16 +1,76 @@
 {% import "macros/entities.askama" as entities %}
 
-{% macro pulse(pulse) %}
-<table class="entity_table">
+{% macro multi_pulse(pulses) %}
+
+{% for (rangetype, pulse) in pulses %}
+<input type="radio" class="tab_radio tab_radio_{{ loop.index }}" id="pulse_tab_{{ loop.index }}" name="pulse_tabs" checked />
+<label for="pulse_tab_{{ loop.index }}">{{ rangetype }}</label> {% if !loop.last %}|{% endif %}
+{% endfor %}
+<br /><br />
+
+{% for (rangetype, pulse) in pulses %}
+{% call pulse(pulse, loop.index) %}
+{% endfor %}
+
+{% endmacro %}
+
+{% macro pulse(pulse, tab_index) %}
+
+<table class="entity_table tab_content_{{ tab_index }}">
     {% for entry in pulse %}
     <tr>
         <td class="timerange">{{ entry.time_range }}</td>
         <td class="amount">{{ entry.scrobbles }}</td>
         <td class="bar">
-            {% let percent = 100 * entry.scrobbles / 400 %} {# TODO find max #}
+            {% let percent = 100 * entry.scrobbles / 20 %} {# TODO find max #}
             <a href="/scrobbles">
             <div style='width:{{ percent }}%;'></div>
             </a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% endmacro %}
+
+{% macro multi_performance(performances) %}
+
+{% for (rangetype, performance) in performances %}
+<input type="radio" class="tab_radio tab_radio_{{ loop.index }}" id="performance_tab_{{ loop.index }}" name="performance_tabs" checked />
+<label for="performance_tab_{{ loop.index }}">{{ rangetype }}</label> {% if !loop.last %}|{% endif %}
+{% endfor %}
+<br /><br />
+
+{% for (rangetype, performance) in performances %}
+{% call performance(performance, loop.index) %}
+{% endfor %}
+
+{% endmacro %}
+
+{% macro performance(performance, tab_index) %}
+
+<table class="entity_table tab_content_{{ tab_index }}">
+
+    {% for entry in performance %}
+    <tr>
+        <td class="timerange">{{ entry.time_range }}</td>
+        <td class="amount">{% if entry.rank != 0 %}{{ entry.rank }}{% else %}-{% endif %}</td>
+        <td class="rank_bar">
+
+            {% let percent = 390 / (3+entry.rank) %} {# TODO find max #}
+            {% if entry.rank != 0 %}
+            <a href="/charts">
+            <div style='width:{{ percent }}%;
+                {% if entry.rank == 1 %}
+                    border-color: var(--color-rank-gold);
+                {% else if entry.rank == 2 %}
+                    border-color: var(--color-rank-silver);
+                {% else if entry.rank == 3%}
+                    border-color: var(--color-rank-bronze);
+                {% endif %}
+            '></div>
+            </a>
+            {% endif %}
         </td>
     </tr>
     {% endfor %}

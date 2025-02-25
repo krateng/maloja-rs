@@ -12,8 +12,8 @@
     --text-color-tertiary: grey;
     --text-color-focus: yellow;
 
-    --ctrl-element-color-bg: rgba(0,255,255,0.1);
-    --ctrl-element-color-main: rgba(103,85,0,0.7);
+    --ctrl-element-color-bg: rgba(0, 255, 255, 0.1);
+    --ctrl-element-color-main: rgba(103, 85, 0, 0.7);
     --ctrl-element-color-focus: gold;
 
     --button-color-bg: var(--text-color);
@@ -21,6 +21,11 @@
     --button-color-fg: var(--base-color);
     --button-color-fg-focus: var(--base-color);
 
+    --color-certified-gold: rgba(255, 215, 0, 1);
+    --color-rank-gold: rgba(255, 215, 0, 1);
+    --color-rank-silver: rgba(192, 192, 192, 1);
+    --color-rank-bronze: rgba(205, 127, 50, 1);
+/*
     --color-certified-diamond: 103, 161, 253;
     --color-certified-platinum: 229, 228, 226;
     --color-certified-gold: 255, 215, 0;
@@ -28,6 +33,8 @@
     --color-rank-gold: var(--color-certified-gold);
     --color-rank-silver: 192, 192, 192;
     --color-rank-bronze: 205, 127, 50;
+
+ */
 }
 
 body {
@@ -127,7 +134,7 @@ table.entity_table td.time {
     width: 11em;
 }
 table.entity_table td.timerange {
-    width: 6em;
+    width: 9em;
 }
 table.entity_table td.rank {
     text-align: right;
@@ -151,6 +158,38 @@ table.entity_table td.bar div {
 }
 table.entity_table tr:hover td.bar div {
     background-color: var(--text-color-focus);
+}
+table.entity_table td.rank_bar div {
+    background-color: var(--base-color-accent-dark);
+    background-position: right;
+    background-repeat:no-repeat;
+    background-size: auto 100%;
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    display:inline-block;
+    border-right: 7px solid;
+    border-color: var(--text-color); /* default for no rank */
+}
+input.tab_radio {
+    display: none;
+}
+input.tab_radio + label {
+    opacity: 0.5;
+    cursor: pointer;
+}
+input.tab_radio:checked + label {
+    opacity: 1;
+}
+
+input.tab_radio ~ table.entity_table {
+    display: none;
+}
+input.tab_radio_1:checked ~ table.entity_table.tab_content_1,
+input.tab_radio_2:checked ~ table.entity_table.tab_content_2,
+input.tab_radio_3:checked ~ table.entity_table.tab_content_3,
+input.tab_radio_4:checked ~ table.entity_table.tab_content_4 {
+    display: table;
 }
 
 
