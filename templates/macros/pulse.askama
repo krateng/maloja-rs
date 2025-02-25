@@ -16,13 +16,15 @@
 
 {% macro pulse(pulse, tab_index) %}
 
+{% let max = 300 %} {# TODO find max #}
+
 <table class="entity_table tab_content_{{ tab_index }}">
     {% for entry in pulse %}
     <tr>
         <td class="timerange">{{ entry.time_range }}</td>
         <td class="amount">{{ entry.scrobbles }}</td>
         <td class="bar">
-            {% let percent = 100 * entry.scrobbles / 20 %} {# TODO find max #}
+            {% let percent = 95 * entry.scrobbles / max %}
             <a href="/scrobbles">
             <div style='width:{{ percent }}%;'></div>
             </a>

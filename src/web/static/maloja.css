@@ -25,6 +25,8 @@
     --color-rank-gold: rgba(255, 215, 0, 1);
     --color-rank-silver: rgba(192, 192, 192, 1);
     --color-rank-bronze: rgba(205, 127, 50, 1);
+
+    --bar-animation-duration: 5s;
 /*
     --color-certified-diamond: 103, 161, 253;
     --color-certified-platinum: 229, 228, 226;
@@ -103,6 +105,8 @@ table.entity_table {
     border-collapse:collapse;
     table-layout: fixed;
     width: 90%;
+
+
 }
 table.entity_table tr:nth-child(even) {
     --current-bg-color: rgba(255,255,255,0.05);
@@ -155,6 +159,7 @@ table.entity_table td.bar div {
     top: 2px;
     bottom: 2px;
     display:inline-block;
+    animation: grow_bar var(--bar-animation-duration) forwards;
 }
 table.entity_table tr:hover td.bar div {
     background-color: var(--text-color-focus);
@@ -170,7 +175,14 @@ table.entity_table td.rank_bar div {
     display:inline-block;
     border-right: 7px solid;
     border-color: var(--text-color); /* default for no rank */
+    animation: grow_bar var(--bar-animation-duration) forwards;
 }
+@keyframes grow_bar {
+    from {
+        width: 0;
+    }
+}
+
 input.tab_radio {
     display: none;
 }
