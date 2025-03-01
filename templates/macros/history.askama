@@ -26,7 +26,7 @@
         <td class="bar">
             {% let percent = 95 * entry.scrobbles / max %}
             <a href="/scrobbles">
-            <div style='width:{{ percent }}%;'></div>
+            <div style="width:{{ percent }}%;"></div>
             </a>
         </td>
     </tr>
@@ -62,7 +62,7 @@
             {% let percent = 390 / (3+entry.rank) %} {# TODO find max #}
             {% if entry.rank != 0 %}
             <a href="/charts">
-            <div style='width:{{ percent }}%;
+            <div style="width:{{ percent }}%;
                 {% if entry.rank == 1 %}
                     border-color: var(--color-rank-gold);
                 {% else if entry.rank == 2 %}
@@ -70,7 +70,7 @@
                 {% else if entry.rank == 3%}
                     border-color: var(--color-rank-bronze);
                 {% endif %}
-            '></div>
+            "></div>
             </a>
             {% endif %}
         </td>

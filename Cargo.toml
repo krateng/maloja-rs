@@ -28,3 +28,4 @@ strum = { version = "0.27.1" }
 askama = { version = "0.12.1", features = ["with-axum"] }
 askama_axum = { version = "0.4.0" }
 dynja = { version = "0.4.1", features = ["askama_release"] }
+serde_urlencoded = {  version = "0.7.1" }

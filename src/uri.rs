@@ -5,7 +5,20 @@ use utoipa::IntoParams;
 use regex::Regex;
 use crate::database::errors::MalojaError;
 use crate::database::views::{Paginated, PaginationInfo};
+use crate::entity::album::AlbumRead;
+use crate::entity::artist::ArtistRead;
+use crate::entity::track::TrackRead;
 use crate::timeranges::{TimeRange, BaseTimeRange, ALL_TIME, RangeType};
+
+// Every category of query / path arguments should have struct that converts both to and from the backend object that we use to represent its meaning
+// each struct also implements a function to convert to the raw query string so we can chain those in templates
+
+pub trait MalojaQuery {
+    fn to_querystring(&self) -> String
+    where Self: Serialize {
+        serde_urlencoded::to_string(self).unwrap()
+    }
+}
 
 // Query args
 #[derive(Deserialize, IntoParams, Debug)]
@@ -37,7 +50,7 @@ impl QueryPagination {
     }
 }
 
-#[derive(Deserialize, IntoParams, Debug)]
+#[derive(Deserialize, Serialize, IntoParams, Debug)]
 #[into_params(parameter_in=Query)]
 pub struct QueryTimerange {
     /// Show results starting at this time. Can be YYYY, YYYY/MM, YYYY/MM/DD or YYYYwWW (for week)
@@ -50,6 +63,7 @@ pub struct QueryTimerange {
     #[param(example="2024")]
     during: Option<String>,
 }
+impl MalojaQuery for QueryTimerange {}
 
 impl QueryTimerange {
     pub fn to_timerange(&self) -> Result<TimeRange, MalojaError> {
@@ -98,17 +112,56 @@ impl QueryTimerange {
         })
 
     }
+
+}
+impl TimeRange {
+    pub fn to_query(&self) -> QueryTimerange {
+        match self {
+            TimeRange::Simple(base) => {
+                QueryTimerange {
+                    from: None,
+                    to: None,
+                    during: Some(Self::base_to_str(base))
+                }
+            }
+            TimeRange::Composite { start, end } => {
+                QueryTimerange {
+                    from: start.clone().map(|x| Self::base_to_str(&x)),
+                    to: end.clone().map(|x| Self::base_to_str(&x)),
+                    during: None
+                }
+            }
+            TimeRange::Infinite => {
+                QueryTimerange {
+                    from: None,
+                    to: None,
+                    during: None,
+                }
+            }
+        }
+    }
+
+    fn base_to_str(input: &BaseTimeRange) -> String {
+        match input {
+            BaseTimeRange::Day { year, month, day } => format!("{}/{}/{}", year, month, day),
+            BaseTimeRange::Week { year, week } => format!("{}w{}", year, week),
+            BaseTimeRange::Month { year, month } => format!("{}/{}", year, month),
+            BaseTimeRange::Year { year } => format!("{}", year),
+        }
+    }
 }
 
-#[derive(Deserialize, IntoParams, Debug)]
+#[derive(Deserialize, Serialize, IntoParams, Debug)]
 #[into_params(parameter_in=Query)]
 pub struct QueryTimesteps {
     /// `day`, `week`, `month` or `year`
     #[param(example="month")]
     pub step: String
 }
+impl MalojaQuery for QueryTimesteps {}
+
 impl QueryTimesteps {
-    pub fn to_type(&self) -> Result<RangeType, MalojaError> {
+    pub fn to_rangetype(&self) -> Result<RangeType, MalojaError> {
         match self.step.as_str() {
             "day" => Ok(RangeType::Day),
             "week" => Ok(RangeType::Week),
@@ -117,29 +170,52 @@ impl QueryTimesteps {
             _ => Err(MalojaError::ParseError { message: "Unknown range type".to_string() }),
         }
     }
+
+}
+impl RangeType {
+    pub fn to_query(&self) -> QueryTimesteps {
+        QueryTimesteps {
+            step: match self {
+                RangeType::Day => "day".to_string(),
+                RangeType::Week => "week".to_string(),
+                RangeType::Month => "month".to_string(),
+                RangeType::Year => "year".to_string(),
+            }
+        }
+
+    }
 }
 
-#[derive(Deserialize, IntoParams, Debug)]
+#[derive(Deserialize, Serialize, IntoParams, Debug)]
 #[into_params(parameter_in=Query)]
 pub struct QueryLimitArtist {
     /// Limit the output to this artist
     #[param(example=69)]
     artist: Option<u32>
 }
+impl MalojaQuery for QueryLimitArtist {}
 
 impl QueryLimitArtist {
     pub fn to_artist_id(&self) -> Option<u32> {
         self.artist //do we really want an extra function here
     }
 }
+impl ArtistRead {
+    pub fn to_query(&self) -> QueryLimitArtist {
+        QueryLimitArtist {
+            artist: Some(self.id),
+        }
+    }
+}
 
-#[derive(Deserialize, IntoParams, Debug)]
+#[derive(Deserialize, Serialize, IntoParams, Debug)]
 #[into_params(parameter_in=Query)]
 pub struct QueryLimitAlbum {
     /// Limit the output to this album
     #[param(example=42)]
     album: Option<u32>
 }
+impl MalojaQuery for QueryLimitAlbum {}
 
 impl QueryLimitAlbum {
     pub fn to_album_id(&self) -> Option<u32> {
@@ -147,19 +223,65 @@ impl QueryLimitAlbum {
     }
 }
 
-#[derive(Deserialize, IntoParams, Debug)]
+impl AlbumRead {
+    pub fn to_query(&self) -> QueryLimitAlbum {
+        QueryLimitAlbum {
+            album: Some(self.id),
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, IntoParams, Debug)]
 #[into_params(parameter_in=Query)]
 pub struct QueryLimitTrack{
     /// Limit the output to this track
     #[param(example=1337)]
     track: Option<u32>
 }
+impl MalojaQuery for QueryLimitTrack {}
 
 impl QueryLimitTrack {
     pub fn to_track_id(&self) -> Option<u32> {
         self.track
     }
 }
+
+impl TrackRead {
+    pub fn to_query(&self) -> QueryLimitTrack {
+        QueryLimitTrack {
+            track: Some(self.id),
+        }
+    }
+}
+
+
+// i really don't like this, but this is basically
+/// A common struct to return the artist / track / album to which a certain
+/// page result was limited. It provides its own `to_querystring` since [`MalojaQuery`]
+/// cannot be implemented on an Option.
+pub struct EntityLimit {
+    pub artist: Option<ArtistRead>,
+    pub track: Option<TrackRead>,
+    pub album: Option<AlbumRead>,
+}
+impl EntityLimit {
+    pub fn to_querystring(&self) -> String {
+        if let Some(artist) = &self.artist {
+            format!("artist={}", artist.id)
+        }
+        else if let Some(track) = &self.track {
+            format!("track={}", track.id)
+        }
+        else if let Some(album) = &self.album {
+            format!("album={}", album.id)
+        }
+        else {
+            "".to_string()
+        }
+    }
+}
+
+
 
 #[derive(Deserialize, IntoParams, Debug)]
 #[into_params(parameter_in=Path)]

@@ -1,5 +1,5 @@
 use std::fmt::{Display, Formatter};
-use chrono::{naive::Days, DateTime, Datelike, TimeZone, Weekday, NaiveDate, NaiveDateTime, Months, Utc};
+use chrono::{naive::Days, DateTime, Datelike, TimeZone, Weekday, NaiveDate, NaiveDateTime, Months, Utc, Local};
 use chrono_tz::Tz;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use strum_macros::Display;
@@ -15,7 +15,7 @@ pub const ALL_TIME: TimeRange = TimeRange::Infinite {};
 
 
 /// The basic time range types that correspond to gregorian units
-#[derive(Clone, Debug, Serialize, ToSchema)]
+#[derive(Clone, Debug, Serialize, ToSchema, Eq, PartialEq)]
 pub enum BaseTimeRange {
     Day { year: i32, month: u8, day: u8 },
     Week { year: i32, week: u8 },
@@ -23,12 +23,22 @@ pub enum BaseTimeRange {
     Year { year: i32 },
 }
 /// A fieldless enum simply to select the different types of time ranges as used by [`BaseTimeRange`]
-#[derive(Clone, Debug, Display)]
+#[derive(Clone, Debug, Display, Eq, PartialEq)]
 pub enum RangeType {
     Day, Week, Month, Year
 }
+impl RangeType {
+    pub fn frequency_adv(&self) -> String {
+        match self {
+            RangeType::Day => String::from("Daily"),
+            RangeType::Week => String::from("Weekly"),
+            RangeType::Month => String::from("Monthly"),
+            RangeType::Year => String::from("Yearly")
+        }
+    }
+}
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 // TODO better toschema
 pub enum TimeRange {
     Simple(BaseTimeRange),
@@ -36,7 +46,17 @@ pub enum TimeRange {
     Infinite, //represented by Composite { None, None } as well, remove?
 }
 
-
+impl RangeType {
+    pub fn get_current(&self) -> TimeRange {
+        let now = Utc::now().with_timezone(&TIMEZONE);
+        match self {
+            RangeType::Day => { TimeRange::Simple(BaseTimeRange::Day { year: now.year(), month: now.month() as u8, day: now.day() as u8 }) },
+            RangeType::Week => { TimeRange::Simple(BaseTimeRange::Week { year: now.year(), week: 6 }) } //TODO
+            RangeType::Month => { TimeRange::Simple(BaseTimeRange::Month { year: now.year(), month: now.month() as u8}) }
+            RangeType::Year => { TimeRange::Simple(BaseTimeRange::Year { year: now.year()}) }
+        }
+    }
+}
 
 
 impl BaseTimeRange {
@@ -160,6 +180,8 @@ impl BaseTimeRange {
             BaseTimeRange::Year { year } => { format!("{}", year) }
         }
     }
+
+
 }
 
 impl TimeRange {
@@ -192,7 +214,7 @@ impl TimeRange {
         }
     }
 
-    fn previous(&self) -> Option<Self> {
+    pub fn previous(&self) -> Option<Self> {
         match self {
             TimeRange::Simple(base) => {
                 Some(TimeRange::Simple(base.previous()))
@@ -206,7 +228,7 @@ impl TimeRange {
         }
     }
 
-    fn next(&self) -> Option<Self> {
+    pub fn next(&self) -> Option<Self> {
         match self {
             TimeRange::Simple(base) => {
                 Some(TimeRange::Simple(base.next()))
@@ -285,6 +307,27 @@ impl TimeRange {
 
             }
             TimeRange::Infinite => { format!("{}", "All Time") }
+        }
+    }
+
+    pub fn describe_relative(&self) -> String {
+        let now = Local::now();
+        if self.includes(now.timestamp()) {
+            match &self {
+                TimeRange::Simple(base) => {
+                    match base {
+                        BaseTimeRange::Day { .. } => "Today".to_string(),
+                        BaseTimeRange::Week { .. } => "This Week".to_string(),
+                        BaseTimeRange::Month { .. } => "This Month".to_string(),
+                        BaseTimeRange::Year { .. } => "This Year".to_string(),
+                    }
+                }
+                _ => self.describe_simple(),
+            }
+        }
+        else {
+            self.describe_simple()
+            // TODO: stuff like weekday, x days ago etc
         }
     }
 }

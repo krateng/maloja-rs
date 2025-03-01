@@ -1,0 +1,22 @@
+{% extends "abstracts/base.html" %}
+
+{% import "macros/history.askama" as history %}
+{% import "macros/entities.askama" as entities %}
+{% import "macros/selector.askama" as selector %}
+
+{% block title %}Performance - Maloja{% endblock title %}
+{% block mainclass %}onetable{% endblock mainclass %}
+
+
+{% block heading %}Performance{% endblock heading %}
+{% block post_heading -%}
+    {% call entities::limit_entity_desc(entity_limit.artist, entity_limit.track, entity_limit.album) %}
+{%- endblock post_heading %}
+
+{% block top_info %}
+{% call selector::selector(timerange, timestep, entity_limit) %}
+{% endblock top_info %}
+
+{% block body_sections %}
+{% call history::performance(performance, 0) %}
+{% endblock body_sections %}

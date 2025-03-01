@@ -26,7 +26,7 @@
     --color-rank-silver: rgba(192, 192, 192, 1);
     --color-rank-bronze: rgba(205, 127, 50, 1);
 
-    --bar-animation-duration: 5s;
+    --bar-animation-duration: 3s;
 /*
     --color-certified-diamond: 103, 161, 253;
     --color-certified-platinum: 229, 228, 226;
@@ -175,11 +175,20 @@ table.entity_table td.rank_bar div {
     display:inline-block;
     border-right: 7px solid;
     border-color: var(--text-color); /* default for no rank */
-    animation: grow_bar var(--bar-animation-duration) forwards;
+    animation: grow_bar var(--bar-animation-duration) forwards,
+        reveal_rank var(--bar-animation-duration);
 }
 @keyframes grow_bar {
     from {
         width: 0;
+    }
+}
+@keyframes reveal_rank {
+    0% {
+        border-color: var(--text-color);
+    }
+    90% {
+        border-color: var(--text-color);
     }
 }
 
@@ -187,11 +196,10 @@ input.tab_radio {
     display: none;
 }
 input.tab_radio + label {
-    opacity: 0.5;
     cursor: pointer;
 }
 input.tab_radio:checked + label {
-    opacity: 1;
+    opacity: 0.5;
 }
 
 input.tab_radio ~ table.entity_table {
@@ -204,6 +212,12 @@ input.tab_radio_4:checked ~ table.entity_table.tab_content_4 {
     display: table;
 }
 
+/* selectors that dont work with input radio, same story */
+
+span.selected {
+    opacity: 0.5;
+}
+
 
 
 /** BASE LAYOUT **/
@@ -211,10 +225,21 @@ input.tab_radio_4:checked ~ table.entity_table.tab_content_4 {
 main {
     display: grid;
     padding: 20px;
-    grid-template-columns: 50% 50%;
-    grid-template-rows: 350px 500px 500px;
+
     min-height: 99%;
 }
+main.sections {
+    grid-template-columns: 50% 50%;
+    grid-template-rows: 350px 500px 500px;
+}
+main.onetable {
+    grid-template-columns: 50% 50%;
+    grid-template-rows: 350px auto;
+}
+main.startpage {
+
+}
+
 main section#top_info {
     grid-row: 1;
     grid-column: 1 / -1;

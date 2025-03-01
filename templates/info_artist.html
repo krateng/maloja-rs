@@ -2,9 +2,10 @@
 
 {% import "macros/charts.askama" as charts %}
 {% import "macros/lists.askama" as lists %}
-{% import "macros/pulse.askama" as pulse %}
+{% import "macros/history.askama" as history %}
 
 {% block title %}{{ artist.name }} - Maloja{% endblock title %}
+{% block mainclass %}sections{% endblock mainclass %}
 
 {% block heading %}{{ artist.name }}{% endblock heading %}
 
@@ -23,10 +24,10 @@
 </section>
 <section>
     <h2><a href="/pulse?artist={{ artist.id }}">Pulse</a></h2>
-    {% call pulse::multi_pulse(pulses) %}
+    {% call history::multi_pulse(pulses) %}
 </section>
 <section>
     <h2><a href="/performance?artist={{ artist.id }}">Performance</a></h2>
-    {% call pulse::multi_performance(performances) %}
+    {% call history::multi_performance(performances) %}
 </section>
 {% endblock body_sections %}

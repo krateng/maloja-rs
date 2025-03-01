@@ -12,7 +12,7 @@
             <td class="bar">
                 {% let percent = 100 * entry.scrobbles / charts[0].scrobbles %}
                 <a href="/scrobbles">
-                <div style='width:{{ percent }}%;'></div>
+                <div style="width:{{ percent }}%;"></div>
                 </a>
             </td>
         </tr>
@@ -32,7 +32,7 @@
         <td class="bar">
             {% let percent = 100 * entry.scrobbles / charts[0].scrobbles %}
             <a href="/scrobbles">
-                <div style='width:{{ percent }}%;'></div>
+                <div style="width:{{ percent }}%;"></div>
             </a>
         </td>
     </tr>
@@ -52,7 +52,7 @@
         <td class="bar">
             {% let percent = 100 * entry.scrobbles / charts[0].scrobbles %}
             <a href="/scrobbles">
-                <div style='width:{{ percent }}%;'></div>
+                <div style="width:{{ percent }}%;"></div>
             </a>
         </td>
     </tr>

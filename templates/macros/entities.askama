@@ -32,8 +32,29 @@
 {%- endmacro %}
 
 {% macro artist_links(artistreads) -%}
+    {% if artistreads.len() == 0 %}{{ config.default_artist }}{% endif %}
     {% for artistread in artistreads -%}
         {% call artist_link(artistread) -%}
         {% if !loop.last %}, {% endif %}
     {%- endfor %}
+
 {%- endmacro %}
+
+
+{% macro limit_entity_desc(artist, track, album) %}
+    {%- match album -%}
+        {%- when Some with (album) -%}
+        of {% call album_link(album) %}
+        {%- when None -%}
+    {%- endmatch -%}
+    {%- match artist -%}
+        {%- when Some with (artist) -%}
+        of {% call artist_link(artist) %}
+        {%- when None -%}
+    {%- endmatch -%}
+    {%- match track -%}
+        {%- when Some with (track) -%}
+        of {% call track_link(track) %}
+        {%- when None -%}
+    {%- endmatch -%}
+{% endmacro %}

@@ -2,9 +2,10 @@
 
 {% import "macros/entities.askama" as entities %}
 {% import "macros/lists.askama" as lists %}
-{% import "macros/pulse.askama" as pulse %}
+{% import "macros/history.askama" as history %}
 
 {% block title %}{{ track.title }} - Maloja{% endblock title %}
+{% block mainclass %}sections{% endblock mainclass %}
 
 {% block pre_heading %}
     {% call entities::artist_links(track.artists) %}
@@ -32,10 +33,10 @@
 </section>
 <section>
     <h2><a href="/pulse?track={{ track.id }}">Pulse</a></h2>
-    {% call pulse::multi_pulse(pulses) %}
+    {% call history::multi_pulse(pulses) %}
 </section>
 <section>
     <h2><a href="/performance?track={{ track.id }}">Performance</a></h2>
-    {% call pulse::multi_performance(performances) %}
+    {% call history::multi_performance(performances) %}
 </section>
 {% endblock %}
