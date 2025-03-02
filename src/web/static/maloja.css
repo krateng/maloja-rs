@@ -202,14 +202,14 @@ input.tab_radio:checked + label {
     opacity: 0.5;
 }
 
-input.tab_radio ~ table.entity_table {
+input.tab_radio ~ div.tab_content {
     display: none;
 }
-input.tab_radio_1:checked ~ table.entity_table.tab_content_1,
-input.tab_radio_2:checked ~ table.entity_table.tab_content_2,
-input.tab_radio_3:checked ~ table.entity_table.tab_content_3,
-input.tab_radio_4:checked ~ table.entity_table.tab_content_4 {
-    display: table;
+input.tab_radio_1:checked ~ div.tab_content_1,
+input.tab_radio_2:checked ~ div.tab_content_2,
+input.tab_radio_3:checked ~ div.tab_content_3,
+input.tab_radio_4:checked ~ div.tab_content_4 {
+    display: initial;
 }
 
 /* selectors that dont work with input radio, same story */

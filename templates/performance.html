@@ -1,6 +1,5 @@
 {% extends "abstracts/base.html" %}
 
-{% import "macros/history.askama" as history %}
 {% import "macros/entities.askama" as entities %}
 {% import "macros/selector.askama" as selector %}
 
@@ -18,5 +17,5 @@
 {% endblock top_info %}
 
 {% block body_sections %}
-{% call history::performance(performance, 0) %}
+{% include "partials/performance.html" %}
 {% endblock body_sections %}

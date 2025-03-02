@@ -3,7 +3,6 @@
 {% import "macros/charts.askama" as charts %}
 {% import "macros/entities.askama" as entities %}
 {% import "macros/lists.askama" as lists %}
-{% import "macros/history.askama" as history %}
 
 {% block title %}{{ album.album_title }} - Maloja{% endblock title %}
 {% block mainclass %}sections{% endblock mainclass %}
@@ -27,11 +26,29 @@
     {% call lists::list_scrobbles(scrobbles[..scrobbles.len().min(16)]) %}
 </section>
 <section>
-    <h2><a href="/pulse?album={{ album.id }}">Pulse</a></h2>
-    {% call history::multi_pulse(pulses) %}
+    <h2><a href="/pulse?album={{ album.id }}&step=year">Pulse</a></h2>
+    {% for (rangetype, pulse) in pulses %}
+    <input type="radio" class="tab_radio tab_radio_{{ loop.index }}" id="pulse_tab_{{ loop.index }}" name="pulse_tabs" checked />
+    <label for="pulse_tab_{{ loop.index }}">{{ rangetype }}</label> {% if !loop.last %}|{% endif %}
+    {% endfor %}
+    <br /><br />
+    {% for (rangetype, pulse) in pulses %}
+    <div class="tab_content tab_content_{{ loop.index }}">
+        {% include "partials/pulse.html" %}
+    </div>
+    {% endfor %}
 </section>
 <section>
-    <h2><a href="/performance?album={{ album.id }}">Performance</a></h2>
-    {% call history::multi_performance(performances) %}
+    <h2><a href="/performance?album={{ album.id }}&step=year">Performance</a></h2>
+    {% for (rangetype, performance) in performances %}
+    <input type="radio" class="tab_radio tab_radio_{{ loop.index }}" id="performance_tab_{{ loop.index }}" name="performance_tabs" checked />
+    <label for="performance_tab_{{ loop.index }}">{{ rangetype }}</label> {% if !loop.last %}|{% endif %}
+    {% endfor %}
+    <br /><br />
+    {% for (rangetype, performance) in performances %}
+    <div class="tab_content tab_content_{{ loop.index }}">
+        {% include "partials/performance.html" %}
+    </div>
+    {% endfor %}
 </section>
 {% endblock body_sections %}

@@ -23,7 +23,7 @@
 	</head>
 
 	<body class="{% block custombodyclasses %}{% endblock custombodyclasses %}">
-		<main>
+		<main class="{% block mainclass %}{% endblock mainclass %}">
 		{% block content %}
 
 		<section id="top_info">
@@ -32,6 +32,7 @@
 				<span id="pre_heading">{% block pre_heading %}{% endblock pre_heading %}</span>
 				<h1 id="heading">{% block heading %}Default Page{% endblock heading %}</h1>
 				<span id="post_heading">{% block post_heading %}{% endblock post_heading %}</span>
+				<br /><br />
 				{% block top_info %}
 
 				{% endblock top_info %}

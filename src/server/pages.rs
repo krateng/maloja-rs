@@ -1,8 +1,9 @@
-use axum::extract::Path;
+use axum::extract::{Path, Query};
 use axum::response::{Html, IntoResponse, Response};
-//use dynja::Template;
 use askama::Template;
-use dynja::minijinja::functions::range;
+use serde::Serialize;
+use serde_urlencoded;
+use crate::configuration::{MalojaConfig, CONFIG};
 use crate::database;
 use crate::database::views::{ChartsEntry, PerformanceEntry, PulseEntry};
 use crate::entity::album::AlbumRead;
@@ -10,13 +11,15 @@ use crate::entity::artist::ArtistRead;
 use crate::entity::scrobble::ScrobbleRead;
 use crate::entity::track::TrackRead;
 use crate::timeranges::{RangeType, TimeRange, ALL_TIME};
-use crate::uri::PathEntity;
+use crate::uri::{EntityLimit, MalojaQuery, PathEntity, QueryLimitAlbum, QueryLimitArtist, QueryLimitTrack, QueryTimerange, QueryTimesteps};
 
 
-/*
+
 // filters dont work for me
 mod filters {
     use askama::Result as AskamaResult;
+    use askama::Error as AskamaError;
+    use serde::Serialize;
 
     pub fn format_in_tz(timestamp: i64) -> AskamaResult<String> {
         // TODO later use config obv
@@ -26,11 +29,14 @@ mod filters {
         let local_time = time.with_timezone(&tz);
         Ok(local_time.format(fmt).to_string())
     }
+
 }
-*/
+
+
+const RANGE_TYPES: [RangeType; 4] = [RangeType::Year, RangeType::Month, RangeType::Week, RangeType::Day];
 
 fn get_last_ranges(amount: usize) -> Vec<(RangeType, Vec<TimeRange>)> {
-    const RANGE_TYPES: [RangeType; 4] = [RangeType::Year, RangeType::Month, RangeType::Week, RangeType::Day];
+
     let range_types_and_ranges: Vec<(RangeType, Vec<TimeRange>)> = RANGE_TYPES.into_iter().map(|range_type| {
         // get the last ranges for each type
         let ranges = ALL_TIME.get_subranges(range_type.clone());
@@ -41,11 +47,19 @@ fn get_last_ranges(amount: usize) -> Vec<(RangeType, Vec<TimeRange>)> {
     range_types_and_ranges
 }
 
+fn get_preset_ranges() -> Vec<TimeRange> {
+    let mut result: Vec<TimeRange> = RANGE_TYPES.into_iter().map(|range_type| range_type.get_current() ).collect();
+    result.insert(0, ALL_TIME);
+    result
+}
+
 
 #[derive(Template)]
 #[template(path = "info_artist.html")]
 struct ArtistPage {
+    config: &'static MalojaConfig,
     artist: ArtistRead,
+    entity_limit: EntityLimit, // we always pass this wrapper to all pages for potential includes
     track_charts: Vec<ChartsEntry<TrackRead>>,
     scrobbles: Vec<ScrobbleRead>,
     pulses: Vec<(RangeType, Vec<PulseEntry>)>,
@@ -75,7 +89,9 @@ pub async fn info_artist(Path(params_path): Path<PathEntity>) -> Response {
     }
 
     let p = ArtistPage {
-        artist: result,
+        config: &CONFIG,
+        artist: result.clone(),
+        entity_limit: EntityLimit { artist: Some(result), track: None, album: None },
         track_charts: tracks,
         scrobbles: scrobbles,
         pulses: pulses,
@@ -87,7 +103,9 @@ pub async fn info_artist(Path(params_path): Path<PathEntity>) -> Response {
 #[derive(Template)]
 #[template(path = "info_track.html")]
 struct TrackPage {
+    config: &'static MalojaConfig,
     track: TrackRead,
+    entity_limit: EntityLimit, // we always pass this wrapper to all pages for potential includes
     scrobbles: Vec<ScrobbleRead>,
     pulses: Vec<(RangeType, Vec<PulseEntry>)>,
     performances: Vec<(RangeType, Vec<PerformanceEntry>)>,
@@ -107,7 +125,9 @@ pub async fn info_track(Path(params_path): Path<PathEntity>) -> Response {
     }
 
     let p = TrackPage {
-        track: result,
+        config: &CONFIG,
+        track: result.clone(),
+        entity_limit: EntityLimit { track: Some(result), album: None, artist: None },
         scrobbles: scrobbles,
         pulses: pulses,
         performances: performances
@@ -118,7 +138,9 @@ pub async fn info_track(Path(params_path): Path<PathEntity>) -> Response {
 #[derive(Template)]
 #[template(path = "info_album.html")]
 struct AlbumPage {
+    config: &'static MalojaConfig,
     album: AlbumRead,
+    entity_limit: EntityLimit, // we always pass this wrapper to all pages for potential includes
     track_charts: Vec<ChartsEntry<TrackRead>>,
     scrobbles: Vec<ScrobbleRead>,
     pulses: Vec<(RangeType, Vec<PulseEntry>)>,
@@ -140,11 +162,113 @@ pub async fn info_album(Path(params_path): Path<PathEntity>) -> Response {
     }
 
     let p = AlbumPage {
-        album: result,
+        config: &CONFIG,
+        album: result.clone(),
+        entity_limit: EntityLimit { album: Some(result), track: None, artist: None },
         track_charts: tracks,
         scrobbles: scrobbles,
         pulses: pulses,
         performances: performances
+    };
+    Html(p.render().unwrap()).into_response()
+}
+
+
+#[derive(Template)]
+#[template(path = "pulse.html")]
+struct PulsePage {
+    config: &'static MalojaConfig,
+    pulse: Vec<PulseEntry>,
+    timerange: TimeRange,
+    timestep: RangeType,
+    entity_limit: EntityLimit,
+    preset_steps: Vec<RangeType>,
+    preset_ranges: Vec<TimeRange>,
+}
+pub async fn pulse(
+    Query(params_timesteps): Query<QueryTimesteps>,
+    Query(params_artist): Query<QueryLimitArtist>,
+    Query(params_album): Query<QueryLimitAlbum>,
+    Query(params_track): Query<QueryLimitTrack>,
+    Query(params_timerange): Query<QueryTimerange>,
+) -> Response {
+    let timerange = params_timerange.to_timerange().unwrap();
+    let timestep = params_timesteps.to_rangetype().unwrap();
+    let subranges = timerange.get_subranges(timestep.clone());
+    let pulse = database::repository::pulse(subranges, params_artist.to_artist_id(), params_album.to_album_id(), params_track.to_track_id()).await.unwrap();
+    // TODO we probably want to restrict this and only allow one entity limit
+
+    let (mut artist, mut track, mut album) = (None, None, None);
+    if let Some(artist_id) = params_artist.to_artist_id() {
+        artist = Some(database::repository::artist_info(artist_id).await.unwrap());
+    }
+    if let Some(track_id) = params_track.to_track_id() {
+        track = Some(database::repository::track_info(track_id).await.unwrap());
+    }
+    if let Some(album_id) = params_album.to_album_id() {
+        album = Some(database::repository::album_info(album_id).await.unwrap());
+    }
+
+    let p = PulsePage {
+        config: &CONFIG,
+        pulse: pulse,
+        timerange: timerange,
+        timestep: timestep,
+        entity_limit: EntityLimit {
+            artist, album, track
+        },
+        preset_steps: RANGE_TYPES.to_vec(),
+        preset_ranges: get_preset_ranges(),
+    };
+    Html(p.render().unwrap()).into_response()
+}
+
+
+#[derive(Template)]
+#[template(path = "performance.html")]
+struct PerformancePage {
+    config: &'static MalojaConfig,
+    performance: Vec<PerformanceEntry>,
+    timerange: TimeRange,
+    timestep: RangeType,
+    entity_limit: EntityLimit,
+    preset_steps: Vec<RangeType>,
+    preset_ranges: Vec<TimeRange>,
+}
+pub async fn performance(
+    Query(params_timesteps): Query<QueryTimesteps>,
+    Query(params_artist): Query<QueryLimitArtist>,
+    Query(params_album): Query<QueryLimitAlbum>,
+    Query(params_track): Query<QueryLimitTrack>,
+    Query(params_timerange): Query<QueryTimerange>,
+) -> Response {
+    let timerange = params_timerange.to_timerange().unwrap();
+    let timestep = params_timesteps.to_rangetype().unwrap();
+    let subranges = timerange.get_subranges(timestep.clone());
+    let performance = database::repository::performance(subranges, params_artist.to_artist_id(), params_album.to_album_id(), params_track.to_track_id()).await.unwrap();
+    // TODO we probably want to restrict this and only allow one entity limit
+
+    let (mut artist, mut track, mut album) = (None, None, None);
+    if let Some(artist_id) = params_artist.to_artist_id() {
+        artist = Some(database::repository::artist_info(artist_id).await.unwrap());
+    }
+    if let Some(track_id) = params_track.to_track_id() {
+        track = Some(database::repository::track_info(track_id).await.unwrap());
+    }
+    if let Some(album_id) = params_album.to_album_id() {
+        album = Some(database::repository::album_info(album_id).await.unwrap());
+    }
+
+    let p = PerformancePage {
+        config: &CONFIG,
+        performance: performance,
+        timerange: timerange,
+        timestep: timestep,
+        entity_limit: EntityLimit {
+            artist, album, track
+        },
+        preset_steps: RANGE_TYPES.to_vec(),
+        preset_ranges: get_preset_ranges(),
     };
     Html(p.render().unwrap()).into_response()
 }

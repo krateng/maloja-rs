@@ -1,0 +1,25 @@
+<table class="entity_table">
+    {% for entry in performance %}
+    <tr>
+        <td class="timerange">{{ entry.time_range }}</td>
+        <td class="amount">{% if entry.rank != 0 %}#{{ entry.rank }}{% else %}-{% endif %}</td>
+        <td class="rank_bar">
+
+            {% let percent = 390 / (3+entry.rank) %} {# TODO find max #}
+            {% if entry.rank != 0 %}
+            <a href="/charts?{{ entry.time_range.to_query().to_querystring() }}">
+                <div style="width:{{ percent }}%;
+                {% if entry.rank == 1 %}
+                    border-color: var(--color-rank-gold);
+                {% else if entry.rank == 2 %}
+                    border-color: var(--color-rank-silver);
+                {% else if entry.rank == 3%}
+                    border-color: var(--color-rank-bronze);
+                {% endif %}
+            "></div>
+            </a>
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</table>
