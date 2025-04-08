@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 sea-orm = { version = "1.1.4", features = [ "sqlx-sqlite", "runtime-tokio-rustls", "macros"] }
-tokio = { version = "1.40.0", features = ["rt", "rt-multi-thread", "macros"] }
+tokio = { version = "1.43.1", features = ["rt", "rt-multi-thread", "macros"] }
 confique = { version = "0.3.0", features = ["toml"] }
 colored = { version = "3.0.0" }
 log = {  version = "0.4.22" }
