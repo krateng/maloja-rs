@@ -22,7 +22,10 @@ pub async fn run_server() {
         .route("/about", get(about))
         .route("/artist/{id}", get(info_artist))
         .route("/track/{id}", get(info_track))
-        .route("/album/{id}", get(info_album));
+        .route("/album/{id}", get(info_album))
+        .route("/pulse", get(pulse))
+        .route("/performance", get(performance))
+        .route("/scrobbles", get(scrobbles));
     // STATIC FILES
     app = app.fallback_service(ServeDir::new("src/web/static"));
 

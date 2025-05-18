@@ -8,7 +8,7 @@ use super::album::{AlbumRead, AlbumWrite};
 #[sea_orm(table_name = "tracks")]
 pub struct Model {
     
-    #[sea_orm(primary_key)]
+    #[sea_orm(primary_key, auto_increment = true)]
     pub id: u32,
 
     /// Canonical track title. Should be unique for the combination of artists

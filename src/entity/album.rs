@@ -7,7 +7,7 @@ use super::artist::{ArtistRead, ArtistReadContext, ArtistWrite};
 #[sea_orm(table_name = "albums")]
 pub struct Model {
     
-    #[sea_orm(primary_key)]
+    #[sea_orm(primary_key, auto_increment = true)]
     pub id: u32,
     
     /// Canonical title of the album

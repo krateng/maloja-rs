@@ -1,11 +1,7 @@
-use std::error::Error;
-use std::ffi::OsString;
 use std::{fs, io};
 use std::path::PathBuf;
 use log::info;
-use sea_orm::{ConnectionTrait, DatabaseConnection, DbErr, EntityTrait};
-use sea_orm::ActiveValue::Set;
-use sea_orm::ColumnType::Json;
+use sea_orm::{DatabaseConnection, DbErr, EntityTrait};
 use serde_json::Value;
 use serde::Deserialize;
 use crate::configuration::FOLDERS;
@@ -124,7 +120,7 @@ pub async fn import_maloja(file: PathBuf) -> Result<(), MalojaError> {
 
    
     
-    create_scrobbles(scrobbles, false).await;
+    create_scrobbles(scrobbles, false).await?;
 
     Ok(())
     

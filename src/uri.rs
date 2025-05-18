@@ -283,6 +283,7 @@ impl EntityLimit {
 
 
 
+/// For when the entity isn't a query argument, but in the path (because we're on the main page of that entity)
 #[derive(Deserialize, IntoParams, Debug)]
 #[into_params(parameter_in=Path)]
 pub struct PathEntity {

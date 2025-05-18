@@ -7,7 +7,7 @@ use utoipa::ToSchema;
 #[sea_orm(table_name = "artists")]
 pub struct Model {
     
-    #[sea_orm(primary_key)]
+    #[sea_orm(primary_key, auto_increment = true)]
     pub id: u32,
     
     /// Canonical Artist name

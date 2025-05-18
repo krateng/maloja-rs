@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use log::debug;
-use sea_orm::{ColumnTrait, DbErr, EntityTrait, NotSet, QueryFilter};
+use sea_orm::{ColumnTrait, EntityTrait, NotSet, QueryFilter};
 use sea_orm::ActiveValue::Set;
 use crate::database::{connect, mark_db_write};
 use crate::database::errors::MalojaError;
@@ -41,7 +41,7 @@ pub async fn get_or_create_artists(input: Vec<ArtistWrite>) -> Result<HashMap<Ar
 
     let mut id_map: HashMap<u32, Vec<&ArtistWrite>> = HashMap::new();
     let mut name_map: HashMap<String, Vec<&ArtistWrite>> = HashMap::new();
-    for (index, inp) in input.iter().enumerate() {
+    for (_index, inp) in input.iter().enumerate() {
         if let Some(id) = &inp.id {
             id_map.entry(*id).or_insert(vec![]).push(inp);
         }
@@ -109,10 +109,10 @@ pub async fn get_or_create_artists(input: Vec<ArtistWrite>) -> Result<HashMap<Ar
         // this doesnt seem to return all models
         // https://github.com/SeaQL/sea-orm/discussions/2191
         // so for now we just insert and call the whole thing again i guess?
-        //let db_result: Vec<ArtistModel> = Artist::insert_many(inserts).exec_with_returning(&db).await.unwrap();
+        //let db_result: Vec<ArtistModel> = Artist::insert_many(inserts).exec_with_returning(&db).await?;
         for chunk in inserts.chunks(BATCH_SIZE) {
             let chunk_inserts = chunk.to_vec();
-            let db_result = Artist::insert_many(chunk_inserts).exec(&db).await.unwrap();
+            let db_result = Artist::insert_many(chunk_inserts).exec_with_returning(&db).await?;
         }
 
         mark_db_write();
@@ -147,7 +147,7 @@ pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> Result<HashMap<Trac
     // as above, but now the name alone isnt enough - we need name and artist exact set match (primary secondary doesnt matter)
     let mut id_map: HashMap<u32, Vec<&TrackWrite>> = HashMap::new();
     let mut title_artists_map: HashMap<(String, Vec<u32>), Vec<&TrackWrite>> = HashMap::new();
-    for (index, inp) in input.iter().enumerate() {
+    for (_index, inp) in input.iter().enumerate() {
         if let Some(id) = &inp.id {
             id_map.entry(*id).or_insert(vec![]).push(inp);
         }
@@ -304,7 +304,7 @@ pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> Result<HashMap<Albu
     // as above, but now the name alone isnt enough - we need name and artist exact set match (primary secondary doesnt matter)
     let mut id_map: HashMap<u32, Vec<&AlbumWrite>> = HashMap::new();
     let mut albumtitle_artists_map: HashMap<(String, Vec<u32>), Vec<&AlbumWrite>> = HashMap::new();
-    for (index, inp) in input.iter().enumerate() {
+    for (_index, inp) in input.iter().enumerate() {
         if let Some(id) = &inp.id {
             id_map.entry(*id).or_insert(vec![]).push(inp);
         }
@@ -445,7 +445,7 @@ pub async fn create_scrobbles(input: Vec<ScrobbleWrite>, fail_on_existing: bool)
     // so TODO: distinguish between use cases? when do we even refer to existing scrobbles with a write?
 
     let mut ts_map: HashMap<i64, Vec<&ScrobbleWrite>> = HashMap::new();
-    for (index, inp) in input.iter().enumerate() {
+    for (_index, inp) in input.iter().enumerate() {
         ts_map.entry(inp.timestamp).or_insert(vec![]).push(inp);
     }
     let ts_list: Vec<i64> = ts_map.keys().cloned().collect();

@@ -21,6 +21,7 @@ use crate::entity::track::{TrackRead};
 use crate::entity::scrobble::{ScrobbleRead};
 use crate::entity::album::{AlbumRead};
 use crate::database::views::{Charts, Paginated, PaginationInfo, PerformanceEntry, PulseEntry};
+use crate::timeranges::TimeRange;
 use crate::uri::{PathEntity, QueryLimitAlbum, QueryLimitArtist, QueryLimitTrack, QueryPagination, QueryTimerange, QueryTimesteps};
 
 pub const API: ScrobbleAPI = ScrobbleAPI {
@@ -321,7 +322,7 @@ async fn pulse(
     Query(params_pagination): Query<QueryPagination>
 ) -> Result<(StatusCode, Json<Paginated<PulseEntry>>), MalojaError> {
     let timerange = params_time.to_timerange()?;
-    let subranges = timerange.get_subranges(params_timesteps.to_type()?);
+    let subranges: Vec<TimeRange> = timerange.get_subranges(params_timesteps.to_rangetype()?);
     let artist_id = params_limit_artist.to_artist_id();
     let album_id = params_limit_album.to_album_id();
     let track_id = params_limit_track.to_track_id();
@@ -350,7 +351,7 @@ async fn performance(
     Query(params_pagination): Query<QueryPagination>
 ) -> Result<(StatusCode, Json<Paginated<PerformanceEntry>>), MalojaError> {
     let timerange = params_time.to_timerange()?;
-    let subranges = timerange.get_subranges(params_timesteps.to_type()?);
+    let subranges = timerange.get_subranges(params_timesteps.to_rangetype()?);
     let artist_id = params_limit_artist.to_artist_id();
     let album_id = params_limit_album.to_album_id();
     let track_id = params_limit_track.to_track_id();

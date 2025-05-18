@@ -132,9 +132,12 @@ pub struct MalojaConfig {
     /// Timezone offset, 0 is UTC
     #[config(default = 0)]
     pub utc_offset: u8,
+    /// Timezone
+    #[config(default = "UTC")]
+    pub timezone: String, //TODO enum? Tz?
     /// What artist string should be shown for tracks or albums with no artists
     #[config(default = "Various Artists")]
-    pub default_albumartist: String,
+    pub default_artist: String,
     /// How to format dates
     #[config(default = "%d. %b %Y %I:%M %p")]
     pub time_format: String,
