@@ -1,0 +1,24 @@
+{% extends "abstracts/base.html" %}
+
+{% import "macros/entities.askama" as entities %}
+{% import "macros/selector.askama" as selector %}
+{% import "macros/lists.askama" as lists %}
+
+{% block title %}Scrobbles - Maloja{% endblock title %}
+{% block mainclass %}onetable{% endblock mainclass %}
+
+
+{% block heading %}Scrobbles{% endblock heading %}
+{% block post_heading -%}
+{% call entities::limit_entity_desc(entity_limit.artist, entity_limit.track, entity_limit.album) %}
+{%- endblock post_heading %}
+
+
+
+{% block top_info %}
+{% call selector::selector_timerange_nostep(timerange, preset_ranges) %}
+{% endblock top_info %}
+
+{% block body_sections %}
+{% call lists::list_scrobbles(scrobbles[..scrobbles.len().min(50)]) %}
+{% endblock body_sections %}

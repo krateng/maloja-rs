@@ -273,6 +273,46 @@ pub async fn performance(
     Html(p.render().unwrap()).into_response()
 }
 
+#[derive(Template)]
+#[template(path = "scrobbles.html")]
+struct ScrobblesPage {
+    config: &'static MalojaConfig,
+    scrobbles: Vec<ScrobbleRead>,
+    entity_limit: EntityLimit,
+    timerange: TimeRange,
+    preset_ranges: Vec<TimeRange>,
+}
+pub async fn scrobbles(
+    Query(params_artist): Query<QueryLimitArtist>,
+    Query(params_album): Query<QueryLimitAlbum>,
+    Query(params_track): Query<QueryLimitTrack>,
+    Query(params_timerange): Query<QueryTimerange>,
+) -> Response {
+    let timerange = params_timerange.to_timerange().unwrap();
+    let scrobbles = database::repository::scrobbles(timerange.clone(), params_artist.to_artist_id(), params_album.to_album_id(), params_track.to_track_id(), true).await.unwrap();
+
+    let (mut artist, mut track, mut album) = (None, None, None);
+    if let Some(artist_id) = params_artist.to_artist_id() {
+        artist = Some(database::repository::artist_info(artist_id).await.unwrap());
+    }
+    if let Some(track_id) = params_track.to_track_id() {
+        track = Some(database::repository::track_info(track_id).await.unwrap());
+    }
+    if let Some(album_id) = params_album.to_album_id() {
+        album = Some(database::repository::album_info(album_id).await.unwrap());
+    }
+
+    let p = ScrobblesPage {
+        config: &CONFIG,
+        scrobbles: scrobbles,
+        entity_limit: EntityLimit {
+            artist, album, track
+        },
+        timerange,
+        preset_ranges: get_preset_ranges(),
+    };
+    Html(p.render().unwrap()).into_response()
+}
 
 
 #[derive(Template)]

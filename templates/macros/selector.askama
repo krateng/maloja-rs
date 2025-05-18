@@ -1,26 +1,56 @@
 {% macro selector(timerange, timestep, entity_limit) %}
+    {% call selector_timerange(timerange, preset_ranges) %}
+    <br />
+    {% call selector_timesteps(timestep, preset_steps) %}
+{% endmacro %}
 
-    {% if timerange.previous().is_some() %}<a href="?{% call query_combine(entity_limit, timerange.previous().unwrap(), timestep) %}">{{ timerange.previous().unwrap() }}</a> « {% endif %}
-    <span class="selected">{{ timerange }}</span>
-    {% if timerange.next().is_some() %} » <a href="?{% call query_combine(entity_limit, timerange.next().unwrap(), timestep) %}">{{ timerange.next().unwrap() }}</a>{% endif %}
+
+
+{% macro selector_timerange(timerange, preset_ranges) %}
+    {% if timerange.previous().is_some() || timerange.next().is_some() %}
+        {# if we dont have any previous or next, we ignore that whole line to avoid weird double interface #}
+        {% if timerange.previous().is_some() %}<a href="?{% call query_combine(entity_limit, timerange.previous().unwrap(), timestep) %}">{{ timerange.previous().unwrap() }}</a> « {% endif %}
+        <span class="selected">{{ timerange }}</span>
+        {% if timerange.next().is_some() %} » <a href="?{% call query_combine(entity_limit, timerange.next().unwrap(), timestep) %}">{{ timerange.next().unwrap() }}</a>{% endif %}
+
+    {% endif %}
     <br />
 
-    {% for step in preset_steps %}
-        {% if step.clone() == timestep %}<span class="selected">{{ step.frequency_adv() }}</span>
-        {% else %}<a href="?{% call query_combine(entity_limit, timerange, step) %}">{{ step.frequency_adv() }}</a>
-        {% endif %}
-        {% if !loop.last %}|{% endif %}
-    {% endfor %}
-    <br />
     {% for range in preset_ranges %}
         {% if range.clone() == timerange %}<span class="selected">{{ range.describe_relative() }}</span>
         {% else %}<a href="?{% call query_combine(entity_limit, range, timestep) %}">{{ range.describe_relative() }}</a>
         {% endif %}
         {% if !loop.last %}|{% endif %}
     {% endfor %}
+{% endmacro %}
 
+{# this is ugly but i havent coded rust in 10 weeks and my brain is fried i just need to get something done #}
+{% macro selector_timerange_nostep(timerange, preset_ranges) %}
+    {% if timerange.previous().is_some() %}<a href="?{% call query_combine_nostep(entity_limit, timerange.previous().unwrap()) %}">{{ timerange.previous().unwrap() }}</a> « {% endif %}
+    <span class="selected">{{ timerange }}</span>
+    {% if timerange.next().is_some() %} » <a href="?{% call query_combine_nostep(entity_limit, timerange.next().unwrap()) %}">{{ timerange.next().unwrap() }}</a>{% endif %}
+    <br />
+    {% for range in preset_ranges %}
+        {% if range.clone() == timerange %}<span class="selected">{{ range.describe_relative() }}</span>
+        {% else %}<a href="?{% call query_combine_nostep(entity_limit, range) %}">{{ range.describe_relative() }}</a>
+        {% endif %}
+        {% if !loop.last %}|{% endif %}
+    {% endfor %}
+{% endmacro %}
+
+{% macro selector_timesteps(timestep, preset_steps) %}
+    {% for step in preset_steps %}
+        {% if step.clone() == timestep %}<span class="selected">{{ step.frequency_adv() }}</span>
+        {% else %}<a href="?{% call query_combine(entity_limit, timerange, step) %}">{{ step.frequency_adv() }}</a>
+        {% endif %}
+        {% if !loop.last %}|{% endif %}
+    {% endfor %}
 {% endmacro %}
 
 {% macro query_combine(limit_entity, timerange, timestep) -%}
 {{ timestep.to_query().to_querystring() }}&{{ timerange.to_query().to_querystring() }}&{{ limit_entity.to_querystring() }}
+{%- endmacro %}
+
+{% macro query_combine_nostep(limit_entity, timerange) -%}
+{{ timerange.to_query().to_querystring() }}&{{ limit_entity.to_querystring() }}
 {%- endmacro %}

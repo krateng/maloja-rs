@@ -4,7 +4,9 @@
     {% for entry in pulse %}
     <tr>
         <td class="timerange">{{ entry.time_range }}</td>
-        <td class="amount">{{ entry.scrobbles }}</td>
+        <td class="amount">
+            <a href="/scrobbles?{{ entry.time_range.to_query().to_querystring() }}&{{ entity_limit.to_querystring() }}">{{ entry.scrobbles }}</a>
+        </td>
         <td class="bar">
             {% let percent = 95 * entry.scrobbles / max %}
             <a href="/scrobbles?{{ entry.time_range.to_query().to_querystring() }}&{{ entity_limit.to_querystring() }}">
