@@ -61,7 +61,10 @@ pub async fn connect() -> Result<DatabaseConnection, MalojaError> {
     let mut dboptions = ConnectOptions::new(dbstring);
     dboptions.sqlx_logging(false);
     match Database::connect(dboptions).await {
-        Ok(c) => Ok(c),
+        Ok(conn) => {
+            conn.execute_unprepared("PRAGMA foreign_keys = ON").await?;
+            Ok(conn)
+        },
         Err(e) => {
             Err(MalojaError::DatabaseConnectionError { message: e.to_string() })
         }
@@ -89,6 +92,7 @@ async fn create_table<E: sea_orm::EntityTrait>(db: &DbConn, entity: E) {
     // TODO: wtf is even going on here
     let statement = backend.build(&stmt);
     let result = db.execute(statement).await.expect("wut");
+    // TODO: STRICT types
 
 }
 
