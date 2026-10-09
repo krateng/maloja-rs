@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use log::debug;
 use sea_orm::{ColumnTrait, EntityTrait, NotSet, QueryFilter};
 use sea_orm::ActiveValue::Set;
-use crate::database::{connect, mark_db_write};
+use crate::database::{connect, mark_db_write, normalize};
 use crate::database::errors::MalojaError;
 use crate::entity::{
     album::{Entity as Album, Model as AlbumModel, ActiveModel as AlbumActiveModel, Column as AlbumColumn, AlbumWrite, AlbumRead},
@@ -16,15 +16,22 @@ use crate::entity::{
 /// How many entities should be inserted into the Database in one go
 const BATCH_SIZE: usize = 250;
 
-fn normalize(input: &str) -> String {
-    input.to_lowercase().replace("_", "-").replace(" ", "-")
-}
+
+
+/// Object that maps a number of incoming [ScrobbleWrite]s to the resulting [ScrobbleModel] that will actually be used.
+type ScrobbleWriteMap = HashMap<ScrobbleWrite, ScrobbleModel>;
+/// Object that maps a number of incoming [TrackWrite]s to the resulting [TrackModel] that will actually be used.
+type TrackWriteMap = HashMap<TrackWrite, TrackModel>;
+/// Object that maps a number of incoming [AlbumWrite]s to the resulting [AlbumModel] that will actually be used.
+type AlbumWriteMap = HashMap<AlbumWrite, AlbumModel>;
+/// Object that maps a number of incoming [ArtistWrite]s to the resulting [ArtistModel] that will actually be used.
+type ArtistWriteMap = HashMap<ArtistWrite, ArtistModel>;
 
 // alrighty this time we're doing it organized from the start unlike the python monstrosity
 // this is totally gonna work this time lmao
 // link the relevant xkcd here
 #[allow(clippy::collapsible_else_if)]
-pub async fn get_or_create_artists(input: Vec<ArtistWrite>) -> Result<HashMap<ArtistWrite, ArtistModel>, MalojaError> {
+pub async fn get_or_create_artists(input: Vec<ArtistWrite>) -> Result<ArtistWriteMap, MalojaError> {
     let db = connect().await?;
     let mut result: HashMap<ArtistWrite, Option<ArtistModel>> = HashMap::new();
     input.clone().into_iter().for_each(|artist| {
@@ -39,9 +46,11 @@ pub async fn get_or_create_artists(input: Vec<ArtistWrite>) -> Result<HashMap<Ar
 
     // supplying an ID indicated the client wants to refer to an existing entity - mismatching other info is ignored
 
+    // we create maps here that map the identifying field (id / normalized name) to all input writes
+    // that we have determined to belong to this artist
     let mut id_map: HashMap<u32, Vec<&ArtistWrite>> = HashMap::new();
     let mut name_map: HashMap<String, Vec<&ArtistWrite>> = HashMap::new();
-    for (_index, inp) in input.iter().enumerate() {
+    for inp in input.iter() {
         if let Some(id) = &inp.id {
             id_map.entry(*id).or_insert(vec![]).push(inp);
         }
@@ -58,10 +67,12 @@ pub async fn get_or_create_artists(input: Vec<ArtistWrite>) -> Result<HashMap<Ar
     // IDs
     let db_result = Artist::find()
         .filter(ArtistColumn::Id.is_in(id_list))
-        .all(&db).await.unwrap();
+        .all(&db).await?;
     for model in db_result {
         let writes = &id_map[&model.id];
         for write in writes {
+            // now fetch the writes that we determined were all the same artist
+            // and map them to the actual found artist model
             result.insert(write.to_owned().clone(), Some(model.clone()));
             // do NOT ask me what the fuck is happening with ownership here i just want it to compile
         }
@@ -74,7 +85,7 @@ pub async fn get_or_create_artists(input: Vec<ArtistWrite>) -> Result<HashMap<Ar
     // Names
     let db_result = Artist::find()
         .filter(ArtistColumn::NameNormalized.is_in(name_list))
-        .all(&db).await.unwrap();
+        .all(&db).await?;
     for model in db_result {
         let writes = &name_map[&model.name_normalized];
         for write in writes {
@@ -83,14 +94,17 @@ pub async fn get_or_create_artists(input: Vec<ArtistWrite>) -> Result<HashMap<Ar
     }
 
     // All remaining must be created new
-    // we dont need any maps here because they will be returned in the order they are supplied
     let mut notfound: Vec<&ArtistWrite> = vec![];
     for (write, opt) in result.iter() {
         if opt.is_none() {
             notfound.push(write);
         }
     }
-    // TODO: deduplicate!
+
+    // deduplicate
+    notfound.sort_by_key(|x| normalize(x.name.as_ref().expect("Cannot write new artist without a name.")));
+    notfound.dedup_by_key(|x| normalize(x.name.as_ref().expect("Cannot write new artist without a name.")));
+
     if !notfound.is_empty() {
         let inserts: Vec<ArtistActiveModel> = notfound.iter().map(|&x| {
             assert!(x.name.is_some()); //TODO
@@ -118,17 +132,18 @@ pub async fn get_or_create_artists(input: Vec<ArtistWrite>) -> Result<HashMap<Ar
         mark_db_write();
 
         debug!("Inserted {:?} Artists", amount_inserts);
+        // just call ourselves again to reuse the logic of everyone already existing
         Box::pin(get_or_create_artists(input)).await
     }
     else {
-        let result: HashMap<ArtistWrite, ArtistModel> = result.into_iter().map(|(k,v)| (k, v.expect("This should not happen!").clone())).collect();
+        let result: ArtistWriteMap = result.into_iter().map(|(k,v)| (k, v.expect("This should not happen!").clone())).collect();
         // There should no longer be None variants now
         Ok(result)
     }
 }
 
 #[allow(clippy::collapsible_else_if)]
-pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> Result<HashMap<TrackWrite, TrackModel>, MalojaError> {
+pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> Result<TrackWriteMap, MalojaError> {
     let db = connect().await?;
     let mut result: HashMap<TrackWrite, Option<TrackModel>> = HashMap::new();
     input.clone().into_iter().for_each(|track| {
@@ -136,11 +151,15 @@ pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> Result<HashMap<Trac
     });
 
     // make sure all artists exist
-    let artists = input.iter().map(|t| [t.primary_artists.clone().unwrap_or_default(), t.secondary_artists.clone().unwrap_or_default()].concat()).flatten().collect();
+    let artists: Vec<ArtistWrite> = input.iter().flat_map(
+        |t: &TrackWrite| [t.primary_artists.clone().unwrap_or_default(), t.secondary_artists.clone().unwrap_or_default()].concat()
+    ).collect();
     let artist_map = get_or_create_artists(artists).await?;
 
     // make sure all albums exist
-    let albums: Vec<AlbumWrite> = input.iter().filter_map(|t| t.album.clone()).collect();
+    let albums: Vec<AlbumWrite> = input.iter().filter_map(
+        |t: &TrackWrite| t.album.clone()
+    ).collect();
     let album_map = get_or_create_albums(albums).await?;
 
 
@@ -280,7 +299,7 @@ pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> Result<HashMap<Trac
         Box::pin(get_or_create_tracks(input)).await
     }
     else {
-        let result: HashMap<TrackWrite, TrackModel> = result.into_iter().map(|(k,v)| (k, v.expect("This should not happen!").clone())).collect();
+        let result: TrackWriteMap = result.into_iter().map(|(k,v)| (k, v.expect("This should not happen!").clone())).collect();
         // There should no longer be None variants now
         Ok(result)
     }
@@ -289,7 +308,7 @@ pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> Result<HashMap<Trac
 
 
 #[allow(clippy::collapsible_else_if)]
-pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> Result<HashMap<AlbumWrite, AlbumModel>, MalojaError> {
+pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> Result<AlbumWriteMap, MalojaError> {
     let db = connect().await?;
     let mut result: HashMap<AlbumWrite, Option<AlbumModel>> = HashMap::new();
     input.clone().into_iter().for_each(|album| {
@@ -417,7 +436,7 @@ pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> Result<HashMap<Albu
         Box::pin(get_or_create_albums(input)).await
     }
     else {
-        let result: HashMap<AlbumWrite, AlbumModel> = result.into_iter().map(|(k,v)| (k, v.expect("This should not happen!").clone())).collect();
+        let result: AlbumWriteMap = result.into_iter().map(|(k,v)| (k, v.expect("This should not happen!").clone())).collect();
         // There should no longer be None variants now
         Ok(result)
     }
@@ -425,7 +444,7 @@ pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> Result<HashMap<Albu
 
 
 #[allow(clippy::collapsible_else_if)]
-pub async fn create_scrobbles(input: Vec<ScrobbleWrite>, fail_on_existing: bool) -> Result<HashMap<ScrobbleWrite, ScrobbleModel>, MalojaError> {
+pub async fn create_scrobbles(input: Vec<ScrobbleWrite>, fail_on_existing: bool) -> Result<ScrobbleWriteMap, MalojaError> {
     // this one is a bit different that the other entity ones because we never supply a scrobblewrite
     // as part of another entity to either create or fetch - scrobbles are only ever created (or patched?)
     let db = connect().await?;
@@ -498,7 +517,7 @@ pub async fn create_scrobbles(input: Vec<ScrobbleWrite>, fail_on_existing: bool)
         Box::pin(create_scrobbles(input, false)).await
     }
     else {
-        let result: HashMap<ScrobbleWrite, ScrobbleModel> = result.into_iter().map(|(k,v)| (k, v.expect("This should not happen!").clone())).collect();
+        let result: ScrobbleWriteMap = result.into_iter().map(|(k,v)| (k, v.expect("This should not happen!").clone())).collect();
         // There should no longer be None variants now
         Ok(result)
     }

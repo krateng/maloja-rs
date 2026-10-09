@@ -97,3 +97,8 @@ async fn create_table<E: sea_orm::EntityTrait>(db: &DbConn, entity: E) {
 
 }
 
+/// Shared function to normalize titles and names for the purpose of duplication detection
+pub fn normalize(input: &str) -> String {
+    input.to_lowercase().replace("_", "-").replace(" ", "-")
+}
+
