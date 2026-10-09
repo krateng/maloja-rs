@@ -17,6 +17,7 @@ use crate::entity::{
 use sea_orm::{ConnectOptions, ConnectionTrait, Database, DatabaseConnection, DbBackend, DbConn, DbErr, Schema, Statement};
 use std::path::PathBuf;
 use crate::database::errors::MalojaError;
+use import::import;
 
 fn get_database_path() -> PathBuf {
     FOLDERS.data.join("maloja.sqlite")
@@ -37,7 +38,7 @@ pub async fn init_db() -> Result<(), MalojaError> {
     log::info!("Checking Database schema...");
     create_tables(&db).await;
     log::info!("Checking imports...");
-    match import::import().await {
+    match import().await {
         Ok((imported, failed)) => {
             log::info!("Imported {} files, failed {}.", imported, failed);
         }

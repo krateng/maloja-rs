@@ -1,44 +1,18 @@
-use std::{fs, io};
 use std::path::PathBuf;
+use std::{fs};
 use log::info;
-use sea_orm::{DatabaseConnection, DbErr, EntityTrait};
 use serde_json::Value;
 use serde::Deserialize;
-use crate::configuration::FOLDERS;
 use crate::configuration::logging::display_path;
 use crate::database::connect;
 use crate::database::errors::MalojaError;
 use crate::database::repository::create_scrobbles;
-use crate::entity::{
-    scrobble::Entity as ScrobbleEntity, scrobble::ActiveModel as ScrobbleModel,
-    track::Entity as TrackEntity, track::ActiveModel as TrackModel,
-    album::Entity as AlbumEntity, album::ActiveModel as AlbumModel,
-    artist::Entity as ArtistEntity, artist::ActiveModel as ArtistModel,
-};
 use crate::entity::album::AlbumWrite;
 use crate::entity::artist::ArtistWrite;
 use crate::entity::scrobble::ScrobbleWrite;
 use crate::entity::track::TrackWrite;
 
-pub async fn import() -> Result<(i32, i32), io::Error> {
-    let import_folder = FOLDERS.data.join("import");
 
-    let (mut imported, mut failed): (i32, i32) = (0, 0);
-    if import_folder.exists() {
-        for entry in fs::read_dir(import_folder)? {
-            let entry = entry?;
-            let result = match entry.file_name().to_str() {
-                Some("maloja_export.json") => { import_maloja(entry.path()).await }
-                _ => {
-                    failed += 1;
-                    continue
-                }
-            };
-            imported += 1;
-        }
-    }
-    Ok((imported, failed))
-}
 
 #[derive(Deserialize, Debug, Clone)]
 struct MalojaExport {
@@ -76,7 +50,7 @@ pub async fn import_maloja(file: PathBuf) -> Result<(), MalojaError> {
     )?;
 
     let db = connect().await?;
-    
+
     let scrobbles: Vec<ScrobbleWrite> = parsed.scrobbles.into_iter().map(|scrobble| {
         ScrobbleWrite {
             timestamp: scrobble.time,
@@ -92,22 +66,22 @@ pub async fn import_maloja(file: PathBuf) -> Result<(), MalojaError> {
                     }
                 }).collect()),
                 album: scrobble.track.album.map(|al| AlbumWrite {
-                        id: None,
-                        album_title: Some(al.albumtitle),
-                        album_artists: al.artists.map(|aas| {
-                            aas.iter().map(|aa| {
-                                // outer map is to unwrap the option, inner map an actual vector map
-                                ArtistWrite {
-                                    id: None,
-                                    name: Some(aa.to_owned()),
-                                    mbid: None,
-                                    spotify_id: None,
-                                }
-                            }).collect()
-                        }),
-                        mbid: None,
-                        spotify_id: None,
-                    }) ,
+                    id: None,
+                    album_title: Some(al.albumtitle),
+                    album_artists: al.artists.map(|aas| {
+                        aas.iter().map(|aa| {
+                            // outer map is to unwrap the option, inner map an actual vector map
+                            ArtistWrite {
+                                id: None,
+                                name: Some(aa.to_owned()),
+                                mbid: None,
+                                spotify_id: None,
+                            }
+                        }).collect()
+                    }),
+                    mbid: None,
+                    spotify_id: None,
+                }) ,
                 secondary_artists: None,
                 track_length: scrobble.track.length,
                 mbid: None,
@@ -118,10 +92,10 @@ pub async fn import_maloja(file: PathBuf) -> Result<(), MalojaError> {
         }
     }).collect();
 
-   
-    
+
+
     create_scrobbles(scrobbles, false).await?;
 
     Ok(())
-    
+
 }
