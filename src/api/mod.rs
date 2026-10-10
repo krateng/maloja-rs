@@ -9,6 +9,7 @@ use utoipa_axum::router::OpenApiRouter;
 mod audioscrobbler;
 mod listenbrainz;
 mod maloja_2;
+mod maloja_1;
 
 const APIS: [ScrobbleAPI; 3] = [listenbrainz::API, audioscrobbler::API, maloja_2::API];
 
@@ -33,6 +34,7 @@ impl ScrobbleAPI {
         (path = listenbrainz::API.prefix, api = listenbrainz::ApiDoc, tags = [listenbrainz::API.tag]),
         (path = audioscrobbler::API.prefix, api = audioscrobbler::ApiDoc, tags = [audioscrobbler::API.tag]),
         (path = maloja_2::API.prefix, api = maloja_2::ApiDoc, tags = [maloja_2::API.tag]),
+        (path = maloja_1::API.prefix, api = maloja_1::ApiDoc, tags = [maloja_1::API.tag]),
     ),
     servers(
         (url = "/apis")
