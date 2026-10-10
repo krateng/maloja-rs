@@ -6,7 +6,9 @@ edition = "2024"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-sea-orm = { version = "2.0.4", features = [ "sqlx-sqlite", "runtime-tokio-rustls", "macros", "sqlite-use-returning-for-3_35"] }
+sea-orm = { version = "2.0.4", features = [
+    "sqlx-sqlite", "runtime-tokio-rustls", "macros", "sqlite-use-returning-for-3_35", "with-uuid"
+] }
 tokio = { version = "1.40.0", features = ["rt", "rt-multi-thread", "macros"] }
 confique = { version = "0.4.0", features = ["toml"] }
 colored = { version = "3.0.0" }
@@ -33,3 +35,4 @@ sqlx = "0.8.3"
 reqwest = { version = "0.13.5", features = ["json"] }
 tower = "0.5.2"
 http-body-util = "0.1.2"
+uuid = { version = "1.28.0", features = ["v7"] }

@@ -1,6 +1,5 @@
 use crate::database::repository::{get_or_create_albums, get_or_create_artists, get_or_create_tracks};
 use crate::entity::album::AlbumWrite;
-use crate::entity::album_artist::Relation::Artist;
 use crate::entity::artist::ArtistWrite;
 use crate::entity::track::TrackWrite;
 use crate::tests::common;
