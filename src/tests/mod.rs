@@ -1,10 +1,10 @@
-use std::fs;
 use crate::database;
+use std::fs;
 
-mod fixtures;
-mod parsing;
 mod api;
 mod direct_insert;
+mod fixtures;
+mod parsing;
 
 pub(crate) async fn common() {
     // TODO MAKE SAFE

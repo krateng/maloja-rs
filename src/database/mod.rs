@@ -1,37 +1,38 @@
-
-pub mod views;
+pub mod errors;
 pub mod import;
 pub mod repository;
-pub mod errors;
+pub mod views;
 
-use std::io::Error;
 use crate::configuration::FOLDERS;
-use crate::entity::{
-    album::Entity as Album,
-    artist::Entity as Artist,
-    scrobble::Entity as Scrobble,
-    track::Entity as Track,
-    track_artist::Entity as TrackArtist,
-    album_artist::Entity as AlbumArtist,
-};
-use sea_orm::{ConnectOptions, ConnectionTrait, Database, DatabaseConnection, DbBackend, DbConn, DbErr, Schema, Statement};
-use std::path::PathBuf;
 use crate::database::errors::MalojaError;
+use crate::entity::{
+    album::Entity as Album, album_artist::Entity as AlbumArtist, artist::Entity as Artist,
+    scrobble::Entity as Scrobble, track::Entity as Track, track_artist::Entity as TrackArtist,
+};
 use import::import;
+use sea_orm::{
+    ConnectOptions, ConnectionTrait, Database, DatabaseConnection, DbBackend, DbConn, DbErr,
+    Schema, Statement,
+};
+use std::io::Error;
+use std::path::PathBuf;
 
 fn get_database_path() -> PathBuf {
     FOLDERS.data.join("maloja.sqlite")
 }
 
 pub async fn init_db() -> Result<(), MalojaError> {
-
     let db = connect().await?;
     assert_eq!(db.get_database_backend(), DbBackend::Sqlite);
 
-    let version: String = db.query_one_raw(Statement::from_string(
-        sea_orm::DatabaseBackend::Sqlite,
-        "SELECT sqlite_version();".to_owned(),
-    )).await?.unwrap().try_get("", "sqlite_version()")?;
+    let version: String = db
+        .query_one_raw(Statement::from_string(
+            sea_orm::DatabaseBackend::Sqlite,
+            "SELECT sqlite_version();".to_owned(),
+        ))
+        .await?
+        .unwrap()
+        .try_get("", "sqlite_version()")?;
 
     log::info!("Using SQLite {}", version);
 
@@ -65,16 +66,12 @@ pub async fn connect() -> Result<DatabaseConnection, MalojaError> {
         Ok(conn) => {
             conn.execute_unprepared("PRAGMA foreign_keys = ON").await?;
             Ok(conn)
-        },
-        Err(e) => {
-            Err(MalojaError::DatabaseConnectionError { message: e.to_string() })
         }
+        Err(e) => Err(MalojaError::DatabaseConnectionError { message: e.to_string() }),
     }
-    
 }
 
 pub async fn create_tables(db: &DbConn) -> Result<(), MalojaError> {
-
     // TODO: proper migrations
 
     create_table(db, Scrobble).await?;
@@ -96,11 +93,9 @@ async fn create_table<E: sea_orm::EntityTrait>(db: &DbConn, entity: E) -> Result
     let result = db.execute(&stmt).await?;
     // TODO: STRICT types
     Ok(())
-
 }
 
 /// Shared function to normalize titles and names for the purpose of duplication detection
 pub fn normalize(input: &str) -> String {
     input.to_lowercase().replace("_", "-").replace(" ", "-")
 }
-

@@ -18,10 +18,7 @@ fn register_routes(mut router: OpenApiRouter) -> OpenApiRouter {
 }
 
 #[derive(OpenApi)]
-#[openapi(
-    paths(submit, validate),
-    info(title = "Listenbrainz API", version = "1")
-)]
+#[openapi(paths(submit, validate), info(title = "Listenbrainz API", version = "1"))]
 pub struct ApiDoc;
 
 #[utoipa::path(

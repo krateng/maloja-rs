@@ -1,9 +1,9 @@
 pub mod logging;
 
 use crate::configuration::logging::{display_envvar, display_path};
-use confique::{toml, Config};
+use confique::{Config, toml};
 use log::warn;
-use std::fs::{remove_file, File, OpenOptions};
+use std::fs::{File, OpenOptions, remove_file};
 use std::io::Write;
 use std::net::IpAddr;
 use std::path::PathBuf;
@@ -40,7 +40,12 @@ pub static FOLDERS: LazyLock<ApplicationFolders> = LazyLock::new(|| {
                             let _ = remove_file(test_file);
                         }
                         Err(e) => {
-                            println!("No write access to {}: {}. Make sure to set the environment variable {} to a writable directory.", display_path(folder), e, display_envvar(envvar));
+                            println!(
+                                "No write access to {}: {}. Make sure to set the environment variable {} to a writable directory.",
+                                display_path(folder),
+                                e,
+                                display_envvar(envvar)
+                            );
                             success = false;
                         }
                     }
@@ -48,7 +53,12 @@ pub static FOLDERS: LazyLock<ApplicationFolders> = LazyLock::new(|| {
             }
             Err(e) => {
                 // logging isn't setup yet
-                println!("Failed to create {}: {}. Make sure to set the environment variable {} to a writable directory.", display_path(folder), e, display_envvar(envvar));
+                println!(
+                    "Failed to create {}: {}. Make sure to set the environment variable {} to a writable directory.",
+                    display_path(folder),
+                    e,
+                    display_envvar(envvar)
+                );
                 success = false;
             }
         }

@@ -26,10 +26,12 @@ pub enum Relation {
     Artist,
 }
 
+#[rustfmt::skip]
 impl Related<super::album::Entity> for Entity {
-    fn to() -> RelationDef { Relation::Album.def() }
+    fn to() -> RelationDef {  Relation::Album.def() }
 }
 
+#[rustfmt::skip]
 impl Related<super::artist::Entity> for Entity {
     fn to() -> RelationDef { Relation::Artist.def() }
 }

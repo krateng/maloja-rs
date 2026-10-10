@@ -1,22 +1,22 @@
 // These are essentially the API schemas, but we store them here because they will also be used internally
 
+use crate::timeranges::TimeRange;
 use serde::Serialize;
 use utoipa::ToSchema;
-use crate::timeranges::TimeRange;
 
 #[derive(Serialize, ToSchema)]
 pub struct Charts<T: Clone> {
     #[schema(inline)]
     pub pagination: PaginationInfo,
     #[schema(inline)]
-    pub result: Vec<ChartsEntry<T>>
+    pub result: Vec<ChartsEntry<T>>,
 }
 #[derive(Serialize, ToSchema)]
 pub struct Top<T: Clone> {
     #[schema(inline)]
     pagination: PaginationInfo,
     #[schema(inline)]
-    result: Vec<TopEntry<T>>
+    result: Vec<TopEntry<T>>,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -24,9 +24,8 @@ pub struct Paginated<T: Clone> {
     #[schema(inline)]
     pub(crate) pagination: PaginationInfo,
     #[schema(inline)]
-    pub(crate) result: Vec<T>
+    pub(crate) result: Vec<T>,
 }
-
 
 #[derive(Serialize, ToSchema, Clone, Debug)]
 pub struct PaginationInfo {

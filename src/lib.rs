@@ -3,7 +3,7 @@ mod configuration;
 mod database;
 mod entity;
 mod server;
-mod timeranges;
-mod uri;
 #[cfg(test)]
 mod tests;
+mod timeranges;
+mod uri;

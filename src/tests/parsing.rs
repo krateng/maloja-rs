@@ -1,38 +1,45 @@
+use crate::database;
 use crate::entity::artist::ArtistWrite;
 use crate::entity::scrobble::{Model, ScrobbleWrite};
 use crate::entity::track::TrackWrite;
-use crate::database;
 use crate::tests::common;
 
 type TrackInfo = (Vec<&'static str>, &'static str);
 
 fn create_scrobble_writes(tracks: Vec<TrackInfo>) -> Vec<ScrobbleWrite> {
     let mut ts = 100000;
-    let writes: Vec<ScrobbleWrite> = tracks.into_iter().map(|track| {
-        ts += 200;
-        ScrobbleWrite {
-            timestamp: ts,
-            track: TrackWrite {
-                id: None,
-                title: Some(track.1.parse().unwrap()),
-                primary_artists: Some(track.0.into_iter().map(|artist| {
-                    ArtistWrite {
-                        id: None,
-                        name: Some(artist.parse().unwrap()),
-                        mbid: None,
-                        spotify_id: None,
-                    }
-                }).collect()),
-                secondary_artists: None,
-                track_length: None,
-                album: None,
-                mbid: None,
-                spotify_id: None,
-            },
-            origin: None,
-            listen_duration: None,
-        }
-    }).collect();
+    let writes: Vec<ScrobbleWrite> = tracks
+        .into_iter()
+        .map(|track| {
+            ts += 200;
+            ScrobbleWrite {
+                timestamp: ts,
+                track: TrackWrite {
+                    id: None,
+                    title: Some(track.1.parse().unwrap()),
+                    primary_artists: Some(
+                        track
+                            .0
+                            .into_iter()
+                            .map(|artist| ArtistWrite {
+                                id: None,
+                                name: Some(artist.parse().unwrap()),
+                                mbid: None,
+                                spotify_id: None,
+                            })
+                            .collect(),
+                    ),
+                    secondary_artists: None,
+                    track_length: None,
+                    album: None,
+                    mbid: None,
+                    spotify_id: None,
+                },
+                origin: None,
+                listen_duration: None,
+            }
+        })
+        .collect();
 
     writes
 }
@@ -63,14 +70,25 @@ async fn match_entities() {
         (vec!["Howard Shore", "Jeremy Soule"], "party in the prc"),
         (vec!["Jeremy Soule", "Howard Shore"], "Party in The PRC"),
         (vec!["jeremy soule", "howard shore"], "Party In The PRC"),
-        (vec!["jeremy soule", "howard shore", "Jeremy Soule", "Howard Shore", "JEREMY SOULE", "HOWARD SHORE"], "Party In The PRC"),
+        (
+            vec![
+                "jeremy soule",
+                "howard shore",
+                "Jeremy Soule",
+                "Howard Shore",
+                "JEREMY SOULE",
+                "HOWARD SHORE",
+            ],
+            "Party In The PRC",
+        ),
     ];
     let amount2 = tracks2.len();
 
     // first one by one
     let mut scrobbles = vec![];
     for write in create_scrobble_writes(tracks1).clone() {
-        let db_result = database::repository::create_scrobbles(vec![write.clone()], false).await.unwrap();
+        let db_result =
+            database::repository::create_scrobbles(vec![write.clone()], false).await.unwrap();
         scrobbles.push(db_result[&write].clone())
     }
     assert_eq!(scrobbles.len(), amount1, "The incorrect amount of scrobbles has been generated");
@@ -78,7 +96,9 @@ async fn match_entities() {
 
     // now all at once
     // TODO why does this overflow the stack???
-    let db_result = database::repository::create_scrobbles(create_scrobble_writes(tracks2), false).await.unwrap();
+    let db_result = database::repository::create_scrobbles(create_scrobble_writes(tracks2), false)
+        .await
+        .unwrap();
     assert_eq!(db_result.len(), amount2, "The incorrect amount of scrobbles has been generated");
     let scrobbles = db_result.values().map(|x| x.to_owned()).collect();
     assert_all_same_track(scrobbles);
@@ -106,7 +126,9 @@ async fn parse_multi_artists() {
     ];
     let amount = tracks1.len();
 
-    let db_result = database::repository::create_scrobbles(create_scrobble_writes(tracks1), false).await.unwrap();
+    let db_result = database::repository::create_scrobbles(create_scrobble_writes(tracks1), false)
+        .await
+        .unwrap();
     assert_eq!(db_result.len(), amount, "The incorrect amount of scrobbles has been generated");
     let scrobbles = db_result.values().map(|x| x.to_owned()).collect();
     assert_all_same_track(scrobbles);

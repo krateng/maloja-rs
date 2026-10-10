@@ -1,18 +1,17 @@
+use super::artist::{ArtistRead, ArtistReadContext, ArtistWrite};
 use sea_orm::entity::prelude::*;
 use serde::Serialize;
 use utoipa::ToSchema;
-use super::artist::{ArtistRead, ArtistReadContext, ArtistWrite};
 
 #[derive(Debug, Clone, DeriveEntityModel, Serialize)]
 #[sea_orm(table_name = "albums")]
 pub struct Model {
-    
     #[sea_orm(primary_key, auto_increment = true)]
     pub id: u32,
-    
+
     /// Canonical title of the album
     pub album_title: String,
-    
+
     /// Normalized album title
     #[serde(skip_serializing, skip_deserializing)]
     pub album_title_normalized: String,
@@ -32,12 +31,12 @@ pub enum Relation {
     AlbumArtist,
 }
 
+#[rustfmt::skip]
 impl Related<super::track::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Track.def()
-    }
+    fn to() -> RelationDef { Relation::Track.def() }
 }
 
+#[rustfmt::skip]
 impl Related<super::artist::Entity> for Entity {
     fn to() -> RelationDef { super::album_artist::Relation::Artist.def() }
     fn via() -> Option<RelationDef> { Some(super::album_artist::Relation::Album.def().rev()) }

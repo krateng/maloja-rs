@@ -1,15 +1,15 @@
-use axum::routing::get;
-use axum::{Json, Router};
 use axum::http::header;
 use axum::response::{IntoResponse, Response};
+use axum::routing::get;
+use axum::{Json, Router};
 use serde_json::json;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 
 mod audioscrobbler;
 mod listenbrainz;
-mod maloja_2;
 mod maloja_1;
+mod maloja_2;
 
 const APIS: [ScrobbleAPI; 3] = [listenbrainz::API, audioscrobbler::API, maloja_2::API];
 
@@ -66,9 +66,7 @@ pub fn mount_apis(root_router: Router) -> Router {
 }
 
 async fn openapi() -> Response {
-    let json_openapi = json!(
-        ApiDoc::openapi()
-    );
+    let json_openapi = json!(ApiDoc::openapi());
     let mut resp = Json(json_openapi).into_response();
     resp.headers_mut().insert(header::CONTENT_TYPE, "application/json".parse().unwrap());
     resp

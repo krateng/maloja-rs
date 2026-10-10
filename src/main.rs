@@ -13,7 +13,7 @@ use colored::Colorize;
 use log::{debug, info, warn};
 use std::io;
 use std::io::Write;
-use tokio::time::{sleep, Duration};
+use tokio::time::{Duration, sleep};
 
 #[tokio::main]
 async fn main() {
@@ -37,7 +37,7 @@ async fn main() {
     // SERVER
     info!("Starting up server...");
     server::run_server().await;
-    
+
     info!("Shutting down...");
     sleep(Duration::from_secs(2)).await;
     io::stdout().flush().unwrap();

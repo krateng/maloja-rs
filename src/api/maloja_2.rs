@@ -1,14 +1,14 @@
-use std::error::Error;
-use axum::extract::{FromRequestParts, Query};
-use axum::extract::path::ErrorKind;
-use axum::extract::rejection::{PathRejection};
-use axum::http::request::Parts;
-use axum::http::StatusCode;
 use axum::Json;
+use axum::extract::path::ErrorKind;
+use axum::extract::rejection::PathRejection;
+use axum::extract::{FromRequestParts, Query};
+use axum::http::StatusCode;
+use axum::http::request::Parts;
 use axum::response::{IntoResponse, Response};
 use axum::routing::any;
-use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
+use std::error::Error;
 use utoipa::{OpenApi, ToSchema};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -16,19 +16,19 @@ use utoipa_axum::routes;
 use crate::api::ScrobbleAPI;
 use crate::database;
 use crate::database::errors::MalojaError;
-use crate::entity::artist::{ArtistRead};
-use crate::entity::track::{TrackRead};
-use crate::entity::scrobble::{ScrobbleRead};
-use crate::entity::album::{AlbumRead};
 use crate::database::views::{Charts, Paginated, PaginationInfo, PerformanceEntry, PulseEntry};
+use crate::entity::album::AlbumRead;
+use crate::entity::artist::ArtistRead;
+use crate::entity::scrobble::ScrobbleRead;
+use crate::entity::track::TrackRead;
 use crate::timeranges::TimeRange;
-use crate::uri::{PathEntity, QueryLimitAlbum, QueryLimitArtist, QueryLimitTrack, QueryPagination, QueryTimerange, QueryTimesteps};
-
-pub const API: ScrobbleAPI = ScrobbleAPI {
-    prefix: "/maloja_2",
-    tag: "Maloja v2",
-    register: register_routes,
+use crate::uri::{
+    PathEntity, QueryLimitAlbum, QueryLimitArtist, QueryLimitTrack, QueryPagination,
+    QueryTimerange, QueryTimesteps,
 };
+
+pub const API: ScrobbleAPI =
+    ScrobbleAPI { prefix: "/maloja_2", tag: "Maloja v2", register: register_routes };
 
 fn register_routes(mut router: OpenApiRouter) -> OpenApiRouter {
     router = router
@@ -46,15 +46,23 @@ fn register_routes(mut router: OpenApiRouter) -> OpenApiRouter {
     router
 }
 
-
 #[derive(OpenApi)]
 #[openapi(
-    paths(charts_tracks, charts_artists, charts_albums, info_artist, info_album, info_track, scrobbles, pulse, performance),
+    paths(
+        charts_tracks,
+        charts_artists,
+        charts_albums,
+        info_artist,
+        info_album,
+        info_track,
+        scrobbles,
+        pulse,
+        performance
+    ),
     info(title = "Maloja API", version = "2"),
-    components(schemas(ScrobbleRead,TrackRead,ArtistRead,AlbumRead))
+    components(schemas(ScrobbleRead, TrackRead, ArtistRead, AlbumRead))
 )]
 pub struct ApiDoc;
-
 
 #[derive(Serialize, ToSchema)]
 #[schema(title = "Error")]
@@ -71,31 +79,41 @@ fn create_response(e: &MalojaError, code: StatusCode, description: String) -> Re
         Json(APIError {
             error_type: format!("{}", e),
             //response_code: code.as_u16(),
-            description
-        })
-    ).into_response()
+            description,
+        }),
+    )
+        .into_response()
 }
 
 impl IntoResponse for MalojaError {
     fn into_response(self) -> Response {
         match &self {
-            MalojaError::ArtistNotFound { id } => create_response(&self, StatusCode::NOT_FOUND, format!("Artist {} not found", id)),
-            MalojaError::TrackNotFound { id } => create_response(&self, StatusCode::NOT_FOUND, format!("Track {} not found", id)),
-            MalojaError::AlbumNotFound { id } => create_response(&self, StatusCode::NOT_FOUND, format!("Album {} not found", id)),
-            MalojaError::DatabaseConnectionError { message } => create_response(&self, StatusCode::INTERNAL_SERVER_ERROR, message.clone()),
-            MalojaError::ParseError { message } => create_response(&self, StatusCode::BAD_REQUEST, message.clone()),
+            MalojaError::ArtistNotFound { id } => {
+                create_response(&self, StatusCode::NOT_FOUND, format!("Artist {} not found", id))
+            }
+            MalojaError::TrackNotFound { id } => {
+                create_response(&self, StatusCode::NOT_FOUND, format!("Track {} not found", id))
+            }
+            MalojaError::AlbumNotFound { id } => {
+                create_response(&self, StatusCode::NOT_FOUND, format!("Album {} not found", id))
+            }
+            MalojaError::DatabaseConnectionError { message } => {
+                create_response(&self, StatusCode::INTERNAL_SERVER_ERROR, message.clone())
+            }
+            MalojaError::ParseError { message } => {
+                create_response(&self, StatusCode::BAD_REQUEST, message.clone())
+            }
             e => create_response(&self, StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
         }
     }
 }
-
 
 // custom path extractor to return proper json errors
 struct Path<T>(T);
 
 impl<S, T> FromRequestParts<S> for Path<T>
 where
-// these trait bounds are copied from `impl FromRequest for axum::extract::path::Path`
+    // these trait bounds are copied from `impl FromRequest for axum::extract::path::Path`
     T: DeserializeOwned + Send,
     S: Send + Sync,
 {
@@ -111,26 +129,33 @@ where
                         let status = StatusCode::BAD_REQUEST;
                         let kind = inner.kind();
                         let description = match kind {
-                            ErrorKind::ParseErrorAtKey { key, .. } => format!("Key <{}> could not be parsed", key),
+                            ErrorKind::ParseErrorAtKey { key, .. } => {
+                                format!("Key <{}> could not be parsed", key)
+                            }
                             _ => "Parameters could not be parsed".to_string(),
                         };
-                        (status, APIError {
-                            error_type: "RequestParamsParseError".to_string(),
-                            description: description.to_string(),
-                        })
+                        (
+                            status,
+                            APIError {
+                                error_type: "RequestParamsParseError".to_string(),
+                                description: description.to_string(),
+                            },
+                        )
                     }
-                    PathRejection::MissingPathParams(error) => {
-                        (StatusCode::BAD_REQUEST, APIError {
+                    PathRejection::MissingPathParams(error) => (
+                        StatusCode::BAD_REQUEST,
+                        APIError {
                             error_type: "RequestParamsParseError".to_string(),
                             description: "Missing path parameters".to_string(),
-                        })
-                    }
-                    _ => {
-                        (StatusCode::INTERNAL_SERVER_ERROR, APIError {
+                        },
+                    ),
+                    _ => (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        APIError {
                             error_type: "RequestParamsParseError".to_string(),
                             description: "Unknown error while parsing path parameters".to_string(),
-                        })
-                    }
+                        },
+                    ),
                 };
 
                 Err((status, Json(body)))
@@ -140,12 +165,15 @@ where
 }
 
 pub async fn notfound() -> Response {
-    (StatusCode::NOT_FOUND, Json(APIError {
-        error_type: "InvalidEndpoint".to_string(),
-        description: "Endpoint does not exist in this API.".to_string(),
-    })).into_response()
+    (
+        StatusCode::NOT_FOUND,
+        Json(APIError {
+            error_type: "InvalidEndpoint".to_string(),
+            description: "Endpoint does not exist in this API.".to_string(),
+        }),
+    )
+        .into_response()
 }
-
 
 #[utoipa::path(
     get,
@@ -157,10 +185,11 @@ pub async fn notfound() -> Response {
         (status = INTERNAL_SERVER_ERROR, body = inline(APIError), description = "Server error while handling the request"),
     )
 )]
-async fn info_artist(Path(params_path): Path<PathEntity>) -> Result<(StatusCode, Json<ArtistRead>), MalojaError> {
+async fn info_artist(
+    Path(params_path): Path<PathEntity>,
+) -> Result<(StatusCode, Json<ArtistRead>), MalojaError> {
     let result = database::repository::artist_info(params_path.id).await?;
     Ok((StatusCode::OK, Json(result)))
-
 }
 
 #[utoipa::path(
@@ -173,7 +202,9 @@ async fn info_artist(Path(params_path): Path<PathEntity>) -> Result<(StatusCode,
         (status = INTERNAL_SERVER_ERROR, body = inline(APIError), description = "Server error while handling the request"),
     )
 )]
-async fn info_track(Path(params_path): Path<PathEntity>) -> Result<(StatusCode, Json<TrackRead>), MalojaError> {
+async fn info_track(
+    Path(params_path): Path<PathEntity>,
+) -> Result<(StatusCode, Json<TrackRead>), MalojaError> {
     let result = database::repository::track_info(params_path.id).await?;
     Ok((StatusCode::OK, Json(result)))
 }
@@ -188,13 +219,12 @@ async fn info_track(Path(params_path): Path<PathEntity>) -> Result<(StatusCode, 
         (status = INTERNAL_SERVER_ERROR, body = inline(APIError), description = "Server error while handling the request"),
     )
 )]
-async fn info_album(Path(params_path): Path<PathEntity>) -> Result<(StatusCode, Json<AlbumRead>), MalojaError> {
+async fn info_album(
+    Path(params_path): Path<PathEntity>,
+) -> Result<(StatusCode, Json<AlbumRead>), MalojaError> {
     let result = database::repository::album_info(params_path.id).await?;
     Ok((StatusCode::OK, Json(result)))
 }
-
-
-
 
 #[utoipa::path(
     get,
@@ -208,21 +238,24 @@ async fn info_album(Path(params_path): Path<PathEntity>) -> Result<(StatusCode, 
 async fn charts_tracks(
     Query(params_time): Query<QueryTimerange>,
     Query(params_limit_artist): Query<QueryLimitArtist>,
-    Query(params_limit_album): Query<QueryLimitAlbum>
+    Query(params_limit_album): Query<QueryLimitAlbum>,
 ) -> Result<(StatusCode, Json<Charts<TrackRead>>), MalojaError> {
     let timerange = params_time.to_timerange()?;
     let artist_id = params_limit_artist.to_artist_id();
     let album_id = params_limit_album.to_album_id();
     let tracks = database::repository::charts_tracks(timerange, artist_id, album_id).await?;
-    Ok((StatusCode::OK, Json(Charts {
-        pagination: PaginationInfo {
-            page: 1,
-            pages: 1,
-            items_per_page: tracks.len() as u32,
-            items_total: tracks.len() as u32,
-        },
-        result: tracks
-    })))
+    Ok((
+        StatusCode::OK,
+        Json(Charts {
+            pagination: PaginationInfo {
+                page: 1,
+                pages: 1,
+                items_per_page: tracks.len() as u32,
+                items_total: tracks.len() as u32,
+            },
+            result: tracks,
+        }),
+    ))
 }
 
 #[utoipa::path(
@@ -235,19 +268,22 @@ async fn charts_tracks(
     )
 )]
 async fn charts_artists(
-    Query(params_time): Query<QueryTimerange>
+    Query(params_time): Query<QueryTimerange>,
 ) -> Result<(StatusCode, Json<Charts<ArtistRead>>), MalojaError> {
     let timerange = params_time.to_timerange()?;
     let artists = database::repository::charts_artists(timerange).await?;
-    Ok((StatusCode::OK, Json(Charts {
-        pagination: PaginationInfo {
-            page: 1,
-            pages: 1,
-            items_per_page: artists.len() as u32,
-            items_total: artists.len() as u32,
-        },
-        result: artists
-    })))
+    Ok((
+        StatusCode::OK,
+        Json(Charts {
+            pagination: PaginationInfo {
+                page: 1,
+                pages: 1,
+                items_per_page: artists.len() as u32,
+                items_total: artists.len() as u32,
+            },
+            result: artists,
+        }),
+    ))
 }
 
 #[utoipa::path(
@@ -261,23 +297,24 @@ async fn charts_artists(
 )]
 async fn charts_albums(
     Query(params_time): Query<QueryTimerange>,
-    Query(params_limit_artist): Query<QueryLimitArtist>
+    Query(params_limit_artist): Query<QueryLimitArtist>,
 ) -> Result<(StatusCode, Json<Charts<AlbumRead>>), MalojaError> {
     let timerange = params_time.to_timerange()?;
     let artist_id = params_limit_artist.to_artist_id();
     let albums = database::repository::charts_albums(timerange, artist_id).await?;
-    Ok((StatusCode::OK, Json(Charts {
-        pagination: PaginationInfo {
-            page: 1,
-            pages: 1,
-            items_per_page: albums.len() as u32,
-            items_total: albums.len() as u32,
-        },
-        result: albums
-    })))
+    Ok((
+        StatusCode::OK,
+        Json(Charts {
+            pagination: PaginationInfo {
+                page: 1,
+                pages: 1,
+                items_per_page: albums.len() as u32,
+                items_total: albums.len() as u32,
+            },
+            result: albums,
+        }),
+    ))
 }
-
-
 
 #[utoipa::path(
     get,
@@ -293,13 +330,14 @@ async fn scrobbles(
     Query(params_limit_artist): Query<QueryLimitArtist>,
     Query(params_limit_album): Query<QueryLimitAlbum>,
     Query(params_limit_track): Query<QueryLimitTrack>,
-    Query(params_pagination): Query<QueryPagination>
+    Query(params_pagination): Query<QueryPagination>,
 ) -> Result<(StatusCode, Json<Paginated<ScrobbleRead>>), MalojaError> {
     let timerange = params_time.to_timerange()?;
     let artist_id = params_limit_artist.to_artist_id();
     let album_id = params_limit_album.to_album_id();
     let track_id = params_limit_track.to_track_id();
-    let scrobbles = database::repository::scrobbles(timerange, artist_id, album_id, track_id, true).await?;
+    let scrobbles =
+        database::repository::scrobbles(timerange, artist_id, album_id, track_id, true).await?;
     let paginated_scrobbles = params_pagination.paginate_results(scrobbles);
     Ok((StatusCode::OK, Json(paginated_scrobbles)))
 }
@@ -319,7 +357,7 @@ async fn pulse(
     Query(params_limit_artist): Query<QueryLimitArtist>,
     Query(params_limit_album): Query<QueryLimitAlbum>,
     Query(params_limit_track): Query<QueryLimitTrack>,
-    Query(params_pagination): Query<QueryPagination>
+    Query(params_pagination): Query<QueryPagination>,
 ) -> Result<(StatusCode, Json<Paginated<PulseEntry>>), MalojaError> {
     let timerange = params_time.to_timerange()?;
     let subranges: Vec<TimeRange> = timerange.get_subranges(params_timesteps.to_rangetype()?);
@@ -330,7 +368,6 @@ async fn pulse(
     let result = database::repository::pulse(subranges, artist_id, album_id, track_id).await?;
     let paginated_pulse = params_pagination.paginate_results(result);
     Ok((StatusCode::OK, Json(paginated_pulse)))
-
 }
 
 #[utoipa::path(
@@ -348,7 +385,7 @@ async fn performance(
     Query(params_limit_artist): Query<QueryLimitArtist>,
     Query(params_limit_album): Query<QueryLimitAlbum>,
     Query(params_limit_track): Query<QueryLimitTrack>,
-    Query(params_pagination): Query<QueryPagination>
+    Query(params_pagination): Query<QueryPagination>,
 ) -> Result<(StatusCode, Json<Paginated<PerformanceEntry>>), MalojaError> {
     let timerange = params_time.to_timerange()?;
     let subranges = timerange.get_subranges(params_timesteps.to_rangetype()?);
@@ -356,8 +393,8 @@ async fn performance(
     let album_id = params_limit_album.to_album_id();
     let track_id = params_limit_track.to_track_id();
 
-    let result = database::repository::performance(subranges, artist_id, album_id, track_id).await?;
+    let result =
+        database::repository::performance(subranges, artist_id, album_id, track_id).await?;
     let paginated_pulse = params_pagination.paginate_results(result);
     Ok((StatusCode::OK, Json(paginated_pulse)))
-
 }

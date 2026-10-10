@@ -1,26 +1,25 @@
+use super::album::{AlbumRead, AlbumWrite};
+use super::artist::{ArtistRead, ArtistReadContext, ArtistWrite};
 use sea_orm::entity::prelude::*;
 use serde::Serialize;
 use utoipa::ToSchema;
-use super::artist::{ArtistRead, ArtistReadContext, ArtistWrite};
-use super::album::{AlbumRead, AlbumWrite};
 
 #[derive(Debug, Clone, DeriveEntityModel, Serialize)]
 #[sea_orm(table_name = "tracks")]
 pub struct Model {
-    
     #[sea_orm(primary_key, auto_increment = true)]
     pub id: u32,
 
     /// Canonical track title. Should be unique for the combination of artists
     pub title: String,
-    
+
     /// Normalized track title for the database
     #[serde(skip_serializing, skip_deserializing)]
     pub title_normalized: String,
-    
+
     /// Duration of the full track in seconds
     pub track_length: Option<u32>,
-    
+
     /// ID of the canonical album release that contains this track
     pub album_id: Option<u32>,
 
@@ -35,23 +34,28 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(has_many = "super::scrobble::Entity")]
     Scrobble,
-    #[sea_orm(belongs_to = "super::album::Entity", from = "Column::AlbumId", to = "super::album::Column::Id")]
+    #[sea_orm(
+        belongs_to = "super::album::Entity",
+        from = "Column::AlbumId",
+        to = "super::album::Column::Id"
+    )]
     // TODO: disable this weird pascal case conversion
     Album,
     #[sea_orm(has_many = "super::track_artist::Entity")]
     TrackArtist,
 }
 
+#[rustfmt::skip]
 impl Related<super::album::Entity> for Entity {
     fn to() -> RelationDef { Relation::Album.def() }
 }
 
+#[rustfmt::skip]
 impl Related<super::scrobble::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Scrobble.def()
-    }
+    fn to() -> RelationDef { Relation::Scrobble.def() }
 }
 
+#[rustfmt::skip]
 impl Related<super::artist::Entity> for Entity {
     fn to() -> RelationDef { super::track_artist::Relation::Artist.def() }
     fn via() -> Option<RelationDef> { Some(super::track_artist::Relation::Track.def().rev()) }

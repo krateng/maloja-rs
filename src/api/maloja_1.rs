@@ -1,7 +1,7 @@
+use crate::api::ScrobbleAPI;
 use utoipa::{OpenApi, ToSchema};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
-use crate::api::ScrobbleAPI;
 
 pub const API: ScrobbleAPI = ScrobbleAPI {
     prefix: "/maloja_1",
@@ -10,16 +10,12 @@ pub const API: ScrobbleAPI = ScrobbleAPI {
 };
 
 fn register_routes(mut router: OpenApiRouter) -> OpenApiRouter {
-    router = router
-        .routes(routes!(scrobble));
+    router = router.routes(routes!(scrobble));
     router
 }
 
 #[derive(OpenApi)]
-#[openapi(
-    paths(scrobble),
-    info(title = "Maloja API", version = "1 (Partial implementation)")
-)]
+#[openapi(paths(scrobble), info(title = "Maloja API", version = "1 (Partial implementation)"))]
 pub struct ApiDoc;
 
 #[utoipa::path(
@@ -29,6 +25,4 @@ pub struct ApiDoc;
         (status = OK, body = (), description = "Successful request"),
     )
 )]
-async fn scrobble() {
-    
-}
+async fn scrobble() {}

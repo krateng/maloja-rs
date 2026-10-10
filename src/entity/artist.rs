@@ -6,13 +6,12 @@ use utoipa::ToSchema;
 #[derive(Debug, Clone, DeriveEntityModel, Serialize)]
 #[sea_orm(table_name = "artists")]
 pub struct Model {
-    
     #[sea_orm(primary_key, auto_increment = true)]
     pub id: u32,
-    
+
     /// Canonical Artist name
     pub name: String,
-    
+
     /// Normalized name for the database
     #[sea_orm(unique)]
     pub name_normalized: String,
@@ -27,21 +26,22 @@ pub struct Model {
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(has_many = "super::track_artist::Entity")]
-    TrackArtist
+    TrackArtist,
 }
 
+#[rustfmt::skip]
 impl Related<super::track::Entity> for Entity {
     fn to() -> RelationDef { super::track_artist::Relation::Track.def() }
     fn via() -> Option<RelationDef> { Some(super::track_artist::Relation::Artist.def().rev()) }
 }
 
+#[rustfmt::skip]
 impl Related<super::album::Entity> for Entity {
     fn to() -> RelationDef { super::album_artist::Relation::Album.def() }
     fn via() -> Option<RelationDef> { Some(super::album_artist::Relation::Artist.def().rev()) }
 }
 
 impl ActiveModelBehavior for ActiveModel {}
-
 
 /// Representation of an artist with the information that can be supplied from the outside.
 /// Used for creating or patching an artist, or to identify an artist within another entity who could
@@ -80,4 +80,3 @@ pub struct ArtistReadContext {
     pub alias: Option<String>,
     pub primary: bool,
 }
-

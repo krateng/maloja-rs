@@ -18,10 +18,7 @@ fn register_routes(mut router: OpenApiRouter) -> OpenApiRouter {
 }
 
 #[derive(OpenApi)]
-#[openapi(
-    paths(mainendpoint),
-    info(title = "Audioscrobbler API", version = "2.0")
-)]
+#[openapi(paths(mainendpoint), info(title = "Audioscrobbler API", version = "2.0"))]
 pub struct ApiDoc;
 
 #[utoipa::path(

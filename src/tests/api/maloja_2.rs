@@ -1,11 +1,15 @@
-use http_body_util::BodyExt;
+use crate::server::{create_app, run_server};
 use crate::tests::common;
-use axum::{body::Body, http::{Request, StatusCode}, Router};
+use crate::tests::fixtures::fixture;
+use axum::{
+    Router,
+    body::Body,
+    http::{Request, StatusCode},
+};
+use http_body_util::BodyExt;
 use log::debug;
 use serde_json::Value;
-use crate::server::{create_app, run_server};
 use tower::{Service, ServiceExt};
-use crate::tests::fixtures::fixture;
 
 const SERVER_ADDRESS: &str = "http://localhost:42010/apis/maloja_2";
 
@@ -17,7 +21,6 @@ async fn get_json_response(app: Router, path: &str) -> Value {
     let data: Value = serde_json::from_slice(&bytes).unwrap();
     data
 }
-
 
 #[tokio::test]
 async fn get_scrobbles_all() {

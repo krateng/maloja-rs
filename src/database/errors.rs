@@ -1,5 +1,5 @@
-use axum::http::StatusCode;
 use axum::Json;
+use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use serde::Serialize;
 use strum;
@@ -15,14 +15,11 @@ pub enum MalojaError {
     DatabaseError { message: String },
     FilesystemError { message: String },
     ParseError { message: String },
-
 }
 
 impl From<sea_orm::DbErr> for MalojaError {
     fn from(e: sea_orm::DbErr) -> Self {
-        MalojaError::DatabaseError {
-            message: e.to_string(),
-        }
+        MalojaError::DatabaseError { message: e.to_string() }
     }
 }
 
@@ -37,5 +34,3 @@ impl From<serde_json::Error> for MalojaError {
         MalojaError::ParseError { message: e.to_string() }
     }
 }
-
-

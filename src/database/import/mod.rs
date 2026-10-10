@@ -1,8 +1,8 @@
 pub mod maloja;
 
 use crate::configuration::FOLDERS;
+use maloja::import_maloja;
 use std::{fs, io};
-use maloja::{import_maloja};
 
 pub async fn import() -> Result<(i32, i32), io::Error> {
     let import_folder = FOLDERS.data.join("import");
@@ -12,10 +12,10 @@ pub async fn import() -> Result<(i32, i32), io::Error> {
         for entry in fs::read_dir(import_folder)? {
             let entry = entry?;
             let result = match entry.file_name().to_str() {
-                Some("maloja_export.json") => { import_maloja(entry.path()).await }
+                Some("maloja_export.json") => import_maloja(entry.path()).await,
                 _ => {
                     failed += 1;
-                    continue
+                    continue;
                 }
             };
             imported += 1;

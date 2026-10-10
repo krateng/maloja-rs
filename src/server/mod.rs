@@ -1,15 +1,14 @@
 mod pages;
 
-use axum::response::{Html, IntoResponse, Response};
-use axum::{Json, Router};
-use tower_http::services::{ServeDir, ServeFile};
-use axum::routing::get;
 use crate::api::mount_apis;
 use crate::configuration::CONFIG;
+use axum::response::{Html, IntoResponse, Response};
+use axum::routing::get;
+use axum::{Json, Router};
 use pages::*;
+use tower_http::services::{ServeDir, ServeFile};
 
 pub async fn run_server() {
-
     let app = create_app().await;
     let bind_address = format!("{}:{}", CONFIG.bind_address, CONFIG.port);
     let listener = tokio::net::TcpListener::bind(bind_address).await.unwrap();
@@ -23,8 +22,7 @@ pub async fn create_app() -> Router {
     // APIS
     app = mount_apis(app);
     // SPECIAL PATHS
-    app = app
-        .nest_service("/api_explorer", ServeFile::new("src/web/special/api_explorer.html"));
+    app = app.nest_service("/api_explorer", ServeFile::new("src/web/special/api_explorer.html"));
     // TEMPLATES
     app = app
         .route("/about", get(about))

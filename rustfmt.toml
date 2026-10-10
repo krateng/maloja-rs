@@ -2,3 +2,5 @@ reorder_imports = true
 group_imports = "StdExternalCrate"
 imports_granularity = "Crate"
 imports_layout = "HorizontalVertical"
+control_brace_style = "ClosingNextLine"
+use_small_heuristics = "Max"

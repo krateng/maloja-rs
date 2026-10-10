@@ -1,23 +1,33 @@
+use crate::database::errors::MalojaError;
+use crate::database::{connect, mark_db_write, normalize};
+use crate::entity::{
+    album::{
+        ActiveModel as AlbumActiveModel, AlbumRead, AlbumWrite, Column as AlbumColumn,
+        Entity as Album, Model as AlbumModel,
+    },
+    album_artist::{ActiveModel as AlbumArtistActiveModel, Entity as AlbumArtist},
+    artist::{
+        ActiveModel as ArtistActiveModel, ArtistRead, ArtistWrite, Column as ArtistColumn,
+        Entity as Artist, Model as ArtistModel,
+    },
+    scrobble::{
+        ActiveModel as ScrobbleActiveModel, Column as ScrobbleColumn, Entity as Scrobble,
+        Model as ScrobbleModel, ScrobbleWrite,
+    },
+    track::{
+        ActiveModel as TrackActiveModel, Column as TrackColumn, Entity as Track,
+        Model as TrackModel, TrackRead, TrackWrite,
+    },
+    track_artist::{ActiveModel as TrackArtistActiveModel, Entity as TrackArtist},
+};
+use log::debug;
+use sea_orm::ActiveValue::Set;
+use sea_orm::{ColumnTrait, EntityTrait, NotSet, QueryFilter, TransactionTrait};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::sync::Arc;
-use log::debug;
-use sea_orm::{ColumnTrait, EntityTrait, NotSet, QueryFilter, TransactionTrait};
-use sea_orm::ActiveValue::Set;
-use crate::database::{connect, mark_db_write, normalize};
-use crate::database::errors::MalojaError;
-use crate::entity::{
-    album::{Entity as Album, Model as AlbumModel, ActiveModel as AlbumActiveModel, Column as AlbumColumn, AlbumWrite, AlbumRead},
-    track::{Entity as Track, Model as TrackModel, ActiveModel as TrackActiveModel, Column as TrackColumn, TrackWrite, TrackRead},
-    artist::{Entity as Artist, Model as ArtistModel, ActiveModel as ArtistActiveModel, Column as ArtistColumn, ArtistWrite, ArtistRead},
-    scrobble::{Entity as Scrobble, Model as ScrobbleModel, ActiveModel as ScrobbleActiveModel, Column as ScrobbleColumn, ScrobbleWrite},
-    track_artist::{Entity as TrackArtist, ActiveModel as TrackArtistActiveModel},
-    album_artist::{Entity as AlbumArtist, ActiveModel as AlbumArtistActiveModel},
-};
 
 /// How many entities should be inserted into the Database in one go
 const BATCH_SIZE: usize = 250;
-
-
 
 /// Object that maps a number of incoming [ScrobbleWrite]s to the resulting [ScrobbleModel] that will actually be used.
 type ScrobbleWriteMap = HashMap<ScrobbleWrite, ScrobbleModel>;
@@ -32,6 +42,7 @@ type ArtistWriteMap = HashMap<ArtistWrite, Arc<ArtistModel>>;
 // this is totally gonna work this time lmao
 // link the relevant xkcd here
 #[allow(clippy::collapsible_else_if)]
+#[rustfmt::skip]
 pub async fn get_or_create_artists(input: Vec<ArtistWrite>) -> Result<ArtistWriteMap, MalojaError> {
     let db = connect().await?;
 
@@ -141,6 +152,7 @@ pub async fn get_or_create_artists(input: Vec<ArtistWrite>) -> Result<ArtistWrit
 }
 
 #[allow(clippy::collapsible_else_if)]
+#[rustfmt::skip]
 pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> Result<TrackWriteMap, MalojaError> {
     let db = connect().await?;
 
@@ -299,9 +311,8 @@ pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> Result<TrackWriteMa
     Ok(result)
 }
 
-
-
 #[allow(clippy::collapsible_else_if)]
+#[rustfmt::skip]
 pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> Result<AlbumWriteMap, MalojaError> {
     let db = connect().await?;
     let mut result: HashMap<AlbumWrite, Option<AlbumModel>> = HashMap::new();
@@ -436,8 +447,8 @@ pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> Result<AlbumWriteMa
     }
 }
 
-
 #[allow(clippy::collapsible_else_if)]
+#[rustfmt::skip]
 pub async fn create_scrobbles(input: Vec<ScrobbleWrite>, fail_on_existing: bool) -> Result<ScrobbleWriteMap, MalojaError> {
     // this one is a bit different that the other entity ones because we never supply a scrobblewrite
     // as part of another entity to either create or fetch - scrobbles are only ever created (or patched?)

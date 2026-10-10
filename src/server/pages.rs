@@ -1,24 +1,25 @@
-use axum::extract::{Path, Query};
-use axum::response::{Html, IntoResponse, Response};
-use askama::Template;
-use serde::Serialize;
-use serde_urlencoded;
-use crate::configuration::{MalojaConfig, CONFIG};
+use crate::configuration::{CONFIG, MalojaConfig};
 use crate::database;
 use crate::database::views::{ChartsEntry, PerformanceEntry, PulseEntry};
 use crate::entity::album::AlbumRead;
 use crate::entity::artist::ArtistRead;
 use crate::entity::scrobble::ScrobbleRead;
 use crate::entity::track::TrackRead;
-use crate::timeranges::{RangeType, TimeRange, ALL_TIME};
-use crate::uri::{EntityLimit, MalojaQuery, PathEntity, QueryLimitAlbum, QueryLimitArtist, QueryLimitTrack, QueryTimerange, QueryTimesteps};
-
-
+use crate::timeranges::{ALL_TIME, RangeType, TimeRange};
+use crate::uri::{
+    EntityLimit, MalojaQuery, PathEntity, QueryLimitAlbum, QueryLimitArtist, QueryLimitTrack,
+    QueryTimerange, QueryTimesteps,
+};
+use askama::Template;
+use axum::extract::{Path, Query};
+use axum::response::{Html, IntoResponse, Response};
+use serde::Serialize;
+use serde_urlencoded;
 
 // filters dont work for me
 mod filters {
-    use askama::Result as AskamaResult;
     use askama::Error as AskamaError;
+    use askama::Result as AskamaResult;
     use serde::Serialize;
 
     pub fn format_in_tz(timestamp: i64) -> AskamaResult<String> {
@@ -29,30 +30,31 @@ mod filters {
         let local_time = time.with_timezone(&tz);
         Ok(local_time.format(fmt).to_string())
     }
-
 }
 
-
-const RANGE_TYPES: [RangeType; 4] = [RangeType::Year, RangeType::Month, RangeType::Week, RangeType::Day];
+const RANGE_TYPES: [RangeType; 4] =
+    [RangeType::Year, RangeType::Month, RangeType::Week, RangeType::Day];
 
 fn get_last_ranges(amount: usize) -> Vec<(RangeType, Vec<TimeRange>)> {
-
-    let range_types_and_ranges: Vec<(RangeType, Vec<TimeRange>)> = RANGE_TYPES.into_iter().map(|range_type| {
-        // get the last ranges for each type
-        let ranges = ALL_TIME.get_subranges(range_type.clone());
-        let last12 = ranges[ranges.len().saturating_sub(amount)..].to_owned();
-        (range_type, last12)
-    } ).collect();
+    let range_types_and_ranges: Vec<(RangeType, Vec<TimeRange>)> = RANGE_TYPES
+        .into_iter()
+        .map(|range_type| {
+            // get the last ranges for each type
+            let ranges = ALL_TIME.get_subranges(range_type.clone());
+            let last12 = ranges[ranges.len().saturating_sub(amount)..].to_owned();
+            (range_type, last12)
+        })
+        .collect();
 
     range_types_and_ranges
 }
 
 fn get_preset_ranges() -> Vec<TimeRange> {
-    let mut result: Vec<TimeRange> = RANGE_TYPES.into_iter().map(|range_type| range_type.get_current() ).collect();
+    let mut result: Vec<TimeRange> =
+        RANGE_TYPES.into_iter().map(|range_type| range_type.get_current()).collect();
     result.insert(0, ALL_TIME);
     result
 }
-
 
 #[derive(Template)]
 #[template(path = "info_artist.html")]
@@ -67,9 +69,10 @@ struct ArtistPage {
 }
 pub async fn info_artist(Path(params_path): Path<PathEntity>) -> Response {
     let result = database::repository::artist_info(params_path.id).await.unwrap();
-    let tracks = database::repository::charts_tracks(ALL_TIME, Some(result.id), None).await.unwrap();
-    let scrobbles = database::repository::scrobbles(ALL_TIME, Some(result.id), None, None, true).await.unwrap();
-
+    let tracks =
+        database::repository::charts_tracks(ALL_TIME, Some(result.id), None).await.unwrap();
+    let scrobbles =
+        database::repository::scrobbles(ALL_TIME, Some(result.id), None, None, true).await.unwrap();
 
     let range_types_and_ranges = get_last_ranges(12);
     // async closures unstable
@@ -81,11 +84,19 @@ pub async fn info_artist(Path(params_path): Path<PathEntity>) -> Response {
     }).collect();*/
     let mut pulses = vec![];
     for (range_type, ranges) in &range_types_and_ranges {
-        pulses.push((range_type.clone(), database::repository::pulse(ranges.clone(), Some(result.id), None, None).await.unwrap()));
+        pulses.push((
+            range_type.clone(),
+            database::repository::pulse(ranges.clone(), Some(result.id), None, None).await.unwrap(),
+        ));
     }
     let mut performances = vec![];
     for (range_type, ranges) in &range_types_and_ranges {
-        performances.push((range_type.clone(), database::repository::performance(ranges.clone(), Some(result.id), None, None).await.unwrap()));
+        performances.push((
+            range_type.clone(),
+            database::repository::performance(ranges.clone(), Some(result.id), None, None)
+                .await
+                .unwrap(),
+        ));
     }
 
     let p = ArtistPage {
@@ -95,7 +106,7 @@ pub async fn info_artist(Path(params_path): Path<PathEntity>) -> Response {
         track_charts: tracks,
         scrobbles: scrobbles,
         pulses: pulses,
-        performances: performances
+        performances: performances,
     };
     Html(p.render().unwrap()).into_response()
 }
@@ -112,16 +123,25 @@ struct TrackPage {
 }
 pub async fn info_track(Path(params_path): Path<PathEntity>) -> Response {
     let result = database::repository::track_info(params_path.id).await.unwrap();
-    let scrobbles = database::repository::scrobbles(ALL_TIME, None, None, Some(result.id), true).await.unwrap();
+    let scrobbles =
+        database::repository::scrobbles(ALL_TIME, None, None, Some(result.id), true).await.unwrap();
 
     let range_types_and_ranges = get_last_ranges(12);
     let mut pulses = vec![];
     for (range_type, ranges) in &range_types_and_ranges {
-        pulses.push((range_type.clone(), database::repository::pulse(ranges.clone(), None, None, Some(result.id)).await.unwrap()));
+        pulses.push((
+            range_type.clone(),
+            database::repository::pulse(ranges.clone(), None, None, Some(result.id)).await.unwrap(),
+        ));
     }
     let mut performances = vec![];
     for (range_type, ranges) in &range_types_and_ranges {
-        performances.push((range_type.clone(), database::repository::performance(ranges.clone(), None, None, Some(result.id)).await.unwrap()));
+        performances.push((
+            range_type.clone(),
+            database::repository::performance(ranges.clone(), None, None, Some(result.id))
+                .await
+                .unwrap(),
+        ));
     }
 
     let p = TrackPage {
@@ -130,7 +150,7 @@ pub async fn info_track(Path(params_path): Path<PathEntity>) -> Response {
         entity_limit: EntityLimit { track: Some(result), album: None, artist: None },
         scrobbles: scrobbles,
         pulses: pulses,
-        performances: performances
+        performances: performances,
     };
     Html(p.render().unwrap()).into_response()
 }
@@ -148,17 +168,27 @@ struct AlbumPage {
 }
 pub async fn info_album(Path(params_path): Path<PathEntity>) -> Response {
     let result = database::repository::album_info(params_path.id).await.unwrap();
-    let tracks = database::repository::charts_tracks(ALL_TIME, None, Some(result.id)).await.unwrap();
-    let scrobbles = database::repository::scrobbles(ALL_TIME, None, Some(result.id), None, true).await.unwrap();
+    let tracks =
+        database::repository::charts_tracks(ALL_TIME, None, Some(result.id)).await.unwrap();
+    let scrobbles =
+        database::repository::scrobbles(ALL_TIME, None, Some(result.id), None, true).await.unwrap();
 
     let range_types_and_ranges = get_last_ranges(12);
     let mut pulses = vec![];
     for (range_type, ranges) in &range_types_and_ranges {
-        pulses.push((range_type.clone(), database::repository::pulse(ranges.clone(), None, Some(result.id), None).await.unwrap()));
+        pulses.push((
+            range_type.clone(),
+            database::repository::pulse(ranges.clone(), None, Some(result.id), None).await.unwrap(),
+        ));
     }
     let mut performances = vec![];
     for (range_type, ranges) in &range_types_and_ranges {
-        performances.push((range_type.clone(), database::repository::performance(ranges.clone(), None, Some(result.id), None).await.unwrap()));
+        performances.push((
+            range_type.clone(),
+            database::repository::performance(ranges.clone(), None, Some(result.id), None)
+                .await
+                .unwrap(),
+        ));
     }
 
     let p = AlbumPage {
@@ -168,11 +198,10 @@ pub async fn info_album(Path(params_path): Path<PathEntity>) -> Response {
         track_charts: tracks,
         scrobbles: scrobbles,
         pulses: pulses,
-        performances: performances
+        performances: performances,
     };
     Html(p.render().unwrap()).into_response()
 }
-
 
 #[derive(Template)]
 #[template(path = "pulse.html")]
@@ -195,7 +224,14 @@ pub async fn pulse(
     let timerange = params_timerange.to_timerange().unwrap();
     let timestep = params_timesteps.to_rangetype().unwrap();
     let subranges = timerange.get_subranges(timestep.clone());
-    let pulse = database::repository::pulse(subranges, params_artist.to_artist_id(), params_album.to_album_id(), params_track.to_track_id()).await.unwrap();
+    let pulse = database::repository::pulse(
+        subranges,
+        params_artist.to_artist_id(),
+        params_album.to_album_id(),
+        params_track.to_track_id(),
+    )
+    .await
+    .unwrap();
     // TODO we probably want to restrict this and only allow one entity limit
 
     let (mut artist, mut track, mut album) = (None, None, None);
@@ -214,15 +250,12 @@ pub async fn pulse(
         pulse: pulse,
         timerange: timerange,
         timestep: timestep,
-        entity_limit: EntityLimit {
-            artist, album, track
-        },
+        entity_limit: EntityLimit { artist, album, track },
         preset_steps: RANGE_TYPES.to_vec(),
         preset_ranges: get_preset_ranges(),
     };
     Html(p.render().unwrap()).into_response()
 }
-
 
 #[derive(Template)]
 #[template(path = "performance.html")]
@@ -245,7 +278,14 @@ pub async fn performance(
     let timerange = params_timerange.to_timerange().unwrap();
     let timestep = params_timesteps.to_rangetype().unwrap();
     let subranges = timerange.get_subranges(timestep.clone());
-    let performance = database::repository::performance(subranges, params_artist.to_artist_id(), params_album.to_album_id(), params_track.to_track_id()).await.unwrap();
+    let performance = database::repository::performance(
+        subranges,
+        params_artist.to_artist_id(),
+        params_album.to_album_id(),
+        params_track.to_track_id(),
+    )
+    .await
+    .unwrap();
     // TODO we probably want to restrict this and only allow one entity limit
 
     let (mut artist, mut track, mut album) = (None, None, None);
@@ -264,9 +304,7 @@ pub async fn performance(
         performance: performance,
         timerange: timerange,
         timestep: timestep,
-        entity_limit: EntityLimit {
-            artist, album, track
-        },
+        entity_limit: EntityLimit { artist, album, track },
         preset_steps: RANGE_TYPES.to_vec(),
         preset_ranges: get_preset_ranges(),
     };
@@ -289,7 +327,15 @@ pub async fn scrobbles(
     Query(params_timerange): Query<QueryTimerange>,
 ) -> Response {
     let timerange = params_timerange.to_timerange().unwrap();
-    let scrobbles = database::repository::scrobbles(timerange.clone(), params_artist.to_artist_id(), params_album.to_album_id(), params_track.to_track_id(), true).await.unwrap();
+    let scrobbles = database::repository::scrobbles(
+        timerange.clone(),
+        params_artist.to_artist_id(),
+        params_album.to_album_id(),
+        params_track.to_track_id(),
+        true,
+    )
+    .await
+    .unwrap();
 
     let (mut artist, mut track, mut album) = (None, None, None);
     if let Some(artist_id) = params_artist.to_artist_id() {
@@ -305,15 +351,12 @@ pub async fn scrobbles(
     let p = ScrobblesPage {
         config: &CONFIG,
         scrobbles: scrobbles,
-        entity_limit: EntityLimit {
-            artist, album, track
-        },
+        entity_limit: EntityLimit { artist, album, track },
         timerange,
         preset_ranges: get_preset_ranges(),
     };
     Html(p.render().unwrap()).into_response()
 }
-
 
 #[derive(Template)]
 #[template(path = "about.html")]
@@ -321,9 +364,7 @@ struct AboutPage {
     version: String,
 }
 pub async fn about() -> Response {
-    let p = AboutPage {
-        version: env!("CARGO_PKG_VERSION").to_string(),
-    };
+    let p = AboutPage { version: env!("CARGO_PKG_VERSION").to_string() };
 
     Html(p.render().unwrap()).into_response()
 }
