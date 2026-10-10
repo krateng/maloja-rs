@@ -1,22 +1,19 @@
 use crate::entity::{
     album::{
-        ActiveModel as AlbumActiveModel, AlbumRead, AlbumWrite, Column as AlbumColumn,
-        Entity as Album, Model as AlbumModel,
-    },
-    album_artist::{ActiveModel as AlbumArtistActiveModel, Entity as AlbumArtist},
+        AlbumRead, Column as AlbumColumn,
+        Entity as Album,
+    }
+    ,
     artist::{
-        ActiveModel as ArtistActiveModel, ArtistRead, ArtistReadContext, ArtistWrite,
-        Column as ArtistColumn, Entity as Artist, Model as ArtistModel,
-    },
-    scrobble::{
-        ActiveModel as ScrobbleActiveModel, Column as ScrobbleColumn, Entity as Scrobble,
-        Model as ScrobbleModel, ScrobbleWrite,
-    },
+        ArtistRead, ArtistReadContext,
+        Column as ArtistColumn, Entity as Artist,
+    }
+    ,
     track::{
-        ActiveModel as TrackActiveModel, Column as TrackColumn, Entity as Track,
-        Model as TrackModel, TrackRead, TrackWrite,
-    },
-    track_artist::{ActiveModel as TrackArtistActiveModel, Entity as TrackArtist},
+        Column as TrackColumn, Entity as Track
+        , TrackRead,
+    }
+    ,
 };
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use std::collections::HashMap;

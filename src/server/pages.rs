@@ -1,11 +1,11 @@
-use crate::configuration::{CONFIG, MalojaConfig};
+use crate::configuration::{MalojaConfig, CONFIG};
 use crate::database;
 use crate::database::views::{ChartsEntry, PerformanceEntry, PulseEntry};
 use crate::entity::album::AlbumRead;
 use crate::entity::artist::ArtistRead;
 use crate::entity::scrobble::ScrobbleRead;
 use crate::entity::track::TrackRead;
-use crate::timeranges::{ALL_TIME, RangeType, TimeRange};
+use crate::timeranges::{RangeType, TimeRange, ALL_TIME};
 use crate::uri::{
     EntityLimit, MalojaQuery, PathEntity, QueryLimitAlbum, QueryLimitArtist, QueryLimitTrack,
     QueryTimerange, QueryTimesteps,
@@ -13,14 +13,10 @@ use crate::uri::{
 use askama::Template;
 use axum::extract::{Path, Query};
 use axum::response::{Html, IntoResponse, Response};
-use serde::Serialize;
-use serde_urlencoded;
 
 // filters dont work for me
 mod filters {
-    use askama::Error as AskamaError;
     use askama::Result as AskamaResult;
-    use serde::Serialize;
 
     pub fn format_in_tz(timestamp: i64) -> AskamaResult<String> {
         // TODO later use config obv

@@ -6,7 +6,7 @@ use crate::entity::scrobble::{
     Relation as ScrobbleRelation, ScrobbleRead,
 };
 use crate::entity::track::{
-    Column as TrackColumn, Entity as TrackEntity, Relation as TrackRelation, TrackRead,
+    Column as TrackColumn, Relation as TrackRelation,
 };
 use crate::entity::track_artist::Column as TrackArtistColumn;
 use crate::timeranges::TimeRange;

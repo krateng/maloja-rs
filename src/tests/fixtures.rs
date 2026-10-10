@@ -2,8 +2,8 @@ use crate::database;
 use crate::entity::artist::ArtistWrite;
 use crate::entity::scrobble::ScrobbleWrite;
 use crate::entity::track::TrackWrite;
-use rand::RngExt;
 use rand::prelude::IndexedRandom;
+use rand::RngExt;
 
 #[rustfmt::skip]
 const ARTIST_PRENAMES_FEMALE: &[&str] = &[

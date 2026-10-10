@@ -11,10 +11,9 @@ use crate::entity::{
 };
 use import::import;
 use sea_orm::{
-    ConnectOptions, ConnectionTrait, Database, DatabaseConnection, DbBackend, DbConn, DbErr,
+    ConnectOptions, ConnectionTrait, Database, DatabaseConnection, DbBackend, DbConn,
     Schema, Statement,
 };
-use std::io::Error;
 use std::path::PathBuf;
 
 fn get_database_path() -> PathBuf {

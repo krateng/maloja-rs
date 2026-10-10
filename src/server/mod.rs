@@ -2,9 +2,8 @@ mod pages;
 
 use crate::api::mount_apis;
 use crate::configuration::CONFIG;
-use axum::response::{Html, IntoResponse, Response};
 use axum::routing::get;
-use axum::{Json, Router};
+use axum::Router;
 use pages::*;
 use tower_http::services::{ServeDir, ServeFile};
 

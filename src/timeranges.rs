@@ -1,13 +1,12 @@
 use chrono::{
-    DateTime, Datelike, Local, Months, NaiveDate, NaiveDateTime, TimeZone, Utc, Weekday,
-    naive::Days,
+    naive::Days, DateTime, Datelike, Local, Months, NaiveDate, TimeZone, Utc,
+    Weekday,
 };
 use chrono_tz::Tz;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Serialize, Serializer};
 use std::fmt::{Display, Formatter};
 use strum_macros::Display;
-use utoipa::openapi::{RefOr, Schema};
-use utoipa::{PartialSchema, ToSchema};
+use utoipa::ToSchema;
 
 const TIMEZONE: Tz = Tz::Europe__Vienna; //AEIOU
 const WEEK_BEGIN: Weekday = Weekday::Sun;

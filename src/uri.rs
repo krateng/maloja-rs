@@ -3,11 +3,10 @@ use crate::database::views::{Paginated, PaginationInfo};
 use crate::entity::album::AlbumRead;
 use crate::entity::artist::ArtistRead;
 use crate::entity::track::TrackRead;
-use crate::timeranges::{ALL_TIME, BaseTimeRange, RangeType, TimeRange};
+use crate::timeranges::{BaseTimeRange, RangeType, TimeRange, ALL_TIME};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::cmp::min;
-use std::collections::HashMap;
 use utoipa::IntoParams;
 
 // Every category of query / path arguments should have struct that converts both to and from the backend object that we use to represent its meaning

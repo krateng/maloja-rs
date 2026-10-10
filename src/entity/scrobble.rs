@@ -3,7 +3,6 @@ use crate::entity::track::TrackWrite;
 use sea_orm::entity::prelude::*;
 use sea_orm::prelude::Json;
 use serde::Serialize;
-use std::time::Duration;
 use utoipa::ToSchema;
 
 #[derive(Debug, Clone, DeriveEntityModel, Serialize)]

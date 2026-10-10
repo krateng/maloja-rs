@@ -1,5 +1,5 @@
 use crate::api::ScrobbleAPI;
-use utoipa::{OpenApi, ToSchema};
+use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 

@@ -1,14 +1,13 @@
-use axum::Json;
 use axum::extract::path::ErrorKind;
 use axum::extract::rejection::PathRejection;
 use axum::extract::{FromRequestParts, Query};
-use axum::http::StatusCode;
 use axum::http::request::Parts;
+use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::any;
-use serde::Serialize;
+use axum::Json;
 use serde::de::DeserializeOwned;
-use std::error::Error;
+use serde::Serialize;
 use utoipa::{OpenApi, ToSchema};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;

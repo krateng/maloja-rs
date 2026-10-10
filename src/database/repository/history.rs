@@ -2,8 +2,7 @@ use crate::database::connect;
 use crate::database::errors::MalojaError;
 use crate::database::repository::{charts_albums, charts_artists, charts_tracks, scrobbles};
 use crate::database::views::{PerformanceEntry, PulseEntry};
-use crate::entity::scrobble::ScrobbleRead;
-use crate::timeranges::{RangeType, TimeRange};
+use crate::timeranges::TimeRange;
 
 /// This is for statistics that represent a development over multiple time ranges
 

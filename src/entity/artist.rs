@@ -1,4 +1,3 @@
-use sea_orm::ActiveValue::Set;
 use sea_orm::entity::prelude::*;
 use serde::Serialize;
 use utoipa::ToSchema;

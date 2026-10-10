@@ -4,7 +4,6 @@ use crate::database::repository::{resolve_album_ids, resolve_artist_ids, resolve
 use crate::entity::album::AlbumRead;
 use crate::entity::artist::ArtistRead;
 use crate::entity::track::TrackRead;
-use sea_orm::DbErr;
 
 pub async fn artist_info(artist_id: u32) -> Result<ArtistRead, MalojaError> {
     let db = connect().await?;

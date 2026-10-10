@@ -2,12 +2,12 @@ use crate::database::errors::MalojaError;
 use crate::database::{connect, mark_db_write, normalize};
 use crate::entity::{
     album::{
-        ActiveModel as AlbumActiveModel, AlbumRead, AlbumWrite, Column as AlbumColumn,
+        ActiveModel as AlbumActiveModel, AlbumWrite, Column as AlbumColumn,
         Entity as Album, Model as AlbumModel,
     },
     album_artist::{ActiveModel as AlbumArtistActiveModel, Entity as AlbumArtist},
     artist::{
-        ActiveModel as ArtistActiveModel, ArtistRead, ArtistWrite, Column as ArtistColumn,
+        ActiveModel as ArtistActiveModel, ArtistWrite, Column as ArtistColumn,
         Entity as Artist, Model as ArtistModel,
     },
     scrobble::{
@@ -16,7 +16,7 @@ use crate::entity::{
     },
     track::{
         ActiveModel as TrackActiveModel, Column as TrackColumn, Entity as Track,
-        Model as TrackModel, TrackRead, TrackWrite,
+        Model as TrackModel, TrackWrite,
     },
     track_artist::{ActiveModel as TrackArtistActiveModel, Entity as TrackArtist},
 };

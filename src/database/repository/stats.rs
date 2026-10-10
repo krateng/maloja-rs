@@ -5,31 +5,24 @@ use crate::database::views::ChartsEntry;
 use crate::entity;
 use crate::entity::{
     album::{
-        ActiveModel as AlbumActiveModel, AlbumRead, AlbumWrite, Column as AlbumColumn,
-        Entity as Album, Model as AlbumModel,
+        AlbumRead, Column as AlbumColumn,
+        Entity as Album,
     },
-    album_artist::{
-        ActiveModel as AlbumArtistActiveModel, Column as AlbumArtistColumn, Entity as AlbumArtist,
-    },
+    album_artist::Column as AlbumArtistColumn,
     artist::{
-        ActiveModel as ArtistActiveModel, ArtistRead, ArtistWrite, Column as ArtistColumn,
-        Entity as Artist, Model as ArtistModel,
+        ArtistRead, Column as ArtistColumn,
+        Entity as Artist,
     },
-    scrobble::{
-        ActiveModel as ScrobbleActiveModel, Column as ScrobbleColumn, Entity as Scrobble,
-        Model as ScrobbleModel, ScrobbleWrite,
-    },
+    scrobble::Column as ScrobbleColumn,
     track::{
-        ActiveModel as TrackActiveModel, Column as TrackColumn, Entity as Track,
-        Model as TrackModel, TrackRead, TrackWrite,
+        Column as TrackColumn, Entity as Track
+        , TrackRead,
     },
-    track_artist::{
-        ActiveModel as TrackArtistActiveModel, Column as TrackArtistColumn, Entity as TrackArtist,
-    },
+    track_artist::Column as TrackArtistColumn,
 };
 use crate::timeranges::TimeRange;
 use sea_orm::{
-    ColumnTrait, DbErr, EntityTrait, JoinType, QueryFilter, QueryOrder, QuerySelect, RelationTrait,
+    ColumnTrait, EntityTrait, JoinType, QueryFilter, QueryOrder, QuerySelect, RelationTrait,
 };
 use sea_query::Expr;
 // Alright for all selections, we dont join with additional information - modularity over query performance for now

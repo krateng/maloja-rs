@@ -1,15 +1,14 @@
-use crate::server::{create_app, run_server};
+use crate::server::create_app;
 use crate::tests::common;
 use crate::tests::fixtures::fixture;
 use axum::{
-    Router,
     body::Body,
-    http::{Request, StatusCode},
+    http::Request,
+    Router,
 };
 use http_body_util::BodyExt;
-use log::debug;
 use serde_json::Value;
-use tower::{Service, ServiceExt};
+use tower::ServiceExt;
 
 const SERVER_ADDRESS: &str = "http://localhost:42010/apis/maloja_2";
 

@@ -10,10 +10,10 @@ mod uri;
 
 use crate::configuration::logging::{display_path, display_url};
 use colored::Colorize;
-use log::{debug, info, warn};
+use log::info;
 use std::io;
 use std::io::Write;
-use tokio::time::{Duration, sleep};
+use tokio::time::{sleep, Duration};
 
 #[tokio::main]
 async fn main() {

@@ -1,4 +1,4 @@
-use super::artist::{ArtistRead, ArtistReadContext, ArtistWrite};
+use super::artist::{ArtistReadContext, ArtistWrite};
 use sea_orm::entity::prelude::*;
 use serde::Serialize;
 use utoipa::ToSchema;
