@@ -6,25 +6,25 @@ edition = "2024"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-sea-orm = { version = "1.1.6", features = [ "sqlx-sqlite", "runtime-tokio-rustls", "macros", "sqlite-use-returning-for-3_35"] }
+sea-orm = { version = "2.0.4", features = [ "sqlx-sqlite", "runtime-tokio-rustls", "macros", "sqlite-use-returning-for-3_35"] }
 tokio = { version = "1.40.0", features = ["rt", "rt-multi-thread", "macros"] }
-confique = { version = "0.3.0", features = ["toml"] }
+confique = { version = "0.4.0", features = ["toml"] }
 colored = { version = "3.0.0" }
 log = {  version = "0.4.22" }
 fern = { version = "0.7.1" }
 chrono = { version = "0.4.39" }
 chrono-tz = {  version = "0.10.1" }
 axum = { version = "0.8.1" }
-utoipa = { version = "5.3.1" }
-utoipa-axum = { version = "0.2.0" }
-tower-http = { version = "0.6.2", features = ["fs"] }
+utoipa = { version = "6.0.0" }
+utoipa-axum = { version = "0.3.0" }
+tower-http = { version = "0.7.1", features = ["fs"] }
 serde = { version = "1.0.216", features = ["derive"] }
 serde_json = {  version = "1.0.134" }
-rand = { version = "0.8.5" }
+rand = { version = "0.10.3", features = ["thread_rng"] }
 regex = { version = "1.11.1" }
-sea-query = { version = "0.32.1" }
-strum_macros = "0.27.1"
-strum = { version = "0.27.1" }
+sea-query = { version = "1.0.2" }
+strum_macros = "0.28.0"
+strum = { version = "0.28.0" }
 askama = { version = "0.12.1", features = ["with-axum"] }
 askama_axum = { version = "0.4.0" }
 dynja = { version = "0.4.1", features = ["askama_release"] }

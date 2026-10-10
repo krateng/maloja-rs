@@ -28,7 +28,7 @@ pub async fn init_db() -> Result<(), MalojaError> {
     let db = connect().await?;
     assert_eq!(db.get_database_backend(), DbBackend::Sqlite);
 
-    let version: String = db.query_one(Statement::from_string(
+    let version: String = db.query_one_raw(Statement::from_string(
         sea_orm::DatabaseBackend::Sqlite,
         "SELECT sqlite_version();".to_owned(),
     )).await?.unwrap().try_get("", "sqlite_version()")?;
@@ -36,7 +36,7 @@ pub async fn init_db() -> Result<(), MalojaError> {
     log::info!("Using SQLite {}", version);
 
     log::info!("Checking Database schema...");
-    create_tables(&db).await;
+    create_tables(&db).await?;
     log::info!("Checking imports...");
     match import().await {
         Ok((imported, failed)) => {
@@ -73,27 +73,29 @@ pub async fn connect() -> Result<DatabaseConnection, MalojaError> {
     
 }
 
-pub async fn create_tables(db: &DbConn) {
+pub async fn create_tables(db: &DbConn) -> Result<(), MalojaError> {
 
     // TODO: proper migrations
 
-    create_table(db, Scrobble).await;
-    create_table(db, Track).await;
-    create_table(db, Artist).await;
-    create_table(db, Album).await;
+    create_table(db, Scrobble).await?;
+    create_table(db, Track).await?;
+    create_table(db, Artist).await?;
+    create_table(db, Album).await?;
 
-    create_table(db, TrackArtist).await;
-    create_table(db, AlbumArtist).await;
+    create_table(db, TrackArtist).await?;
+    create_table(db, AlbumArtist).await?;
+
+    Ok(())
 }
 
-async fn create_table<E: sea_orm::EntityTrait>(db: &DbConn, entity: E) {
+async fn create_table<E: sea_orm::EntityTrait>(db: &DbConn, entity: E) -> Result<(), MalojaError> {
     let backend = db.get_database_backend();
     let schema = Schema::new(backend);
-    let stmt = schema.create_table_from_entity(entity).if_not_exists().to_owned();
-    // TODO: wtf is even going on here
-    let statement = backend.build(&stmt);
-    let result = db.execute(statement).await.expect("wut");
+    let mut stmt = schema.create_table_from_entity(entity);
+    stmt.if_not_exists();
+    let result = db.execute(&stmt).await?;
     // TODO: STRICT types
+    Ok(())
 
 }
 

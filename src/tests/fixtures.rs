@@ -1,5 +1,5 @@
-use rand::prelude::SliceRandom;
-use rand::{thread_rng, Rng};
+use rand::prelude::IndexedRandom;
+use rand::RngExt;
 use crate::database;
 use crate::entity::artist::ArtistWrite;
 use crate::entity::scrobble::ScrobbleWrite;
@@ -51,20 +51,21 @@ const SONG_NOUNS_PLURAL: &[&str] = &[
 
 
 pub async fn fixture(amount_artists: u32, amount_tracks: u32, amount_scrobbles: u32) {
- 
+
+    let mut rng = rand::rng();
 
     let mut artists = vec![];
     for _i in (0..amount_artists) {
-        let (artist_prenames, artist_particles) = match thread_rng().gen_bool(0.5) {
+        let (artist_prenames, artist_particles) = match rng.random_bool(0.5) {
             true => { (ARTIST_PRENAMES_FEMALE, [ARTIST_PARTICLES_FEMALE, ARTIST_PARTICLES_SHARED].concat()) },
             false => { (ARTIST_PRENAMES_MALE, [ARTIST_PARTICLES_MALE, ARTIST_PARTICLES_SHARED].concat()) }
         };
         artists.push(ArtistWrite {
             id: None,
             name: Some(format!("{} {}{}",
-                               artist_prenames.choose(&mut thread_rng()).unwrap(),
-                               artist_particles.choose(&mut thread_rng()).unwrap(),
-                               ARTIST_SURNAMES.choose(&mut thread_rng()).unwrap()
+                               artist_prenames.choose(&mut rng).unwrap(),
+                               artist_particles.choose(&mut rng).unwrap(),
+                               ARTIST_SURNAMES.choose(&mut rng).unwrap()
             )),
             mbid: None,
             spotify_id: None,
@@ -74,18 +75,18 @@ pub async fn fixture(amount_artists: u32, amount_tracks: u32, amount_scrobbles: 
     let mut tracks = vec![];
     for _i in (0..amount_tracks) {
 
-        let artist_amount = *[1usize, 1usize, 1usize, 2usize, 2usize, 3usize].choose(&mut thread_rng()).unwrap();
-        let track_artists: Vec<&ArtistWrite> = artists.choose_multiple(&mut thread_rng(), artist_amount).collect();
+        let artist_amount = *[1usize, 1usize, 1usize, 2usize, 2usize, 3usize].choose(&mut rng).unwrap();
+        let track_artists: Vec<&ArtistWrite> = artists.sample(&mut rng, artist_amount).collect();
         let track_artists = track_artists.into_iter().map(|x| x.to_owned()).collect();
         // wtf is this code
 
         tracks.push(TrackWrite {
             id: None,
             title: Some(format!("{} {} {} {}",
-                                SONG_DETERMINERS.choose(&mut thread_rng()).unwrap(),
-                                SONG_NOUNS.choose(&mut thread_rng()).unwrap(),
-                                SONG_PREPOSITIONS.choose(&mut thread_rng()).unwrap(),
-                                SONG_NOUNS_PLURAL.choose(&mut thread_rng()).unwrap()
+                                SONG_DETERMINERS.choose(&mut rng).unwrap(),
+                                SONG_NOUNS.choose(&mut rng).unwrap(),
+                                SONG_PREPOSITIONS.choose(&mut rng).unwrap(),
+                                SONG_NOUNS_PLURAL.choose(&mut rng).unwrap()
             )),
             primary_artists: Some(track_artists),
             secondary_artists: None,
@@ -102,12 +103,12 @@ pub async fn fixture(amount_artists: u32, amount_tracks: u32, amount_scrobbles: 
     for _i in (0..amount_scrobbles) {
         scrobbles.push(ScrobbleWrite {
             timestamp: timestamp,
-            track: tracks.choose(&mut thread_rng()).unwrap().to_owned(),
+            track: tracks.choose(&mut rng).unwrap().to_owned(),
             origin: None,
             listen_duration: None,
         });
 
-        timestamp += thread_rng().gen_range(200..2000);
+        timestamp += rng.random_range(200..2000);
     }
 
     database::repository::create_scrobbles(scrobbles, false).await.unwrap();
