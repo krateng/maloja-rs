@@ -4,7 +4,7 @@ use crate::database;
 mod fixtures;
 mod parsing;
 mod api;
-
+mod direct_insert;
 
 pub(crate) async fn common() {
     // TODO MAKE SAFE
