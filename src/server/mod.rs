@@ -9,6 +9,14 @@ use crate::configuration::CONFIG;
 use pages::*;
 
 pub async fn run_server() {
+
+    let app = create_app().await;
+    let bind_address = format!("{}:{}", CONFIG.bind_address, CONFIG.port);
+    let listener = tokio::net::TcpListener::bind(bind_address).await.unwrap();
+    axum::serve(listener, app).await.unwrap();
+}
+
+pub async fn create_app() -> Router {
     // TODO: files in package
 
     let mut app = Router::new();
@@ -29,7 +37,5 @@ pub async fn run_server() {
     // STATIC FILES
     app = app.fallback_service(ServeDir::new("src/web/static"));
 
-    let bind_address = format!("{}:{}", CONFIG.bind_address, CONFIG.port);
-    let listener = tokio::net::TcpListener::bind(bind_address).await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    app
 }

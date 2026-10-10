@@ -50,16 +50,11 @@ const SONG_NOUNS_PLURAL: &[&str] = &[
 ];
 
 
-pub async fn fixture() {
-
-    const ARTISTS_AMOUNT: u32 = 7;
-    const TRACKS_AMOUNT: u32 = 20;
-    const SCROBBLES_AMOUNT: u32 = 40;
-
-    
+pub async fn fixture(amount_artists: u32, amount_tracks: u32, amount_scrobbles: u32) {
+ 
 
     let mut artists = vec![];
-    for _i in (0..ARTISTS_AMOUNT) {
+    for _i in (0..amount_artists) {
         let (artist_prenames, artist_particles) = match thread_rng().gen_bool(0.5) {
             true => { (ARTIST_PRENAMES_FEMALE, [ARTIST_PARTICLES_FEMALE, ARTIST_PARTICLES_SHARED].concat()) },
             false => { (ARTIST_PRENAMES_MALE, [ARTIST_PARTICLES_MALE, ARTIST_PARTICLES_SHARED].concat()) }
@@ -77,7 +72,7 @@ pub async fn fixture() {
     }
     
     let mut tracks = vec![];
-    for _i in (0..TRACKS_AMOUNT) {
+    for _i in (0..amount_tracks) {
 
         let artist_amount = *[1usize, 1usize, 1usize, 2usize, 2usize, 3usize].choose(&mut thread_rng()).unwrap();
         let track_artists: Vec<&ArtistWrite> = artists.choose_multiple(&mut thread_rng(), artist_amount).collect();
@@ -104,7 +99,7 @@ pub async fn fixture() {
     let mut timestamp = time.timestamp();
 
     let mut scrobbles = vec![];
-    for _i in (0..SCROBBLES_AMOUNT) {
+    for _i in (0..amount_scrobbles) {
         scrobbles.push(ScrobbleWrite {
             timestamp: timestamp,
             track: tracks.choose(&mut thread_rng()).unwrap().to_owned(),
