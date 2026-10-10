@@ -1,4 +1,5 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 use log::debug;
 use sea_orm::{ColumnTrait, EntityTrait, NotSet, QueryFilter};
 use sea_orm::ActiveValue::Set;
@@ -25,7 +26,7 @@ type TrackWriteMap = HashMap<TrackWrite, TrackModel>;
 /// Object that maps a number of incoming [AlbumWrite]s to the resulting [AlbumModel] that will actually be used.
 type AlbumWriteMap = HashMap<AlbumWrite, AlbumModel>;
 /// Object that maps a number of incoming [ArtistWrite]s to the resulting [ArtistModel] that will actually be used.
-type ArtistWriteMap = HashMap<ArtistWrite, ArtistModel>;
+type ArtistWriteMap = HashMap<ArtistWrite, Arc<ArtistModel>>;
 
 // alrighty this time we're doing it organized from the start unlike the python monstrosity
 // this is totally gonna work this time lmao
@@ -33,113 +34,106 @@ type ArtistWriteMap = HashMap<ArtistWrite, ArtistModel>;
 #[allow(clippy::collapsible_else_if)]
 pub async fn get_or_create_artists(input: Vec<ArtistWrite>) -> Result<ArtistWriteMap, MalojaError> {
     let db = connect().await?;
-    let mut result: HashMap<ArtistWrite, Option<ArtistModel>> = HashMap::new();
-    input.clone().into_iter().for_each(|artist| {
-        result.insert(artist, None);
-    });
 
-    // internal ID means instant match - if id supplied but doesn't exist, error!
-    // if no ID supplied:
-    // - mbid match - use extra table so multiple mbids can match to same artist
-    // - spotfiy id match - same
-    // - normalized name
+    // our final result, to be filled as we get the models
+    let mut result: ArtistWriteMap = HashMap::new();
+    // all currently unmatched writes, owned by this structure until they are moved to the result map
+    let mut todo: HashSet<ArtistWrite> = input.iter().cloned().collect();
 
-    // supplying an ID indicated the client wants to refer to an existing entity - mismatching other info is ignored
+    // collect all entries that we already know will be duplicates based on their input fields
+    // intermediately own them, so we always just move the owned writes around
+    // and never clone them
+    let mut todo_by_id: HashMap<u32, HashSet<ArtistWrite>> = HashMap::new();
+    let mut todo_by_normalized_name: HashMap<String, HashSet<ArtistWrite>> = HashMap::new();
 
-    // we create maps here that map the identifying field (id / normalized name) to all input writes
-    // that we have determined to belong to this artist
-    let mut id_map: HashMap<u32, Vec<&ArtistWrite>> = HashMap::new();
-    let mut name_map: HashMap<String, Vec<&ArtistWrite>> = HashMap::new();
-    for inp in input.iter() {
-        if let Some(id) = &inp.id {
-            id_map.entry(*id).or_insert(vec![]).push(inp);
+    // fill our maps with data
+    let mut todo_remaining: HashSet<ArtistWrite> = HashSet::new();
+    for inp in todo.drain() {
+        if let Some(id) = inp.id {
+            todo_by_id.entry(id).or_insert_with(HashSet::new).insert(inp);
         }
         // if we have an ID supplied, we're not gonna use anything else, even if the ID doesn't work - so all other maps in else
+        else if let Some(name) = &inp.name {
+            todo_by_normalized_name.entry(normalize(&*name)).or_insert_with(HashSet::new).insert(inp);
+        }
+        // TODO: mbid and spotify_id
         else {
-            if let Some(name) = &inp.name {
-                name_map.entry(normalize(name)).or_insert(vec![]).push(inp);
-            }
+            todo_remaining.insert(inp);
         }
     }
-    let id_list: Vec<u32> = id_map.keys().cloned().collect();
-    let name_list: Vec<String> = name_map.keys().cloned().collect();
+    todo = todo_remaining;
+    assert!(todo.is_empty());
 
-    // IDs
-    let db_result = Artist::find()
-        .filter(ArtistColumn::Id.is_in(id_list))
+    // DB query based on IDs
+    let db_result: Vec<ArtistModel> = Artist::find()
+        .filter(ArtistColumn::Id.is_in(todo_by_id.keys()))
         .all(&db).await?;
+    // for each found entry, now fetch the writes associated with this ID and add the mapping to the result
     for model in db_result {
-        let writes = &id_map[&model.id];
-        for write in writes {
-            // now fetch the writes that we determined were all the same artist
-            // and map them to the actual found artist model
-            result.insert(write.to_owned().clone(), Some(model.clone()));
-            // do NOT ask me what the fuck is happening with ownership here i just want it to compile
+        let arc = Arc::new(model);
+        for write in todo_by_id.remove(&arc.id).expect("ID Map does not contain returned ID even though we fetched from DB with that ID Map") {
+            result.insert(
+                write,
+                Arc::clone(&arc)
+            );
         }
-
     }
-    // TODO: make sure no supplied IDs are unused - this should be an error instead of just checking for other match methods
+    assert!(todo_by_id.is_empty());
+    // TODO: make sure no supplied IDs are unused - this should be an error
 
-    // TODO: mbid and spotify_id
-
-    // Names
-    let db_result = Artist::find()
-        .filter(ArtistColumn::NameNormalized.is_in(name_list))
+    // DB query based on normalized names
+    let db_result: Vec<ArtistModel> = Artist::find()
+        .filter(ArtistColumn::NameNormalized.is_in(todo_by_normalized_name.keys()))
         .all(&db).await?;
+    // for each found entry, now fetch the writes associated with this name and add the mapping to the result
     for model in db_result {
-        let writes = &name_map[&model.name_normalized];
-        for write in writes {
-            result.insert(write.to_owned().clone(), Some(model.clone()));
+        let arc = Arc::new(model);
+        for write in todo_by_normalized_name.remove(&arc.name_normalized).expect("Name Map does not contain returned name even though we fetched from DB with that name Map") {
+            result.insert(
+                write,
+                Arc::clone(&arc)
+            );
         }
     }
+    // the rest stays in the name map for now so we can do inserts
+    if !todo_by_normalized_name.is_empty() {
+        // All remaining must be created new
 
-    // All remaining must be created new
-    let mut notfound: Vec<&ArtistWrite> = vec![];
-    for (write, opt) in result.iter() {
-        if opt.is_none() {
-            notfound.push(write);
-        }
-    }
-
-    // deduplicate
-    notfound.sort_by_key(|x| normalize(x.name.as_ref().expect("Cannot write new artist without a name.")));
-    notfound.dedup_by_key(|x| normalize(x.name.as_ref().expect("Cannot write new artist without a name.")));
-
-    if !notfound.is_empty() {
-        let inserts: Vec<ArtistActiveModel> = notfound.iter().map(|&x| {
-            assert!(x.name.is_some()); //TODO
-            let x = x.to_owned();
+        let inserts: Vec<ArtistActiveModel> = todo_by_normalized_name.iter().map(|(x, y)| {
+            let representative_write = y.iter().next().expect("We created an empty write list for a normalized name");
             ArtistActiveModel {
                 id: NotSet,
-                name: Set(x.name.clone().unwrap()),
-                name_normalized: Set(normalize(&x.name.clone().unwrap())),
-                mbid: Set(x.mbid),
-                spotify_id: Set(x.spotify_id),
+                name: Set(representative_write.name.clone().expect("All newly to write artists should have a name")),
+                name_normalized: Set(x.clone()),
+                mbid: Set(representative_write.mbid.clone()),
+                spotify_id: Set(representative_write.spotify_id.clone()),
             }
         }).collect();
 
-        //let inserts = inserts.chunks(1).next().unwrap().to_vec();
         let amount_inserts = &inserts.len();
-        // this doesnt seem to return all models
-        // https://github.com/SeaQL/sea-orm/discussions/2191
-        // so for now we just insert and call the whole thing again i guess?
-        //let db_result: Vec<ArtistModel> = Artist::insert_many(inserts).exec_with_returning(&db).await?;
+
         for chunk in inserts.chunks(BATCH_SIZE) {
             let chunk_inserts = chunk.to_vec();
-            let db_result = Artist::insert_many(chunk_inserts).exec_with_returning(&db).await?;
+            let db_result: Vec<ArtistModel> = Artist::insert_many(chunk_inserts).exec_with_returning(&db).await?;
+            for model in db_result {
+                let arc = Arc::new(model);
+                for write in todo_by_normalized_name.remove(&arc.name_normalized).expect("Name Map does not contain returned name even though we inserted into DB with that name Map") {
+                    result.insert(
+                        write,
+                        Arc::clone(&arc)
+                    );
+                }
+            }
         }
 
         mark_db_write();
-
         debug!("Inserted {:?} Artists", amount_inserts);
-        // just call ourselves again to reuse the logic of everyone already existing
-        Box::pin(get_or_create_artists(input)).await
     }
-    else {
-        let result: ArtistWriteMap = result.into_iter().map(|(k,v)| (k, v.expect("This should not happen!").clone())).collect();
-        // There should no longer be None variants now
-        Ok(result)
-    }
+
+    assert!(todo_by_normalized_name.is_empty());
+    assert!(input.iter().all(|x| result.contains_key(x)));
+    Ok(result)
+
 }
 
 #[allow(clippy::collapsible_else_if)]
@@ -256,40 +250,31 @@ pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> Result<TrackWriteMa
         // for now, insert each one individually so we can actually get the ID
         // i really hope this isnt the permanent solution
         for (insert, primary_artists, secondary_artists) in inserts {
-            let db_result = Track::insert(insert).exec_with_returning(&db).await.unwrap();
+            let db_result = Track::insert(insert).exec_with_returning(&db).await?;
 
 
             // TODO: MAKE THIS NOT SHIT
             let track_id = db_result.id;
 
-            let track_artist_inserts_primary: Vec<TrackArtistActiveModel> = primary_artists.iter().map(|x| {
+            let mut already_encountered_artist_ids = HashSet::new();
+
+            let primary = primary_artists.iter().map(|a| (a, true));
+            let secondary = secondary_artists.iter().map(|a| (a, false));
+            let inserts: Vec<TrackArtistActiveModel> = primary.chain(secondary).filter_map(|(a, primary)| {
                 // get the mapped model that definitely has an ID now
-                let artist_model = &artist_map[x];
-                TrackArtistActiveModel {
+                let artist_model = &artist_map[a];
+                // .then only fires if we inserted
+                already_encountered_artist_ids.insert(artist_model.id).then(|| TrackArtistActiveModel {
                     track_id: Set(track_id),
                     artist_id: Set(artist_model.id),
-                    primary: Set(true),
+                    primary: Set(primary),
                     artist_alias: Default::default(),
-                }
-            }).collect();
-            let track_artist_inserts_secondary: Vec<TrackArtistActiveModel> = secondary_artists.iter().map(|x| {
-                let artist_model = &artist_map[x];
-                TrackArtistActiveModel {
-                    track_id: Set(track_id),
-                    artist_id: Set(artist_model.id),
-                    primary: Set(false),
-                    artist_alias: Default::default(),
-                }
+                })
             }).collect();
 
-
-            if !track_artist_inserts_primary.is_empty() {
-                let db_result = TrackArtist::insert_many(track_artist_inserts_primary).exec(&db).await.unwrap();
+            if !inserts.is_empty() {
+                let db_result = TrackArtist::insert_many(inserts).exec(&db).await?;
             }
-            if !track_artist_inserts_secondary.is_empty() {
-                let db_result = TrackArtist::insert_many(track_artist_inserts_secondary).exec(&db).await.unwrap();
-            }
-
 
         }
 
@@ -407,7 +392,7 @@ pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> Result<AlbumWriteMa
         // for now, insert each one individually so we can actually get the ID
         // i really hope this isnt the permanent solution
         for (insert, artists) in inserts {
-            let db_result = Album::insert(insert).exec_with_returning(&db).await.unwrap();
+            let db_result = Album::insert(insert).exec_with_returning(&db).await?;
 
 
             // TODO: MAKE THIS NOT SHIT
@@ -424,7 +409,7 @@ pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> Result<AlbumWriteMa
 
 
             if !album_artist_inserts.is_empty() {
-                let db_result = AlbumArtist::insert_many(album_artist_inserts).exec(&db).await.unwrap();
+                let db_result = AlbumArtist::insert_many(album_artist_inserts).exec(&db).await?;
             }
 
 
@@ -471,7 +456,7 @@ pub async fn create_scrobbles(input: Vec<ScrobbleWrite>, fail_on_existing: bool)
 
     let db_result = Scrobble::find()
         .filter(ScrobbleColumn::Timestamp.is_in(ts_list))
-        .all(&db).await.unwrap();
+        .all(&db).await?;
     for model in db_result {
         let writes = &ts_map[&model.timestamp];
         for write in writes {
@@ -508,7 +493,7 @@ pub async fn create_scrobbles(input: Vec<ScrobbleWrite>, fail_on_existing: bool)
         // i really hope this isnt the permanent solution
         for chunk in inserts.chunks(BATCH_SIZE) {
             let chunk_inserts = chunk.to_vec();
-            let db_result = Scrobble::insert_many(chunk_inserts).exec(&db).await.unwrap();
+            let db_result = Scrobble::insert_many(chunk_inserts).exec(&db).await?;
         }
 
         mark_db_write();
