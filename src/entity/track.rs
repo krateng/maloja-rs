@@ -64,7 +64,7 @@ impl ActiveModelBehavior for ActiveModel {}
 /// exist or should be newly created
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
 pub struct TrackWrite {
-    #[schema(minimum = 1)]
+    #[schema(minimum = 1, examples(42))]
     pub id: Option<u32>,
     #[schema(examples("Whistle"))]
     pub title: Option<String>,
@@ -83,7 +83,7 @@ pub struct TrackWrite {
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
 #[schema(title = "Track", as = entity::track::TrackRead, description = "Musical work")]
 pub struct TrackRead {
-    #[schema(minimum = 1)]
+    #[schema(minimum = 1, examples(42))]
     pub id: u32,
     #[schema(examples("Whistle"))]
     pub title: String,

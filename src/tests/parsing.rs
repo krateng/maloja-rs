@@ -63,6 +63,7 @@ async fn match_entities() {
         (vec!["Howard Shore", "Jeremy Soule"], "party in the prc"),
         (vec!["Jeremy Soule", "Howard Shore"], "Party in The PRC"),
         (vec!["jeremy soule", "howard shore"], "Party In The PRC"),
+        (vec!["jeremy soule", "howard shore", "Jeremy Soule", "Howard Shore", "JEREMY SOULE", "HOWARD SHORE"], "Party In The PRC"),
     ];
     let amount2 = tracks2.len();
 
@@ -76,6 +77,7 @@ async fn match_entities() {
     assert_all_same_track(scrobbles);
 
     // now all at once
+    // TODO why does this overflow the stack???
     let db_result = database::repository::create_scrobbles(create_scrobble_writes(tracks2), false).await.unwrap();
     assert_eq!(db_result.len(), amount2, "The incorrect amount of scrobbles has been generated");
     let scrobbles = db_result.values().map(|x| x.to_owned()).collect();

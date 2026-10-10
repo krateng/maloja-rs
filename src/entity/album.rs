@@ -50,7 +50,7 @@ impl ActiveModelBehavior for ActiveModel {}
 /// exist or should be newly created
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
 pub struct AlbumWrite {
-    #[schema(minimum = 1)]
+    #[schema(minimum = 1, examples(42))]
     pub id: Option<u32>,
     #[schema(examples("Square One"))]
     pub album_title: Option<String>,
@@ -65,7 +65,7 @@ pub struct AlbumWrite {
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
 #[schema(title = "Album", as = entity::album::AlbumRead, description = "Studio album / EP / Single a track canonically belongs to")]
 pub struct AlbumRead {
-    #[schema(minimum = 1)]
+    #[schema(minimum = 1, examples(42))]
     pub id: u32,
     #[schema(examples("Square One"))]
     pub album_title: String,

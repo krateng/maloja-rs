@@ -48,7 +48,7 @@ impl ActiveModelBehavior for ActiveModel {}
 /// exist or should be newly created
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
 pub struct ArtistWrite {
-    #[schema(minimum = 1)]
+    #[schema(minimum = 1, examples(42))]
     pub id: Option<u32>,
     #[schema(examples("Blackpink"))]
     pub name: Option<String>,
@@ -62,7 +62,7 @@ pub struct ArtistWrite {
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
 #[schema(title = "Artist", as = entity::artist::ArtistRead, description = "Performer, composer or otherwise credited entity")]
 pub struct ArtistRead {
-    #[schema(minimum = 1)]
+    #[schema(minimum = 1, examples(42))]
     pub id: u32,
     #[schema(examples("Blackpink"))]
     pub name: String,
@@ -72,7 +72,7 @@ pub struct ArtistRead {
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
 #[schema(title = "Artist (Context)", as = entity::artist::ArtistReadContext, description = "Performer, composer or otherwise credited entity in relation to a specific album or track")]
 pub struct ArtistReadContext {
-    #[schema(minimum = 1)]
+    #[schema(minimum = 1, examples(42))]
     pub id: u32,
     #[schema(examples("Tom Holkenborg"))]
     pub name: String,
