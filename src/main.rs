@@ -32,7 +32,7 @@ async fn main() {
 
     // DATABASE
     info!("Initializing database...");
-    database::init_db().await;
+    database::init_db().await.unwrap();
 
     // SERVER
     info!("Starting up server...");

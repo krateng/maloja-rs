@@ -141,7 +141,7 @@ where
                             },
                         )
                     }
-                    PathRejection::MissingPathParams(error) => (
+                    PathRejection::MissingPathParams(_error) => (
                         StatusCode::BAD_REQUEST,
                         APIError {
                             error_type: "RequestParamsParseError".to_string(),

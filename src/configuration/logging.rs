@@ -17,7 +17,7 @@ pub fn setup_logger() -> Result<(), fern::InitError> {
             panic!("Failed to setup logging");
         }
     };
-    let dis = fern::Dispatch::new()
+    fern::Dispatch::new()
         .format(|out, message, record| {
             out.finish(format_args!(
                 "[{} {} {}] {}",

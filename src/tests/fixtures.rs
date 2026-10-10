@@ -61,7 +61,7 @@ pub async fn fixture(amount_artists: u32, amount_tracks: u32, amount_scrobbles: 
     let mut rng = rand::rng();
 
     let mut artists = vec![];
-    for _i in (0..amount_artists) {
+    for _i in 0..amount_artists  {
         let (artist_prenames, artist_particles) = match rng.random_bool(0.5) {
             true => (
                 ARTIST_PRENAMES_FEMALE,
@@ -85,7 +85,7 @@ pub async fn fixture(amount_artists: u32, amount_tracks: u32, amount_scrobbles: 
     }
 
     let mut tracks = vec![];
-    for _i in (0..amount_tracks) {
+    for _i in 0..amount_tracks  {
         let artist_amount =
             *[1usize, 1usize, 1usize, 2usize, 2usize, 3usize].choose(&mut rng).unwrap();
         let track_artists: Vec<&ArtistWrite> = artists.sample(&mut rng, artist_amount).collect();
@@ -109,11 +109,11 @@ pub async fn fixture(amount_artists: u32, amount_tracks: u32, amount_scrobbles: 
             spotify_id: None,
         });
     }
-    let mut time = chrono::Utc::now() - chrono::Duration::days(1);
+    let time = chrono::Utc::now() - chrono::Duration::days(1);
     let mut timestamp = time.timestamp();
 
     let mut scrobbles = vec![];
-    for _i in (0..amount_scrobbles) {
+    for _i in 0..amount_scrobbles  {
         scrobbles.push(ScrobbleWrite {
             timestamp: timestamp,
             track: tracks.choose(&mut rng).unwrap().to_owned(),

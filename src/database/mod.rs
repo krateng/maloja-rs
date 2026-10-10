@@ -89,7 +89,7 @@ async fn create_table<E: sea_orm::EntityTrait>(db: &DbConn, entity: E) -> Result
     let schema = Schema::new(backend);
     let mut stmt = schema.create_table_from_entity(entity);
     stmt.if_not_exists();
-    let result = db.execute(&stmt).await?;
+    let _result = db.execute(&stmt).await?;
     // TODO: STRICT types
     Ok(())
 }

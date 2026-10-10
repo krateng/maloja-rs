@@ -42,7 +42,7 @@ pub async fn import_maloja(file: PathBuf) -> Result<(), MalojaError> {
 
     let parsed: MalojaExport = serde_json::from_reader(fs::File::open(file)?)?;
 
-    let db = connect().await?;
+    let _db = connect().await?;
 
     let scrobbles: Vec<ScrobbleWrite> = parsed
         .scrobbles

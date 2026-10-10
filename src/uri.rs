@@ -33,7 +33,7 @@ impl QueryPagination {
         let page = self.page.unwrap_or(1);
         let per_page = self.per_page.unwrap_or(50);
         let start_index = ((page - 1) * per_page) as usize;
-        let end_index = (start_index + per_page as usize);
+        let end_index = start_index + per_page as usize ;
         let end_index = min(end_index, results.len());
         // avoid errors if we request non existent pages - just show empty
         let start_index = min(start_index, end_index);

@@ -12,7 +12,7 @@ pub async fn pulse(
     album_id: Option<u32>,
     track_id: Option<u32>,
 ) -> Result<Vec<PulseEntry>, MalojaError> {
-    let db = connect().await?;
+    let _db = connect().await?;
     let mut result = vec![];
     for subrange in sub_ranges {
         let scrobbles =
@@ -29,7 +29,7 @@ pub async fn performance(
     album_id: Option<u32>,
     track_id: Option<u32>,
 ) -> Result<Vec<PerformanceEntry>, MalojaError> {
-    let db = connect().await?;
+    let _db = connect().await?;
     let mut result = vec![];
     for subrange in sub_ranges {
         if let Some(artist_id) = artist_id {

@@ -1,5 +1,5 @@
 use chrono::{
-    naive::Days, DateTime, Datelike, Local, Months, NaiveDate, TimeZone, Utc,
+    naive::Days, DateTime, Datelike, Local, Months, NaiveDate, Utc,
     Weekday,
 };
 use chrono_tz::Tz;
@@ -87,7 +87,7 @@ impl BaseTimeRange {
                     % 7) as i32;
                 let weekoffset2: i32 = 7 - weekoffset;
                 let use_offset = if weekoffset > weekoffset2 { weekoffset2 } else { -weekoffset };
-                let first_week_start = if (use_offset >= 0) {
+                let first_week_start = if use_offset >= 0  {
                     first_day_this_year.checked_add_days(Days::new(use_offset as u64)).unwrap()
                 } else {
                     first_day_this_year.checked_sub_days(Days::new(-use_offset as u64)).unwrap()
@@ -124,7 +124,7 @@ impl BaseTimeRange {
     }
 
     fn previous(&self) -> Self {
-        let (first, last) = self.datetime_boundaries();
+        let (first, _last) = self.datetime_boundaries();
         match self {
             BaseTimeRange::Day { .. } => {
                 let new = first.checked_sub_days(Days::new(1)).unwrap();
@@ -152,7 +152,7 @@ impl BaseTimeRange {
     }
 
     fn next(&self) -> Self {
-        let (first, last) = self.datetime_boundaries();
+        let (first, _last) = self.datetime_boundaries();
         match self {
             BaseTimeRange::Day { .. } => {
                 let new = first.checked_add_days(Days::new(1)).unwrap();
@@ -182,10 +182,10 @@ impl BaseTimeRange {
     fn describe(&self) -> String {
         let dt = self.datetime_boundaries().0;
         match &self {
-            BaseTimeRange::Day { year, month, day } => dt.format("%d. %B %Y").to_string(),
-            BaseTimeRange::Week { year, week } => dt.format("Week %-V %Y").to_string(),
-            BaseTimeRange::Month { year, month } => dt.format("%B %Y").to_string(),
-            BaseTimeRange::Year { year } => dt.format("%Y").to_string(),
+            BaseTimeRange::Day { year: _, month: _, day: _ } => dt.format("%d. %B %Y").to_string(),
+            BaseTimeRange::Week { year: _, week: _ } => dt.format("Week %-V %Y").to_string(),
+            BaseTimeRange::Month { year: _, month: _ } => dt.format("%B %Y").to_string(),
+            BaseTimeRange::Year { year: _ } => dt.format("%Y").to_string(),
         }
     }
 
@@ -240,7 +240,7 @@ impl TimeRange {
     pub fn previous(&self) -> Option<Self> {
         match self {
             TimeRange::Simple(base) => Some(TimeRange::Simple(base.previous())),
-            TimeRange::Composite { start, end } => {
+            TimeRange::Composite { start: _, end: _ } => {
                 todo!()
             }
             TimeRange::Infinite {} => None,
@@ -250,7 +250,7 @@ impl TimeRange {
     pub fn next(&self) -> Option<Self> {
         match self {
             TimeRange::Simple(base) => Some(TimeRange::Simple(base.next())),
-            TimeRange::Composite { start, end } => {
+            TimeRange::Composite { start: _, end: _ } => {
                 todo!()
             }
             TimeRange::Infinite {} => None,
@@ -265,10 +265,10 @@ impl TimeRange {
     pub fn validate(&self) -> bool {
         // TODO: i don't really like this being done here
         match self {
-            TimeRange::Simple(base) => true,
-            TimeRange::Composite { start, end } => {
+            TimeRange::Simple(_base) => true,
+            TimeRange::Composite { start: _, end: _ } => {
                 let (s, e) = &self.timestamp_boundaries();
-                (s < e)
+                s < e 
             }
             TimeRange::Infinite {} => true,
         }

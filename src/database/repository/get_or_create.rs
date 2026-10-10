@@ -171,7 +171,7 @@ pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> Result<TrackWriteMa
     let albums: Vec<AlbumWrite> = input.iter().filter_map(
         |t: &TrackWrite| t.album.clone()
     ).collect();
-    let album_map = get_or_create_albums(albums).await?;
+    let _album_map = get_or_create_albums(albums).await?;
 
 
     // as above, but now the name alone isnt enough - we need name and artist exact
@@ -429,7 +429,7 @@ pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> Result<AlbumWriteMa
 
 
             if !album_artist_inserts.is_empty() {
-                let db_result = AlbumArtist::insert_many(album_artist_inserts).exec(&db).await?;
+                let _db_result = AlbumArtist::insert_many(album_artist_inserts).exec(&db).await?;
             }
 
 
@@ -449,7 +449,7 @@ pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> Result<AlbumWriteMa
 
 #[allow(clippy::collapsible_else_if)]
 #[rustfmt::skip]
-pub async fn create_scrobbles(input: Vec<ScrobbleWrite>, fail_on_existing: bool) -> Result<ScrobbleWriteMap, MalojaError> {
+pub async fn create_scrobbles(input: Vec<ScrobbleWrite>, _fail_on_existing: bool) -> Result<ScrobbleWriteMap, MalojaError> {
     // this one is a bit different that the other entity ones because we never supply a scrobblewrite
     // as part of another entity to either create or fetch - scrobbles are only ever created (or patched?)
     let db = connect().await?;
@@ -513,7 +513,7 @@ pub async fn create_scrobbles(input: Vec<ScrobbleWrite>, fail_on_existing: bool)
         // i really hope this isnt the permanent solution
         for chunk in inserts.chunks(BATCH_SIZE) {
             let chunk_inserts = chunk.to_vec();
-            let db_result = Scrobble::insert_many(chunk_inserts).exec(&db).await?;
+            let _db_result = Scrobble::insert_many(chunk_inserts).exec(&db).await?;
         }
 
         mark_db_write();
