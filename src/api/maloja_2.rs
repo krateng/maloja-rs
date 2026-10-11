@@ -16,10 +16,10 @@ use crate::api::ScrobbleAPI;
 use crate::database;
 use crate::database::errors::MalojaError;
 use crate::database::views::{Charts, Paginated, PaginationInfo, PerformanceEntry, PulseEntry};
-use crate::entity::album::AlbumRead;
-use crate::entity::artist::ArtistRead;
-use crate::entity::scrobble::ScrobbleRead;
-use crate::entity::track::TrackRead;
+use crate::entity::{
+    AlbumRead, ArtistRead, TrackRead, ScrobbleRead,
+    ScrobbleWrite,
+};
 use crate::timeranges::TimeRange;
 use crate::uri::{
     PathEntity, QueryLimitAlbum, QueryLimitArtist, QueryLimitTrack, QueryPagination,
@@ -40,6 +40,7 @@ fn register_routes(mut router: OpenApiRouter) -> OpenApiRouter {
         .routes(routes!(scrobbles))
         .routes(routes!(pulse))
         .routes(routes!(performance))
+        .routes(routes!(submit_scrobbles))
         //.fallback(notfound); // TODO: https://github.com/tokio-rs/axum/issues/3138
         .route("/{*rest}", any(notfound));
     router
@@ -56,7 +57,8 @@ fn register_routes(mut router: OpenApiRouter) -> OpenApiRouter {
         info_track,
         scrobbles,
         pulse,
-        performance
+        performance,
+        submit_scrobbles,
     ),
     info(title = "Maloja API", version = "2"),
     components(schemas(ScrobbleRead, TrackRead, ArtistRead, AlbumRead))
@@ -396,4 +398,19 @@ async fn performance(
         database::repository::performance(subranges, artist_id, album_id, track_id).await?;
     let paginated_pulse = params_pagination.paginate_results(result);
     Ok((StatusCode::OK, Json(paginated_pulse)))
+}
+
+
+#[utoipa::path(
+    post,
+    path = "/scrobble",
+    request_body = Vec<ScrobbleWrite>,
+    responses(
+        (status = OK, body = inline(Vec<ScrobbleRead>), description = "Successful scrobble"),
+        (status = INTERNAL_SERVER_ERROR, body = inline(APIError), description = "Server error while handling the request"),
+    )
+)]
+async fn submit_scrobbles(Json(scrobbles): Json<Vec<ScrobbleWrite>>) -> Result<(StatusCode, Json<Vec<ScrobbleRead>>), MalojaError> {
+    let result = database::repository::create_scrobbles_return_reads(scrobbles, true).await?;
+    Ok((StatusCode::OK, Json(result)))
 }
