@@ -3,6 +3,7 @@ use crate::database::repository::{
 };
 use crate::entity::album::AlbumWrite;
 use crate::entity::artist::ArtistWrite;
+use crate::entity::ArtistWriteContext;
 use crate::entity::track::TrackWrite;
 use crate::tests::common;
 
@@ -26,9 +27,11 @@ async fn insert_albums() {
     let write = AlbumWrite {
         id: None,
         album_title: Some("Square One".parse().unwrap()),
-        album_artists: Some(vec![ArtistWrite {
+        album_artists: Some(vec![ArtistWriteContext {
             id: None,
             name: Some("Blackpink".parse().unwrap()),
+            alias: None,
+            primary: true,
             mbid: None,
             spotify_id: None,
         }]),
@@ -46,20 +49,23 @@ async fn insert_tracks() {
     let write = TrackWrite {
         id: None,
         title: Some("Red Dress".parse().unwrap()),
-        primary_artists: Some(vec![ArtistWrite {
+        artists: Some(vec![ArtistWriteContext {
             id: None,
             name: Some("Red Velvet".parse().unwrap()),
+            alias: None,
+            primary: true,
             mbid: None,
             spotify_id: None,
         }]),
-        secondary_artists: None,
         track_length: None,
         album: Some(AlbumWrite {
             id: None,
             album_title: Some("The Red".parse().unwrap()),
-            album_artists: Some(vec![ArtistWrite {
+            album_artists: Some(vec![ArtistWriteContext {
                 id: None,
                 name: Some("Red Velvet".parse().unwrap()),
+                alias: None,
+                primary: true,
                 mbid: None,
                 spotify_id: None,
             }]),

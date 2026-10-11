@@ -1,5 +1,6 @@
 use crate::database;
 use crate::entity::artist::ArtistWrite;
+use crate::entity::ArtistWriteContext;
 use crate::entity::scrobble::{Model, ScrobbleWrite};
 use crate::entity::track::TrackWrite;
 use crate::tests::common;
@@ -17,19 +18,20 @@ fn create_scrobble_writes(tracks: Vec<TrackInfo>) -> Vec<ScrobbleWrite> {
                 track: TrackWrite {
                     id: None,
                     title: Some(track.1.parse().unwrap()),
-                    primary_artists: Some(
+                    artists: Some(
                         track
                             .0
                             .into_iter()
-                            .map(|artist| ArtistWrite {
+                            .map(|artist| ArtistWriteContext {
                                 id: None,
                                 name: Some(artist.parse().unwrap()),
+                                alias: None,
+                                primary: true,
                                 mbid: None,
                                 spotify_id: None,
                             })
                             .collect(),
                     ),
-                    secondary_artists: None,
                     track_length: None,
                     album: None,
                     mbid: None,

@@ -4,6 +4,7 @@ use crate::entity::scrobble::ScrobbleWrite;
 use crate::entity::track::TrackWrite;
 use rand::prelude::IndexedRandom;
 use rand::RngExt;
+use crate::entity::ArtistWriteContext;
 
 #[rustfmt::skip]
 const ARTIST_PRENAMES_FEMALE: &[&str] = &[
@@ -71,7 +72,7 @@ pub async fn fixture(amount_artists: u32, amount_tracks: u32, amount_scrobbles: 
                 (ARTIST_PRENAMES_MALE, [ARTIST_PARTICLES_MALE, ARTIST_PARTICLES_SHARED].concat())
             }
         };
-        artists.push(ArtistWrite {
+        artists.push(ArtistWriteContext {
             id: None,
             name: Some(format!(
                 "{} {}{}",
@@ -79,6 +80,8 @@ pub async fn fixture(amount_artists: u32, amount_tracks: u32, amount_scrobbles: 
                 artist_particles.choose(&mut rng).unwrap(),
                 ARTIST_SURNAMES.choose(&mut rng).unwrap()
             )),
+            alias: None,
+            primary: true,
             mbid: None,
             spotify_id: None,
         });
@@ -88,7 +91,7 @@ pub async fn fixture(amount_artists: u32, amount_tracks: u32, amount_scrobbles: 
     for _i in 0..amount_tracks  {
         let artist_amount =
             *[1usize, 1usize, 1usize, 2usize, 2usize, 3usize].choose(&mut rng).unwrap();
-        let track_artists: Vec<&ArtistWrite> = artists.sample(&mut rng, artist_amount).collect();
+        let track_artists: Vec<&ArtistWriteContext> = artists.sample(&mut rng, artist_amount).collect();
         let track_artists = track_artists.into_iter().map(|x| x.to_owned()).collect();
         // wtf is this code
 
@@ -101,8 +104,7 @@ pub async fn fixture(amount_artists: u32, amount_tracks: u32, amount_scrobbles: 
                 SONG_PREPOSITIONS.choose(&mut rng).unwrap(),
                 SONG_NOUNS_PLURAL.choose(&mut rng).unwrap()
             )),
-            primary_artists: Some(track_artists),
-            secondary_artists: None,
+            artists: Some(track_artists),
             track_length: None,
             album: None,
             mbid: None,
