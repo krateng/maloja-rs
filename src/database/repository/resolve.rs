@@ -1,104 +1,153 @@
 use crate::entity::{
-    album::{
-        AlbumRead, Column as AlbumColumn,
-        Entity as Album,
-    }
-    ,
-    artist::{
-        ArtistRead, ArtistReadContext,
-        Column as ArtistColumn, Entity as Artist,
-    }
-    ,
-    track::{
-        Column as TrackColumn, Entity as Track
-        , TrackRead,
-    }
-    ,
+    ArtistRead, ArtistModel, Artist, ArtistColumn, ArtistReadContext,
+    AlbumRead, AlbumModel, Album, AlbumColumn,
+    TrackRead, TrackModel, Track, TrackColumn,
+    ScrobbleRead, ScrobbleModel, Scrobble, ScrobbleColumn,
+    TrackArtistModel, TrackArtist,
+    AlbumArtistModel, AlbumArtist,
 };
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use crate::database::errors::MalojaError;
+use crate::database::repository::{album_model_to_read, artist_model_to_read, track_model_to_read};
 
-pub async fn resolve_track_ids(ids: Vec<u32>, db: &DatabaseConnection) -> HashMap<u32, TrackRead> {
+pub type TrackArtistFull = (TrackArtistModel, ArtistModel);
+pub type AlbumArtistFull = (AlbumArtistModel, ArtistModel);
+pub type AlbumModelWithRelated = (AlbumModel, HashSet<AlbumArtistFull>);
+pub type TrackModelWithRelated = (TrackModel, HashSet<TrackArtistFull>, Option<AlbumModelWithRelated>);
+pub type ScrobbleModelWithRelated = (ScrobbleModel, TrackModelWithRelated);
+
+
+pub async fn resolve_track_ids_to_models(ids: Vec<u32>, db: &DatabaseConnection) -> Result<HashMap<u32, TrackModelWithRelated>, MalojaError> {
     // we can resolve one relation directly with a db call instead of the function
-    let db_result = Track::find()
+    let db_result: Vec<(TrackModel, Vec<TrackArtistModel>)> = Track::find()
         .filter(TrackColumn::Id.is_in(ids))
-        .find_with_related(Artist)
+        .find_with_related(TrackArtist)
         .all(db)
-        .await
-        .unwrap();
+        .await?;
 
-    let album_ids: Vec<u32> = db_result.iter().filter_map(|(track, _)| track.album_id).collect();
-    let album_map = resolve_album_ids(album_ids, db).await;
+    let artist_ids: Vec<u32> = db_result.iter().flat_map(|(t, tas)| tas).map(|ta| ta.artist_id).collect();
+    let artist_map: HashMap<u32, ArtistModel> = resolve_artist_ids_to_models(artist_ids, &db).await?;
 
-    let mut result: HashMap<u32, TrackRead> = HashMap::new();
+    let album_ids: Vec<u32> = db_result.iter().map(|(t, tas)| t.album_id).collect();
+    let album_map: HashMap<u32, AlbumModelWithRelated> = resolve_album_ids_to_models(album_ids, &db).await?;
 
-    for (track, artists) in db_result {
+    let mut result: HashMap<u32, TrackModelWithRelated> = HashMap::new();
+
+    for (track, track_artists) in db_result {
+        let album_id = track.album_id.clone();
         result.insert(
             track.id,
-            TrackRead {
-                id: track.id,
-                title: track.title,
-                artists: artists
-                    .into_iter()
-                    .map(|a| ArtistReadContext {
-                        id: a.id,
-                        name: a.name,
-                        alias: None,
-                        primary: true,
-                    })
-                    .collect(),
-                album: track.album_id.map(|album_id| album_map[&album_id].clone()),
-                track_length: track.track_length,
-            },
+            (
+                track, // TrackModel
+                track_artists.into_iter().map(|ta| {
+                    let artist_id = ta.artist_id.clone();
+                    (
+                        ta, // TrackArtistModel
+                        artist_map.get(&artist_id) // ArtistModel
+                    )
+                }).collect(),
+                album_id.as_ref().and_then(|x| album_map.get(x)).cloned() // AlbumModelWithRelated
+            )
         );
     }
 
-    result
+    Ok(result)
+}
+
+pub async fn resolve_album_ids_to_models(ids: Vec<u32>, db: &DatabaseConnection) -> Result<HashMap<u32, AlbumModelWithRelated>, MalojaError> {
+    let db_result: Vec<(AlbumModel, Vec<AlbumArtistModel>)> = Album::find()
+        .filter(AlbumColumn::Id.is_in(ids))
+        .find_with_related(AlbumArtist)
+        .all(db)
+        .await?;
+
+    let artist_ids: Vec<u32> = db_result.iter().flat_map(|(a, aas)| aas).map(|aa| aa.artist_id).collect();
+    let artist_map: HashMap<u32, ArtistModel> = resolve_artist_ids_to_models(artist_ids, &db).await?;
+
+    let mut result: HashMap<u32, AlbumModelWithRelated> = HashMap::new();
+
+    for (album, album_artists) in db_result {
+        result.insert(
+            album.id,
+            (
+                album, // AlbumModel
+                album_artists.into_iter().map(|aa| {
+                    let artist_id = aa.artist_id.clone();
+                    (
+                        aa, // AlbumArtistModel
+                        artist_map.get(&artist_id) // ArtistModel
+                    )
+                }).collect(),
+            )
+        );
+    }
+
+    Ok(result)
+}
+
+pub async fn resolve_artist_ids_to_models(ids: Vec<u32>, db: &DatabaseConnection) -> Result<HashMap<u32, ArtistModel>, MalojaError> {
+    let db_result: Vec<ArtistModel> = Artist::find()
+        .filter(ArtistColumn::Id.is_in(ids))
+        .all(db)
+        .await?;
+
+    let mut result: HashMap<u32, ArtistModel> = HashMap::new();
+
+    for artist in db_result {
+        result.insert(
+            artist.id,
+            artist
+        );
+    }
+
+    Ok(result)
+
+}
+
+pub async fn resolve_scrobble_ids_to_models(ids: Vec<i64>, db: &DatabaseConnection) -> Result<HashMap<i64, ScrobbleModelWithRelated>, MalojaError> {
+    let db_result: Vec<ScrobbleModel> = Scrobble::find()
+        .filter(ScrobbleColumn::Timestamp.is_in(ids))
+        .all(db)
+        .await?;
+
+    // no point getting the track in the same query if we call the other func anyway
+    // technically we could save some performance by introducing a weird middle query so that we
+    // can get the track here, and then get album and track artists there?
+
+    let track_ids: Vec<u32> = db_result.iter().map(|s| s.track_id).collect();
+    let track_map: HashMap<u32, TrackModelWithRelated> = resolve_track_ids_to_models(track_ids, &db).await?;
+
+    let mut result: HashMap<i64, ScrobbleModelWithRelated> = HashMap::new();
+
+    for scrobble in db_result {
+        let track_id = scrobble.track_id;
+        result.insert(
+            scrobble.timestamp,
+            (
+                scrobble,
+                *track_map.get(&track_id).expect("We should have a track to this ID")
+            )
+        );
+    }
+
+    Ok(result)
+}
+
+pub async fn resolve_track_ids(ids: Vec<u32>, db: &DatabaseConnection) -> HashMap<u32, TrackRead> {
+    let models = resolve_track_ids_to_models(ids, db).await?;
+    let reads: HashMap<u32, TrackRead> = models.into_iter().map(|(x,y)| (x, track_model_to_read(y))).collect();
+    reads
 }
 
 pub async fn resolve_album_ids(ids: Vec<u32>, db: &DatabaseConnection) -> HashMap<u32, AlbumRead> {
-    let db_result = Album::find()
-        .filter(AlbumColumn::Id.is_in(ids))
-        .find_with_related(Artist)
-        .all(db)
-        .await
-        .unwrap();
-
-    let mut result: HashMap<u32, AlbumRead> = HashMap::new();
-
-    for (album, artists) in db_result {
-        result.insert(
-            album.id,
-            AlbumRead {
-                id: album.id,
-                album_title: album.album_title,
-                album_artists: artists
-                    .into_iter()
-                    .map(|a| ArtistReadContext {
-                        id: a.id,
-                        name: a.name,
-                        alias: None,
-                        primary: true,
-                    })
-                    .collect(),
-            },
-        );
-    }
-
-    result
+    let models = resolve_album_ids_to_models(ids, db).await?;
+    let reads: HashMap<u32, AlbumRead> = models.into_iter().map(|(x,y)| (x, album_model_to_read(y))).collect();
+    reads
 }
 
-pub async fn resolve_artist_ids(
-    ids: Vec<u32>,
-    db: &DatabaseConnection,
-) -> HashMap<u32, ArtistRead> {
-    let db_result = Artist::find().filter(ArtistColumn::Id.is_in(ids)).all(db).await.unwrap();
-
-    let mut result: HashMap<u32, ArtistRead> = HashMap::new();
-
-    for artist in db_result {
-        result.insert(artist.id, ArtistRead { id: artist.id, name: artist.name });
-    }
-
-    result
+pub async fn resolve_artist_ids(ids: Vec<u32>, db: &DatabaseConnection) -> HashMap<u32, ArtistRead> {
+    let models = resolve_artist_ids_to_models(ids, db).await?;
+    let reads: HashMap<u32, ArtistRead> = models.into_iter().map(|(x,y)| (x, artist_model_to_read(y))).collect();
+    reads
 }
