@@ -1,6 +1,6 @@
 use crate::database::connect;
 use crate::database::errors::MalojaError;
-use crate::database::repository::resolve_track_ids;
+use crate::database::repository::{resolve_track_ids_to_models, scrobble_model_to_read};
 use crate::entity::scrobble::{
     Column as ScrobbleColumn, Entity as ScrobbleEntity, Model as ScrobbleModel,
     Relation as ScrobbleRelation, ScrobbleRead,
@@ -52,23 +52,13 @@ pub async fn scrobbles(
 
     let result: Vec<ScrobbleModel> = query.all(&db).await?;
     let track_ids = result.iter().map(|s| s.track_id.clone()).collect();
-    let track_map = resolve_track_ids(track_ids, &db).await;
+    let track_map = resolve_track_ids_to_models(track_ids, &db).await?;
 
-    let result = result
-        .into_iter()
-        .map(|s| {
-            let tz = chrono_tz::Tz::Europe__Vienna; //TODO
-            let time = chrono::DateTime::from_timestamp(s.timestamp.clone(), 0).unwrap();
-            let fmt = "%d. %b %Y %H:%M %Z";
-            let local_time = time.with_timezone(&tz);
-
-            ScrobbleRead {
-                timestamp: s.timestamp.clone(),
-                time_local: local_time.format(fmt).to_string(),
-                track: track_map[&s.track_id].clone(),
-            }
-        })
-        .collect();
+    let result: Vec<ScrobbleRead> = result.into_iter().map(|s| {
+        let track_id = s.track_id.clone();
+        scrobble_model_to_read((s, *track_map.get(&track_id).expect("Scrobble must have track")))
+    } ).collect();
 
     Ok(result)
 }
+

@@ -1,4 +1,4 @@
-use crate::database::repository::{timestamp_to_local, AlbumArtistFull, AlbumModelWithRelated, ScrobbleModelWithRelated, TrackArtistFull, TrackModelWithRelated};
+use crate::database::repository::{AlbumArtistFull, AlbumModelWithRelated, ScrobbleModelWithRelated, TrackArtistFull, TrackModelWithRelated};
 use crate::entity::{
     AlbumRead, ArtistModel, ArtistRead,
     ArtistReadContext,
@@ -63,4 +63,13 @@ pub fn scrobble_model_to_read((scrobble, track): ScrobbleModelWithRelated) -> Sc
         time_local: timestamp_to_local(scrobble.timestamp),
         track: track_model_to_read(track),
     }
+}
+
+
+fn timestamp_to_local(ts: i64) -> String {
+    let tz = chrono_tz::Tz::Europe__Vienna; //TODO
+    let time = chrono::DateTime::from_timestamp(ts, 0).unwrap();
+    let fmt = "%d. %b %Y %H:%M %Z";
+    let local_time = time.with_timezone(&tz);
+    local_time.format(fmt).to_string()
 }
