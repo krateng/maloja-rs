@@ -1,7 +1,10 @@
 use sea_orm::entity::prelude::*;
 use sea_orm::{DeriveRelation, EnumIter};
+use super::{
+    Album, Artist,
+};
 
-#[derive(Debug, Clone, DeriveEntityModel)]
+#[derive(Eq, PartialEq, Hash, Debug, Clone, DeriveEntityModel)]
 #[sea_orm(table_name = "album_artists")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
@@ -29,12 +32,12 @@ pub enum Relation {
 }
 
 #[rustfmt::skip]
-impl Related<super::album::Entity> for Entity {
+impl Related<Album> for Entity {
     fn to() -> RelationDef {  Relation::Album.def() }
 }
 
 #[rustfmt::skip]
-impl Related<super::artist::Entity> for Entity {
+impl Related<Artist> for Entity {
     fn to() -> RelationDef { Relation::Artist.def() }
 }
 

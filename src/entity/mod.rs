@@ -28,3 +28,10 @@ pub use track_artist::{
 pub use album_artist::{
     Model as AlbumArtistModel, Entity as AlbumArtist,
 };
+
+use album::Relation as AlbumRelation;
+use artist::Relation as ArtistRelation;
+use scrobble::Relation as ScrobbleRelation;
+use track::Relation as TrackRelation;
+use track_artist::Relation as TrackArtistRelation;
+use album_artist::Relation as AlbumArtistRelation;

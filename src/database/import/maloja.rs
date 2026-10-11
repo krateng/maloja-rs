@@ -11,6 +11,7 @@ use serde::Deserialize;
 use serde_json::Value;
 use std::fs;
 use std::path::PathBuf;
+use crate::entity::ArtistWriteContext;
 
 #[derive(Deserialize, Debug, Clone)]
 struct MalojaExport {
@@ -53,14 +54,16 @@ pub async fn import_maloja(file: PathBuf) -> Result<(), MalojaError> {
                 track: TrackWrite {
                     id: None,
                     title: Some(scrobble.track.title),
-                    primary_artists: Some(
+                    artists: Some(
                         scrobble
                             .track
                             .artists
                             .into_iter()
-                            .map(|a| ArtistWrite {
+                            .map(|a| ArtistWriteContext {
                                 id: None,
                                 name: Some(a),
+                                alias: None,
+                                primary: true,
                                 mbid: None,
                                 spotify_id: None,
                             })
@@ -73,9 +76,11 @@ pub async fn import_maloja(file: PathBuf) -> Result<(), MalojaError> {
                             aas.iter()
                                 .map(|aa| {
                                     // outer map is to unwrap the option, inner map an actual vector map
-                                    ArtistWrite {
+                                    ArtistWriteContext {
                                         id: None,
                                         name: Some(aa.to_owned()),
+                                        alias: None,
+                                        primary: true,
                                         mbid: None,
                                         spotify_id: None,
                                     }
@@ -85,7 +90,6 @@ pub async fn import_maloja(file: PathBuf) -> Result<(), MalojaError> {
                         mbid: None,
                         spotify_id: None,
                     }),
-                    secondary_artists: None,
                     track_length: scrobble.track.length,
                     mbid: None,
                     spotify_id: None,

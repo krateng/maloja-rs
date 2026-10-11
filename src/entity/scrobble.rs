@@ -1,11 +1,13 @@
-use crate::entity::track::TrackRead;
-use crate::entity::track::TrackWrite;
+use super::{
+  TrackRead, TrackWrite,
+  Track,
+};
 use sea_orm::entity::prelude::*;
 use sea_orm::prelude::Json;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, DeriveEntityModel, Serialize)]
+#[derive(Eq, PartialEq, Hash, Debug, Clone, DeriveEntityModel, Serialize)]
 #[sea_orm(table_name = "scrobbles")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
@@ -34,7 +36,7 @@ pub enum Relation {
 }
 
 #[rustfmt::skip]
-impl Related<super::track::Entity> for Entity {
+impl Related<Track> for Entity {
     fn to() -> RelationDef { Relation::Track.def() }
 }
 

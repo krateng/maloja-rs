@@ -1,10 +1,14 @@
-use super::album::{AlbumRead, AlbumWrite};
-use super::artist::{ArtistReadContext, ArtistWrite, ArtistWriteContext};
+use super::{
+    AlbumRead, AlbumWrite,
+    ArtistReadContext, ArtistWriteContext,
+    Album, Scrobble, Artist, TrackArtist,
+    TrackArtistRelation
+};
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, DeriveEntityModel, Serialize)]
+#[derive(Eq, PartialEq, Hash, Debug, Clone, DeriveEntityModel, Serialize)]
 #[sea_orm(table_name = "tracks")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = true)]
@@ -46,19 +50,25 @@ pub enum Relation {
 }
 
 #[rustfmt::skip]
-impl Related<super::album::Entity> for Entity {
+impl Related<Album> for Entity {
     fn to() -> RelationDef { Relation::Album.def() }
 }
 
 #[rustfmt::skip]
-impl Related<super::scrobble::Entity> for Entity {
+impl Related<Scrobble> for Entity {
     fn to() -> RelationDef { Relation::Scrobble.def() }
 }
 
 #[rustfmt::skip]
-impl Related<super::artist::Entity> for Entity {
-    fn to() -> RelationDef { super::track_artist::Relation::Artist.def() }
-    fn via() -> Option<RelationDef> { Some(super::track_artist::Relation::Track.def().rev()) }
+impl Related<Artist> for Entity {
+    fn to() -> RelationDef { TrackArtistRelation::Artist.def() }
+    fn via() -> Option<RelationDef> { Some(TrackArtistRelation::Track.def().rev()) }
+}
+
+// extra relation to the n-to-m-connector-entity since that now contains data
+#[rustfmt::skip]
+impl Related<TrackArtist> for Entity {
+    fn to() -> RelationDef { Relation::TrackArtist.def() }
 }
 
 impl ActiveModelBehavior for ActiveModel {}

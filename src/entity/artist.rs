@@ -1,8 +1,12 @@
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+use super::{
+    TrackArtistRelation, AlbumArtistRelation,
+    Track, Album,
+};
 
-#[derive(Debug, Clone, DeriveEntityModel, Serialize)]
+#[derive(Eq, PartialEq, Hash, Debug, Clone, DeriveEntityModel, Serialize)]
 #[sea_orm(table_name = "artists")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = true)]
@@ -29,15 +33,15 @@ pub enum Relation {
 }
 
 #[rustfmt::skip]
-impl Related<super::track::Entity> for Entity {
-    fn to() -> RelationDef { super::track_artist::Relation::Track.def() }
-    fn via() -> Option<RelationDef> { Some(super::track_artist::Relation::Artist.def().rev()) }
+impl Related<Track> for Entity {
+    fn to() -> RelationDef { TrackArtistRelation::Track.def() }
+    fn via() -> Option<RelationDef> { Some(TrackArtistRelation::Artist.def().rev()) }
 }
 
 #[rustfmt::skip]
-impl Related<super::album::Entity> for Entity {
-    fn to() -> RelationDef { super::album_artist::Relation::Album.def() }
-    fn via() -> Option<RelationDef> { Some(super::album_artist::Relation::Artist.def().rev()) }
+impl Related<Album> for Entity {
+    fn to() -> RelationDef { AlbumArtistRelation::Album.def() }
+    fn via() -> Option<RelationDef> { Some(AlbumArtistRelation::Artist.def().rev()) }
 }
 
 impl ActiveModelBehavior for ActiveModel {}
@@ -72,9 +76,9 @@ pub struct ArtistRead {
 #[schema(title = "Album Artist / Track Artist (Post)", as = entity::artist::ArtistWriteContext, description = "Performer, composer or otherwise credited entity in relation to a specific album or track")]
 pub struct ArtistWriteContext {
     #[schema(minimum = 1, examples(42))]
-    pub id: u32,
+    pub id: Option<u32>,
     #[schema(examples("Tom Holkenborg"))]
-    pub name: String,
+    pub name: Option<String>,
     #[schema(examples("Junkie XL"))]
     pub alias: Option<String>,
     pub primary: bool,
@@ -95,4 +99,15 @@ pub struct ArtistReadContext {
     #[schema(examples("Junkie XL"))]
     pub alias: Option<String>,
     pub primary: bool,
+}
+
+impl Into<ArtistWrite> for ArtistWriteContext {
+    fn into(self) -> ArtistWrite {
+        ArtistWrite {
+            id: self.id,
+            name: self.name,
+            mbid: self.mbid,
+            spotify_id: self.spotify_id,
+        }
+    }
 }
