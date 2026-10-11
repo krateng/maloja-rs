@@ -9,7 +9,7 @@ use crate::entity::{
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use std::collections::{HashMap, HashSet};
 use crate::database::errors::MalojaError;
-use crate::database::repository::{album_model_to_read, artist_model_to_read, track_model_to_read};
+use crate::database::repository::{album_model_to_read, artist_model_to_read, scrobble_model_to_read, track_model_to_read};
 
 pub type TrackArtistFull = (TrackArtistModel, ArtistModel);
 pub type AlbumArtistFull = (AlbumArtistModel, ArtistModel);
@@ -29,7 +29,7 @@ pub async fn resolve_track_ids_to_models(ids: Vec<u32>, db: &DatabaseConnection)
     let artist_ids: Vec<u32> = db_result.iter().flat_map(|(t, tas)| tas).map(|ta| ta.artist_id).collect();
     let artist_map: HashMap<u32, ArtistModel> = resolve_artist_ids_to_models(artist_ids, &db).await?;
 
-    let album_ids: Vec<u32> = db_result.iter().map(|(t, tas)| t.album_id).collect();
+    let album_ids: Vec<u32> = db_result.iter().filter_map(|(t, tas)| t.album_id).collect();
     let album_map: HashMap<u32, AlbumModelWithRelated> = resolve_album_ids_to_models(album_ids, &db).await?;
 
     let mut result: HashMap<u32, TrackModelWithRelated> = HashMap::new();
@@ -44,7 +44,7 @@ pub async fn resolve_track_ids_to_models(ids: Vec<u32>, db: &DatabaseConnection)
                     let artist_id = ta.artist_id.clone();
                     (
                         ta, // TrackArtistModel
-                        artist_map.get(&artist_id) // ArtistModel
+                        artist_map.get(&artist_id).expect("Artist ID should be in Map").clone() // ArtistModel
                     )
                 }).collect(),
                 album_id.as_ref().and_then(|x| album_map.get(x)).cloned() // AlbumModelWithRelated
@@ -76,7 +76,7 @@ pub async fn resolve_album_ids_to_models(ids: Vec<u32>, db: &DatabaseConnection)
                     let artist_id = aa.artist_id.clone();
                     (
                         aa, // AlbumArtistModel
-                        artist_map.get(&artist_id) // ArtistModel
+                        artist_map.get(&artist_id).expect("Artist ID should be in Map").clone() // ArtistModel
                     )
                 }).collect(),
             )
@@ -126,7 +126,7 @@ pub async fn resolve_scrobble_ids_to_models(ids: Vec<i64>, db: &DatabaseConnecti
             scrobble.timestamp,
             (
                 scrobble,
-                *track_map.get(&track_id).expect("We should have a track to this ID")
+                track_map.get(&track_id).expect("Track ID should be in map").clone()
             )
         );
     }
@@ -134,20 +134,26 @@ pub async fn resolve_scrobble_ids_to_models(ids: Vec<i64>, db: &DatabaseConnecti
     Ok(result)
 }
 
-pub async fn resolve_track_ids(ids: Vec<u32>, db: &DatabaseConnection) -> HashMap<u32, TrackRead> {
+pub async fn resolve_track_ids(ids: Vec<u32>, db: &DatabaseConnection) -> Result<HashMap<u32, TrackRead>, MalojaError> {
     let models = resolve_track_ids_to_models(ids, db).await?;
     let reads: HashMap<u32, TrackRead> = models.into_iter().map(|(x,y)| (x, track_model_to_read(y))).collect();
-    reads
+    Ok(reads)
 }
 
-pub async fn resolve_album_ids(ids: Vec<u32>, db: &DatabaseConnection) -> HashMap<u32, AlbumRead> {
+pub async fn resolve_album_ids(ids: Vec<u32>, db: &DatabaseConnection) -> Result<HashMap<u32, AlbumRead>, MalojaError> {
     let models = resolve_album_ids_to_models(ids, db).await?;
     let reads: HashMap<u32, AlbumRead> = models.into_iter().map(|(x,y)| (x, album_model_to_read(y))).collect();
-    reads
+    Ok(reads)
 }
 
-pub async fn resolve_artist_ids(ids: Vec<u32>, db: &DatabaseConnection) -> HashMap<u32, ArtistRead> {
+pub async fn resolve_artist_ids(ids: Vec<u32>, db: &DatabaseConnection) -> Result<HashMap<u32, ArtistRead>, MalojaError> {
     let models = resolve_artist_ids_to_models(ids, db).await?;
     let reads: HashMap<u32, ArtistRead> = models.into_iter().map(|(x,y)| (x, artist_model_to_read(y))).collect();
-    reads
+    Ok(reads)
+}
+
+pub async fn resolve_scrobble_ids(ids: Vec<i64>, db: &DatabaseConnection) -> Result<HashMap<i64, ScrobbleRead>, MalojaError> {
+    let models = resolve_scrobble_ids_to_models(ids, db).await?;
+    let reads: HashMap<i64, ScrobbleRead> = models.into_iter().map(|(x,y)| (x, scrobble_model_to_read(y))).collect();
+    Ok(reads)
 }

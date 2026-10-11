@@ -58,7 +58,7 @@ pub async fn charts_tracks(
     let result: Vec<(u32, u32, u32)> = query.into_tuple().all(&db).await?;
 
     let id_list = result.iter().map(|(id, _scrobbles, _rank)| id.to_owned()).collect();
-    let id_map = resolve_track_ids(id_list, &db).await;
+    let id_map = resolve_track_ids(id_list, &db).await?;
 
     let charts: Vec<ChartsEntry<TrackRead>> = result
         .into_iter()
@@ -92,7 +92,7 @@ pub async fn charts_artists(
     let result: Vec<(u32, u32, u32)> = query.into_tuple().all(&db).await?;
 
     let id_list = result.iter().map(|(id, _scrobbles, _rank)| id.to_owned()).collect();
-    let id_map = resolve_artist_ids(id_list, &db).await;
+    let id_map = resolve_artist_ids(id_list, &db).await?;
 
     let charts: Vec<ChartsEntry<ArtistRead>> = result
         .into_iter()
@@ -133,7 +133,7 @@ pub async fn charts_albums(
     let result: Vec<(u32, u32, u32)> = query.into_tuple().all(&db).await?;
 
     let id_list = result.iter().map(|(id, _scrobbles, _rank)| id.to_owned()).collect();
-    let id_map = resolve_album_ids(id_list, &db).await;
+    let id_map = resolve_album_ids(id_list, &db).await?;
 
     let charts: Vec<ChartsEntry<AlbumRead>> = result
         .into_iter()

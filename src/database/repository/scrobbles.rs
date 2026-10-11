@@ -56,7 +56,8 @@ pub async fn scrobbles(
 
     let result: Vec<ScrobbleRead> = result.into_iter().map(|s| {
         let track_id = s.track_id.clone();
-        scrobble_model_to_read((s, *track_map.get(&track_id).expect("Scrobble must have track")))
+        let track_model = track_map.get(&track_id).expect("Scrobble must have track").clone();
+        scrobble_model_to_read((s, track_model))
     } ).collect();
 
     Ok(result)
