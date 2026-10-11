@@ -2,7 +2,7 @@ use crate::entity::track::TrackRead;
 use crate::entity::track::TrackWrite;
 use sea_orm::entity::prelude::*;
 use sea_orm::prelude::Json;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 #[derive(Debug, Clone, DeriveEntityModel, Serialize)]
@@ -42,7 +42,8 @@ impl ActiveModelBehavior for ActiveModel {}
 
 /// Representation of a scrobble with the information that can be supplied from the outside.
 /// Used for creating or patching a scrobble
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, Deserialize, ToSchema)]
+#[schema(title = "Scrobble (Post)", as = entity::scrobble::ScrobbleWrite, description = "Instance of user listening to a track")]
 pub struct ScrobbleWrite {
     #[schema(examples(904098042))]
     pub timestamp: i64,

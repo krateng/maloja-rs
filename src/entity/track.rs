@@ -1,7 +1,7 @@
 use super::album::{AlbumRead, AlbumWrite};
-use super::artist::{ArtistReadContext, ArtistWrite};
+use super::artist::{ArtistReadContext, ArtistWrite, ArtistWriteContext};
 use sea_orm::entity::prelude::*;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 #[derive(Debug, Clone, DeriveEntityModel, Serialize)]
@@ -66,14 +66,14 @@ impl ActiveModelBehavior for ActiveModel {}
 /// Representation of a track with the information that can be supplied from the outside.
 /// Used for creating or patching a track, or to identify a track within another entity which could
 /// exist or should be newly created
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, Deserialize, ToSchema)]
+#[schema(title = "Track (Post)", as = entity::track::TrackWrite, description = "Musical work")]
 pub struct TrackWrite {
     #[schema(minimum = 1, examples(42))]
     pub id: Option<u32>,
     #[schema(examples("Whistle"))]
     pub title: Option<String>,
-    pub primary_artists: Option<Vec<ArtistWrite>>,
-    pub secondary_artists: Option<Vec<ArtistWrite>>,
+    pub artists: Option<Vec<ArtistWriteContext>>,
     #[schema(examples(195))]
     pub track_length: Option<u32>,
     pub album: Option<AlbumWrite>,

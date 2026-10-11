@@ -1,6 +1,6 @@
-use super::artist::{ArtistReadContext, ArtistWrite};
+use super::artist::{ArtistReadContext, ArtistWrite, ArtistWriteContext};
 use sea_orm::entity::prelude::*;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 #[derive(Debug, Clone, DeriveEntityModel, Serialize)]
@@ -47,13 +47,14 @@ impl ActiveModelBehavior for ActiveModel {}
 /// Representation of an album with the information that can be supplied from the outside.
 /// Used for creating or patching an album, or to identify an album within another entity which could
 /// exist or should be newly created
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, Deserialize, ToSchema)]
+#[schema(title = "Album (Post)", as = entity::album::AlbumWrite, description = "Studio album / EP / Single a track canonically belongs to")]
 pub struct AlbumWrite {
     #[schema(minimum = 1, examples(42))]
     pub id: Option<u32>,
     #[schema(examples("Square One"))]
     pub album_title: Option<String>,
-    pub album_artists: Option<Vec<ArtistWrite>>,
+    pub album_artists: Option<Vec<ArtistWriteContext>>,
     #[schema(examples("e05f3677-7708-4776-9159-5201559b62d3"))]
     pub mbid: Option<String>,
     #[schema(examples("0FOOodYRlj7gzh7q7IjmNZ"))]

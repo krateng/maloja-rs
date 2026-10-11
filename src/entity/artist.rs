@@ -1,5 +1,5 @@
 use sea_orm::entity::prelude::*;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 #[derive(Debug, Clone, DeriveEntityModel, Serialize)]
@@ -45,7 +45,8 @@ impl ActiveModelBehavior for ActiveModel {}
 /// Representation of an artist with the information that can be supplied from the outside.
 /// Used for creating or patching an artist, or to identify an artist within another entity who could
 /// exist or should be newly created
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, Deserialize, ToSchema)]
+#[schema(title = "Artist (Post)", as = entity::artist::ArtistWrite, description = "Performer, composer or otherwise credited entity")]
 pub struct ArtistWrite {
     #[schema(minimum = 1, examples(42))]
     pub id: Option<u32>,
@@ -67,9 +68,25 @@ pub struct ArtistRead {
     pub name: String,
 }
 
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, Deserialize, ToSchema)]
+#[schema(title = "Album Artist / Track Artist (Post)", as = entity::artist::ArtistWriteContext, description = "Performer, composer or otherwise credited entity in relation to a specific album or track")]
+pub struct ArtistWriteContext {
+    #[schema(minimum = 1, examples(42))]
+    pub id: u32,
+    #[schema(examples("Tom Holkenborg"))]
+    pub name: String,
+    #[schema(examples("Junkie XL"))]
+    pub alias: Option<String>,
+    pub primary: bool,
+    #[schema(examples("48646387-1664-4c9a-9139-9bfd091b823c"))]
+    pub mbid: Option<String>,
+    #[schema(examples("41MozSoPIsD1dJM0CLPjZF"))]
+    pub spotify_id: Option<String>,
+}
+
 /// Representation of an artist as they should be shown to the outside when within the context of a related entity (track or album)
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
-#[schema(title = "Artist (Context)", as = entity::artist::ArtistReadContext, description = "Performer, composer or otherwise credited entity in relation to a specific album or track")]
+#[schema(title = "Album Artist / Track Artist", as = entity::artist::ArtistReadContext, description = "Performer, composer or otherwise credited entity in relation to a specific album or track")]
 pub struct ArtistReadContext {
     #[schema(minimum = 1, examples(42))]
     pub id: u32,

@@ -8,6 +8,8 @@ pub struct Model {
     pub album_id: u32,
     #[sea_orm(primary_key, auto_increment = false)]
     pub artist_id: u32,
+    pub primary: bool,
+    pub artist_alias: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
