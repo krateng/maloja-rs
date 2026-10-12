@@ -35,13 +35,13 @@ pub async fn resolve_track_ids_to_models(ids: Vec<u32>, db: &DatabaseConnection)
     let mut result: HashMap<u32, TrackModelWithRelated> = HashMap::new();
 
     for (track, track_artists) in db_result {
-        let album_id = track.album_id.clone();
+        let album_id = track.album_id;
         result.insert(
             track.id,
             (
                 track, // TrackModel
                 track_artists.into_iter().map(|ta| {
-                    let artist_id = ta.artist_id.clone();
+                    let artist_id = ta.artist_id;
                     (
                         ta, // TrackArtistModel
                         artist_map.get(&artist_id).expect("Artist ID should be in Map").clone() // ArtistModel
@@ -73,7 +73,7 @@ pub async fn resolve_album_ids_to_models(ids: Vec<u32>, db: &DatabaseConnection)
             (
                 album, // AlbumModel
                 album_artists.into_iter().map(|aa| {
-                    let artist_id = aa.artist_id.clone();
+                    let artist_id = aa.artist_id;
                     (
                         aa, // AlbumArtistModel
                         artist_map.get(&artist_id).expect("Artist ID should be in Map").clone() // ArtistModel

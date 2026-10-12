@@ -104,13 +104,20 @@ pub struct ArtistReadContext {
     pub primary: bool,
 }
 
-impl Into<ArtistWrite> for ArtistWriteContext {
-    fn into(self) -> ArtistWrite {
+impl From<ArtistWriteContext> for ArtistWrite {
+    fn from(value: ArtistWriteContext) -> Self {
         ArtistWrite {
-            id: self.id,
-            name: self.name,
-            mbid: self.mbid,
-            spotify_id: self.spotify_id,
+            id: value.id,
+            name: value.name,
+            mbid: value.mbid,
+            spotify_id: value.spotify_id,
         }
+    }
+}
+
+impl ArtistWriteContext {
+    pub(crate) fn into_artist_write(self) -> ArtistWrite {
+        let result: ArtistWrite = self.into();
+        result
     }
 }

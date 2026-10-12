@@ -24,9 +24,11 @@ pub use scrobble::{
 };
 pub use track_artist::{
     Model as TrackArtistModel, Entity as TrackArtist,
+    ActiveModel as TrackArtistActiveModel,
 };
 pub use album_artist::{
     Model as AlbumArtistModel, Entity as AlbumArtist,
+    ActiveModel as AlbumArtistActiveModel,
 };
 
 use album::Relation as AlbumRelation;

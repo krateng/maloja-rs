@@ -7,6 +7,7 @@ pub enum MalojaError {
     ArtistNotFound { id: u32 },
     TrackNotFound { id: u32 },
     AlbumNotFound { id: u32 },
+    MissingField { field: String },
     DatabaseConnectionError { message: String },
     DatabaseError { message: String },
     FilesystemError { message: String },
