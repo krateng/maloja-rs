@@ -1,12 +1,12 @@
-use crate::database;
+use crate::{database, setup};
 use std::fs;
+use crate::configuration::CONFIG;
 
 mod api;
 mod fixtures;
 mod parsing;
 
 pub(crate) async fn common() {
-    dotenvy::from_filename(".env.test").ok();
 
     fs::remove_dir_all("./testing/data")
         .or_else(|e| if e.kind() == std::io::ErrorKind::NotFound { Ok(()) } else { Err(e) })
@@ -18,5 +18,5 @@ pub(crate) async fn common() {
         .or_else(|e| if e.kind() == std::io::ErrorKind::NotFound { Ok(()) } else { Err(e) })
         .expect("Could not remove ./testing/log");
 
-    database::init_db().await.unwrap();
+    setup(true).await;
 }

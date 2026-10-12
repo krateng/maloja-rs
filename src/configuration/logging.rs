@@ -17,6 +17,7 @@ pub fn setup_logger() -> Result<(), fern::InitError> {
             panic!("Failed to setup logging");
         }
     };
+    let filter_level = if cfg!(test) { log::LevelFilter::Off } else { log::LevelFilter::Debug };
     fern::Dispatch::new()
         .format(|out, message, record| {
             out.finish(format_args!(
@@ -27,7 +28,7 @@ pub fn setup_logger() -> Result<(), fern::InitError> {
                 message
             ))
         })
-        .level(log::LevelFilter::Debug)
+        .level(filter_level)
         .chain(std::io::stdout())
         .chain(logfile)
         .apply()?;
