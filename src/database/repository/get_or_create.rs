@@ -185,19 +185,20 @@ pub async fn get_or_create_artists(input: Vec<ArtistWrite>) -> Result<HashMap<Ar
 pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> Result<HashMap<AlbumWrite, u32>, MalojaError> {
     let db = connect().await?;
 
-    let album_artist_write_map: HashMap<AlbumWrite, HashSet<ArtistWriteContext>> = input.clone().into_iter()
+    let artist_writes: Vec<ArtistWrite> = input.iter().flat_map(|x| x.album_artists.clone().unwrap_or_else(Vec::new)).map(|x| x.into_artist_write()).collect();
+    let artist_map = get_or_create_artists(artist_writes).await?;
+
+    let combined_list: Vec<(AlbumWrite, Vec<(u32, ArtistWriteContext)>)> = input.into_iter()
         .map(|x| (
-            x.clone(),
-            x.album_artists.unwrap_or(vec![]).into_iter().collect()
-        )).collect();
-    let artist_writes: Vec<ArtistWrite> = album_artist_write_map.iter().flat_map(|(_, v)| v.clone()).map(|x| x.into_artist_write()).collect();
-    let artist_id_map: HashMap<ArtistWrite, u32> = get_or_create_artists(artist_writes).await?;
-    // carry context info with us for later insertion
-    let album_artist_id_map: HashMap<AlbumWrite, HashSet<(u32, ArtistWriteContext)>> = album_artist_write_map
-        .into_iter().map(|(al,ar)| (al, ar.into_iter().map(|aw| (artist_id_map[&aw.clone().into_artist_write()], aw)).collect())).collect();
+                x.clone(),
+                x.album_artists.unwrap_or_else(Vec::new).iter().map(|x| {
+                    (artist_map[&x.clone().into_artist_write()], x.clone())
+                }).collect::<Vec<(u32, ArtistWriteContext)>>()
+            )
+        ).collect();
 
     // fill in existing ones
-    let album_info: Vec<(AlbumWrite, HashSet<u32>)> = album_artist_id_map.iter().map(|(write, artists)|
+    let album_info: Vec<(AlbumWrite, HashSet<u32>)> = combined_list.iter().map(|(write, artists)|
         (write.clone(), artists.iter().map(|(id, _)| *id).collect())
     ).collect();
     let existing = get_existing_album_ids(album_info, &db).await?;
@@ -209,12 +210,20 @@ pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> Result<HashMap<Albu
         }).collect();
 
     // create inserts for all remaining ones
-    let inserts: Vec<(AlbumWrite, AlbumActiveModel, HashSet<(u32, ArtistWriteContext)>)> = album_artist_id_map
+    let inserts: Vec<(AlbumWrite, AlbumActiveModel, Vec<AlbumArtistActiveModel>)> = combined_list
         .into_iter()
         .filter(|(write, _)| !result.contains_key(write))
-        .map(|(a,aid)| {
-            let mut model = album_write_to_model(a.clone());
-            (a, model, aid)
+        .map(|(album,artists)| {
+            let mut model = album_write_to_model(album.clone());
+            let album_artist_inserts = artists.into_iter().map(|(id, context)| {
+                    AlbumArtistActiveModel {
+                        album_id: NotSet,
+                        artist_id: Set(id),
+                        primary: Set(context.primary),
+                        artist_alias: Set(context.alias),
+                    }
+                }).collect();
+            (album, model, album_artist_inserts)
         }).collect();
 
     // not as pretty as batch inserts, but to keep track of which model got which ID (sqlite doesnt guarantee order),
@@ -223,19 +232,16 @@ pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> Result<HashMap<Albu
     // expect for the initial import
     let txn = db.begin().await?;
     let amount_inserts = &inserts.len();
-    for (write, insert, artists) in inserts {
+    for (write, insert, mut album_artists) in inserts {
         let db_result = Album::insert(insert).exec(&txn).await?;
         let album_id: u32 = db_result.last_insert_id;
         result.insert(write, album_id);
 
-        let aux_inserts: Vec<AlbumArtistActiveModel> = artists.into_iter().map(|(artist_id, context)| AlbumArtistActiveModel {
-            album_id: Set(album_id),
-            artist_id: Set(artist_id),
-            primary: Set(context.primary),
-            artist_alias: Set(context.alias),
-        }).collect();
+        for aux_insert in &mut album_artists {
+            aux_insert.album_id = Set(album_id);
+        }
 
-        let db_result_aux = AlbumArtist::insert_many(aux_inserts).exec(&txn).await?;
+        AlbumArtist::insert_many(album_artists).exec(&txn).await?;
     }
     txn.commit().await?;
 
@@ -283,12 +289,12 @@ pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> Result<HashMap<Trac
         .map(|(track,artists, album)| {
             let mut model = track_write_to_model(track.clone());
             model.album_id = album.map(|x| Set(Some(x))).unwrap_or(NotSet);
-            let track_artist_inserts = artists.into_iter().map(|x| {
+            let track_artist_inserts = artists.into_iter().map(|(id, context)| {
                 TrackArtistActiveModel {
                     track_id: NotSet,
-                    artist_id: Set(x.0),
-                    primary: Set(x.1.primary),
-                    artist_alias: Set(x.1.alias),
+                    artist_id: Set(id),
+                    primary: Set(context.primary),
+                    artist_alias: Set(context.alias),
                 }
             }).collect();
             (track, model, track_artist_inserts)
