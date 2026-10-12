@@ -1,9 +1,11 @@
+use std::collections::HashSet;
 use crate::database;
 use crate::entity::artist::ArtistWrite;
-use crate::entity::ArtistWriteContext;
+use crate::entity::{ArtistRead, ArtistWriteContext, TrackRead};
 use crate::entity::scrobble::{Model, ScrobbleWrite};
 use crate::entity::track::TrackWrite;
 use crate::tests::common;
+use crate::timeranges::TimeRange;
 
 type TrackInfo = (Vec<&'static str>, &'static str);
 
@@ -45,72 +47,129 @@ fn create_scrobble_writes(tracks: Vec<TrackInfo>) -> Vec<ScrobbleWrite> {
 
     writes
 }
-
-fn assert_all_same_track(scrobbles: Vec<Model>) {
-    let mut ids: Vec<u32> = vec![];
-    for scrobble in scrobbles {
-        ids.push(scrobble.track_id);
-    }
-    ids.dedup();
-    assert_eq!(ids.len(), 1, "More than 1 track has been created.");
-}
-
-#[tokio::test]
-async fn match_entities() {
-    common().await;
-
-    let tracks1: Vec<TrackInfo> = vec![
+fn ignore_capitalization_data() -> Vec<ScrobbleWrite> {
+    let tracks: Vec<TrackInfo> = vec![
         (vec!["Jennie", "Lalisa"], "The Ballad of Ace LeBaron"),
         (vec!["Jennie", "Lalisa"], "The Ballad of Ace Lebaron"),
-        (vec!["Lalisa", "Jennie"], "the ballad of ace lebaron"),
-        (vec!["lalisa", "jennie"], "THE BALLAD OF ACE LEBARON"),
+        (vec!["jennie", "lalisa"], "The Ballad of Ace LeBaron"),
+        (vec!["jennie", "lalisa"], "The Ballad of Ace Lebaron"),
     ];
-    let amount1 = tracks1.len();
-
-    let tracks2: Vec<TrackInfo> = vec![
-        (vec!["Howard Shore", "Jeremy Soule"], "Party in the PRC"),
-        (vec!["Howard Shore", "Jeremy Soule"], "party in the prc"),
-        (vec!["Jeremy Soule", "Howard Shore"], "Party in The PRC"),
-        (vec!["jeremy soule", "howard shore"], "Party In The PRC"),
-        (
-            vec![
-                "jeremy soule",
-                "howard shore",
-                "Jeremy Soule",
-                "Howard Shore",
-                "JEREMY SOULE",
-                "HOWARD SHORE",
-            ],
-            "Party In The PRC",
-        ),
-    ];
-    let amount2 = tracks2.len();
-
-    // first one by one
-    let mut scrobbles = vec![];
-    for write in create_scrobble_writes(tracks1).clone() {
-        let db_result =
-            database::repository::create_scrobbles(vec![write.clone()], false).await.unwrap();
-        scrobbles.push(db_result[&write].clone())
-    }
-    assert_eq!(scrobbles.len(), amount1, "The incorrect amount of scrobbles has been generated");
-    assert_all_same_track(scrobbles);
-
-    // now all at once
-    // TODO why does this overflow the stack???
-    let db_result = database::repository::create_scrobbles(create_scrobble_writes(tracks2), false)
-        .await
-        .unwrap();
-    assert_eq!(db_result.len(), amount2, "The incorrect amount of scrobbles has been generated");
-    let scrobbles = db_result.values().map(|x| x.to_owned()).collect();
-    assert_all_same_track(scrobbles);
+    create_scrobble_writes(tracks)
 }
 
 #[tokio::test]
-async fn parse_multi_artists() {
+async fn ignore_capitalization_separate() {
     common().await;
+    let writes = ignore_capitalization_data();
+    let writes_amount = writes.len();
+    for write in writes {
+        database::repository::create_scrobbles(vec![write], false).await.unwrap();
+    }
+    let scrobbles = database::repository::scrobbles(
+        TimeRange::Infinite, None, None, None,false
+    ).await.unwrap();
+    assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
+    let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
+    assert_eq!(tracks.len(), 1);
+}
 
-    let tracks1: Vec<TrackInfo> = vec![
+#[tokio::test]
+async fn ignore_capitalization_batch() {
+    common().await;
+    let writes = ignore_capitalization_data();
+    let writes_amount = writes.len();
+    database::repository::create_scrobbles(writes, false).await.unwrap();
+    let scrobbles = database::repository::scrobbles(
+        TimeRange::Infinite, None, None, None,false
+    ).await.unwrap();
+    assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
+    let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
+    assert_eq!(tracks.len(), 1);
+}
+
+fn ignore_artist_order_data() -> Vec<ScrobbleWrite> {
+    let tracks: Vec<TrackInfo> = vec![
+        (vec!["Howard Shore", "Jeremy Soule", "Tilman Sillescu"], "Party in the PRC"),
+        (vec!["Tilman Sillescu", "Howard Shore", "Jeremy Soule"], "Party in the PRC"),
+        (vec!["Jeremy Soule", "Tilman Sillescu", "Howard Shore"], "Party in the PRC"),
+    ];
+    create_scrobble_writes(tracks)
+}
+
+#[tokio::test]
+async fn ignore_artist_order_separate() {
+    common().await;
+    let writes = ignore_artist_order_data();
+    let writes_amount = writes.len();
+    for write in writes {
+        database::repository::create_scrobbles(vec![write], false).await.unwrap();
+    }
+    let scrobbles = database::repository::scrobbles(
+        TimeRange::Infinite, None, None, None,false
+    ).await.unwrap();
+    assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
+    let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
+    assert_eq!(tracks.len(), 1);
+}
+
+#[tokio::test]
+async fn ignore_artist_order_batch() {
+    common().await;
+    let writes = ignore_artist_order_data();
+    let writes_amount = writes.len();
+    database::repository::create_scrobbles(writes, false).await.unwrap();
+    let scrobbles = database::repository::scrobbles(
+        TimeRange::Infinite, None, None, None,false
+    ).await.unwrap();
+    assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
+    let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
+    assert_eq!(tracks.len(), 1);
+}
+
+fn ignore_duplicate_artists_data() -> Vec<ScrobbleWrite> {
+    let tracks: Vec<TrackInfo> = vec![
+        (vec!["Soyeon", "Jennie", "Dahyun"], "VfB Stuttgart, ein Leben lang!"),
+        (vec!["Soyeon", "Jennie", "Dahyun", "Soyeon"], "VfB Stuttgart, ein Leben lang!"),
+        (vec!["Soyeon", "Jennie", "Dahyun", "Jennie"], "VfB Stuttgart, ein Leben lang!"),
+        (vec!["Soyeon", "Jennie", "Dahyun", "Dahyun"], "VfB Stuttgart, ein Leben lang!"),
+        (vec!["Soyeon", "Jennie", "Dahyun", "soyeon", "jennie", "dahyun"], "VfB Stuttgart, ein Leben lang!"),
+    ];
+    create_scrobble_writes(tracks)
+}
+
+#[tokio::test]
+async fn ignore_duplicate_artists_separate() {
+    common().await;
+    let writes = ignore_duplicate_artists_data();
+    let writes_amount = writes.len();
+    for write in writes {
+        database::repository::create_scrobbles(vec![write], false).await.unwrap();
+    }
+    let scrobbles = database::repository::scrobbles(
+        TimeRange::Infinite, None, None, None,false
+    ).await.unwrap();
+    assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
+    let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
+    assert_eq!(tracks.len(), 1);
+}
+
+#[tokio::test]
+async fn ignore_duplicate_artists_batch() {
+    common().await;
+    let writes = ignore_duplicate_artists_data();
+    let writes_amount = writes.len();
+    database::repository::create_scrobbles(writes, false).await.unwrap();
+    let scrobbles = database::repository::scrobbles(
+        TimeRange::Infinite, None, None, None,false
+    ).await.unwrap();
+    assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
+    let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
+    assert_eq!(tracks.len(), 1);
+
+}
+
+fn parse_multi_artists_data() -> Vec<ScrobbleWrite> {
+    let tracks: Vec<TrackInfo> = vec![
         (vec!["Soyeon", "Yuqi"], "Sapphic"),
         (vec!["Yuqi"], "Sapphic ft. Soyeon"),
         (vec!["Yuqi"], "Sapphic (ft. Soyeon)"),
@@ -126,12 +185,122 @@ async fn parse_multi_artists() {
         (vec!["Yuqi (featuring Soyeon)"], "Sapphic"),
         (vec!["Yuqi;Soyeon"], "Sapphic"),
     ];
-    let amount = tracks1.len();
+    create_scrobble_writes(tracks)
+}
 
-    let db_result = database::repository::create_scrobbles(create_scrobble_writes(tracks1), false)
-        .await
-        .unwrap();
-    assert_eq!(db_result.len(), amount, "The incorrect amount of scrobbles has been generated");
-    let scrobbles = db_result.values().map(|x| x.to_owned()).collect();
-    assert_all_same_track(scrobbles);
+#[tokio::test]
+async fn parse_multi_artists_separate() {
+    common().await;
+    let writes = parse_multi_artists_data();
+    let writes_amount = writes.len();
+    for write in writes {
+        database::repository::create_scrobbles(vec![write], false).await.unwrap();
+    }
+    let scrobbles = database::repository::scrobbles(
+        TimeRange::Infinite, None, None, None,false
+    ).await.unwrap();
+    assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
+    let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
+    assert_eq!(tracks.len(), 1);
+}
+
+#[tokio::test]
+async fn parse_multi_artists_batch() {
+    common().await;
+    let writes = parse_multi_artists_data();
+    let writes_amount = writes.len();
+    database::repository::create_scrobbles(writes, false).await.unwrap();
+    let scrobbles = database::repository::scrobbles(
+        TimeRange::Infinite, None, None, None,false
+    ).await.unwrap();
+    assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
+    let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
+    assert_eq!(tracks.len(), 1);
+}
+
+#[tokio::test]
+async fn provide_artist_by_id() {
+    common().await;
+    let writes = create_scrobble_writes(vec![
+        (vec!["Jihyo"], "The Elven Priestess"),
+    ]);
+    database::repository::create_scrobbles(writes, false).await.unwrap();
+
+    let scrobbles = database::repository::scrobbles(
+        TimeRange::Infinite, None, None, None,false
+    ).await.unwrap();
+    assert_eq!(scrobbles.len(), 1, "The incorrect amount of scrobbles has been generated");
+    let jihyo_id = scrobbles.first().unwrap().track.artists.first().unwrap().id;
+
+    let new_scrobble = ScrobbleWrite {
+        timestamp: None,
+        track: TrackWrite {
+            id: None,
+            title: Some("Thigh Noon".parse().unwrap()),
+            artists: Some(vec![
+                ArtistWriteContext {
+                    id: Some(jihyo_id),
+                    name: None,
+                    alias: None,
+                    primary: true,
+                    mbid: None,
+                    spotify_id: None,
+                }
+            ]),
+            track_length: None,
+            album: None,
+            mbid: None,
+            spotify_id: None,
+        },
+        origin: None,
+        listen_duration: None,
+    };
+
+    database::repository::create_scrobbles(vec![new_scrobble], false).await.unwrap();
+    let scrobbles = database::repository::scrobbles(
+        TimeRange::Infinite, None, None, None,false
+    ).await.unwrap();
+    assert_eq!(scrobbles.len(), 2, "The incorrect amount of scrobbles has been generated");
+    let artist_ids: HashSet<u32> = scrobbles.into_iter().map(|scrobble| scrobble.track).flat_map(|x| x.artists).map(|x| x.id).collect();
+    assert_eq!(artist_ids.len(), 1);
+}
+
+#[tokio::test]
+async fn provide_track_by_id() {
+    common().await;
+    let writes = create_scrobble_writes(vec![
+        (vec!["Jihyo"], "The Elven Priestess"),
+    ]);
+    database::repository::create_scrobbles(writes, false).await.unwrap();
+
+    let scrobbles = database::repository::scrobbles(
+        TimeRange::Infinite, None, None, None,false
+    ).await.unwrap();
+    assert_eq!(scrobbles.len(), 1, "The incorrect amount of scrobbles has been generated");
+    let song_id = scrobbles.first().unwrap().track.id;
+
+    let new_scrobble = ScrobbleWrite {
+        timestamp: None,
+        track: TrackWrite {
+            id: Some(song_id),
+            title: None,
+            artists: None,
+            track_length: None,
+            album: None,
+            mbid: None,
+            spotify_id: None,
+        },
+        origin: None,
+        listen_duration: None,
+    };
+
+    database::repository::create_scrobbles(vec![new_scrobble], false).await.unwrap();
+    let scrobbles = database::repository::scrobbles(
+        TimeRange::Infinite, None, None, None,false
+    ).await.unwrap();
+    assert_eq!(scrobbles.len(), 2, "The incorrect amount of scrobbles has been generated");
+    let track_ids: HashSet<u32> = scrobbles.into_iter().map(|scrobble| scrobble.track).map(|x| x.id).collect();
+    assert_eq!(track_ids.len(), 1);
+
+
 }

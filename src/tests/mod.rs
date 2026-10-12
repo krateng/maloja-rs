@@ -2,17 +2,11 @@ use crate::database;
 use std::fs;
 
 mod api;
-mod direct_insert;
 mod fixtures;
 mod parsing;
 
 pub(crate) async fn common() {
-    // TODO MAKE SAFE
-    unsafe {
-        std::env::set_var("MALOJA_DATA_PATH", "./testing/data");
-        std::env::set_var("MALOJA_CONFIG_PATH", "./testing/config");
-        std::env::set_var("MALOJA_LOG_PATH", "./testing/log");
-    }
+    dotenvy::from_filename(".env.test").ok();
 
     fs::remove_dir_all("./testing/data")
         .or_else(|e| if e.kind() == std::io::ErrorKind::NotFound { Ok(()) } else { Err(e) })

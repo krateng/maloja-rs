@@ -37,3 +37,4 @@ reqwest = { version = "0.13.5", features = ["json"] }
 tower = "0.5.2"
 http-body-util = "0.1.2"
 uuid = { version = "1.28.0", features = ["v7"] }
+dotenvy = "0.15.7"
