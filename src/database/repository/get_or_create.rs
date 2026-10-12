@@ -209,14 +209,13 @@ pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> Result<HashMap<Albu
         }).collect();
 
     // create inserts for all remaining ones
-    let inserts: HashMap<AlbumWrite, AlbumActiveModel> = album_artist_id_map
+    let inserts: Vec<(AlbumWrite, AlbumActiveModel, HashSet<(u32, ArtistWriteContext)>)> = album_artist_id_map
         .into_iter()
         .filter(|(write, _)| !result.contains_key(write))
         .map(|(a,aid)| {
             let mut model = album_write_to_model(a.clone());
-            (a, model)
+            (a, model, aid)
         }).collect();
-
 
     // not as pretty as batch inserts, but to keep track of which model got which ID (sqlite doesnt guarantee order),
     // we do it all individually
@@ -224,9 +223,19 @@ pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> Result<HashMap<Albu
     // expect for the initial import
     let txn = db.begin().await?;
     let amount_inserts = &inserts.len();
-    for (write, insert) in inserts {
+    for (write, insert, artists) in inserts {
         let db_result = Album::insert(insert).exec(&txn).await?;
-        result.insert(write, db_result.last_insert_id);
+        let album_id: u32 = db_result.last_insert_id;
+        result.insert(write, album_id);
+
+        let aux_inserts: Vec<AlbumArtistActiveModel> = artists.into_iter().map(|(artist_id, context)| AlbumArtistActiveModel {
+            album_id: Set(album_id),
+            artist_id: Set(artist_id),
+            primary: Set(context.primary),
+            artist_alias: Set(context.alias),
+        }).collect();
+
+        let db_result_aux = AlbumArtist::insert_many(aux_inserts).exec(&txn).await?;
     }
     txn.commit().await?;
 
