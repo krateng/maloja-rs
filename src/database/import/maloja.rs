@@ -50,7 +50,7 @@ pub async fn import_maloja(file: PathBuf) -> Result<(), MalojaError> {
         .into_iter()
         .map(|scrobble| {
             ScrobbleWrite {
-                timestamp: scrobble.time,
+                timestamp: Some(scrobble.time),
                 track: TrackWrite {
                     id: None,
                     title: Some(scrobble.track.title),

@@ -1,5 +1,6 @@
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
+use serde_inline_default::serde_inline_default;
 use utoipa::ToSchema;
 use super::{
     TrackArtistRelation, AlbumArtistRelation,
@@ -72,6 +73,7 @@ pub struct ArtistRead {
     pub name: String,
 }
 
+#[serde_inline_default]
 #[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, Deserialize, ToSchema)]
 #[schema(title = "Album Artist / Track Artist (Post)", as = entity::artist::ArtistWriteContext, description = "Performer, composer or otherwise credited entity in relation to a specific album or track")]
 pub struct ArtistWriteContext {
@@ -81,6 +83,7 @@ pub struct ArtistWriteContext {
     pub name: Option<String>,
     #[schema(examples("Junkie XL"))]
     pub alias: Option<String>,
+    #[serde_inline_default(true)]
     pub primary: bool,
     #[schema(examples("48646387-1664-4c9a-9139-9bfd091b823c"))]
     pub mbid: Option<String>,

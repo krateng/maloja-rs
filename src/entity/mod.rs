@@ -7,20 +7,20 @@ pub mod track_artist;
 
 pub use album::{
     Model as AlbumModel, Entity as Album, AlbumWrite, AlbumRead,
-    Column as AlbumColumn,
+    Column as AlbumColumn, ActiveModel as AlbumActiveModel,
 };
 pub use artist::{
     Model as ArtistModel, Entity as Artist,
     ArtistWrite, ArtistRead, ArtistWriteContext, ArtistReadContext,
-    Column as ArtistColumn,
+    Column as ArtistColumn, ActiveModel as ArtistActiveModel,
 };
 pub use track::{
     Model as TrackModel, Entity as Track, TrackWrite, TrackRead,
-    Column as TrackColumn,
+    Column as TrackColumn, ActiveModel as TrackActiveModel,
 };
 pub use scrobble::{
     Model as ScrobbleModel, Entity as Scrobble, ScrobbleWrite, ScrobbleRead,
-    Column as ScrobbleColumn,
+    Column as ScrobbleColumn, ActiveModel as ScrobbleActiveModel,
 };
 pub use track_artist::{
     Model as TrackArtistModel, Entity as TrackArtist,

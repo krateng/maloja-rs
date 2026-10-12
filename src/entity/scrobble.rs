@@ -48,7 +48,7 @@ impl ActiveModelBehavior for ActiveModel {}
 #[schema(title = "Scrobble (Post)", as = entity::scrobble::ScrobbleWrite, description = "Instance of user listening to a track")]
 pub struct ScrobbleWrite {
     #[schema(examples(904098042))]
-    pub timestamp: i64,
+    pub timestamp: Option<i64>,
     pub track: TrackWrite,
     #[schema(examples("navidrome"))]
     pub origin: Option<String>,

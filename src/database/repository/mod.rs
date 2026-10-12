@@ -5,6 +5,7 @@ pub mod resolve;
 pub mod scrobbles;
 pub mod stats;
 pub mod models_to_reads;
+mod writes_to_models;
 
 pub use get_or_create::*;
 pub use history::*;

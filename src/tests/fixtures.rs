@@ -117,7 +117,7 @@ pub async fn fixture(amount_artists: u32, amount_tracks: u32, amount_scrobbles: 
     let mut scrobbles = vec![];
     for _i in 0..amount_scrobbles  {
         scrobbles.push(ScrobbleWrite {
-            timestamp: timestamp,
+            timestamp: Some(timestamp),
             track: tracks.choose(&mut rng).unwrap().to_owned(),
             origin: None,
             listen_duration: None,

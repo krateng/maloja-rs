@@ -14,7 +14,7 @@ fn create_scrobble_writes(tracks: Vec<TrackInfo>) -> Vec<ScrobbleWrite> {
         .map(|track| {
             ts += 200;
             ScrobbleWrite {
-                timestamp: ts,
+                timestamp: Some(ts),
                 track: TrackWrite {
                     id: None,
                     title: Some(track.1.parse().unwrap()),
