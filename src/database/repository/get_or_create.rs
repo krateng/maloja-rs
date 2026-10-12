@@ -3,7 +3,7 @@ use crate::database::{connect, mark_db_write, normalize};
 use crate::entity::{AlbumActiveModel, Album, AlbumModel, AlbumWrite, AlbumColumn, ArtistActiveModel, Artist, ArtistModel, ArtistWrite, ArtistColumn, TrackActiveModel, Track, TrackModel, TrackWrite, TrackColumn, ScrobbleActiveModel, Scrobble, ScrobbleModel, ScrobbleWrite, ScrobbleColumn, AlbumArtistActiveModel, AlbumArtist, TrackArtistActiveModel, TrackArtist, ArtistWriteContext, ScrobbleRead, TrackArtistModel, AlbumArtistModel};
 use log::debug;
 use sea_orm::ActiveValue::Set;
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, NotSet, QueryFilter};
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, NotSet, QueryFilter, TransactionSession, TransactionTrait};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use crate::database::repository::resolve_scrobble_ids;
@@ -166,11 +166,13 @@ pub async fn get_or_create_artists(input: Vec<ArtistWrite>) -> Result<HashMap<Ar
     // we do it all individually
     // using a txn should make the performance cost acceptable with sqlite, and we rarely insert lots of stuff
     // expect for the initial import
+    let txn = db.begin().await?;
     let amount_inserts = &inserts.len();
     for (write, insert) in inserts {
-        let db_result = Artist::insert(insert).exec(&db).await?;
+        let db_result = Artist::insert(insert).exec(&txn).await?;
         result.insert(write, db_result.last_insert_id);
     }
+    txn.commit().await?;
 
     mark_db_write();
     debug!("Inserted {:?} artists", amount_inserts);
@@ -220,11 +222,13 @@ pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> Result<HashMap<Albu
     // we do it all individually
     // using a txn should make the performance cost acceptable with sqlite, and we rarely insert lots of stuff
     // expect for the initial import
+    let txn = db.begin().await?;
     let amount_inserts = &inserts.len();
     for (write, insert) in inserts {
-        let db_result = Album::insert(insert).exec(&db).await?;
+        let db_result = Album::insert(insert).exec(&txn).await?;
         result.insert(write, db_result.last_insert_id);
     }
+    txn.commit().await?;
 
     mark_db_write();
     debug!("Inserted {:?} albums", amount_inserts);
@@ -279,11 +283,13 @@ pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> Result<HashMap<Trac
     // we do it all individually
     // using a txn should make the performance cost acceptable with sqlite, and we rarely insert lots of stuff
     // expect for the initial import
+    let txn = db.begin().await?;
     let amount_inserts = &inserts.len();
     for (write, insert) in inserts {
-        let db_result = Track::insert(insert).exec(&db).await?;
+        let db_result = Track::insert(insert).exec(&txn).await?;
         result.insert(write, db_result.last_insert_id);
     }
+    txn.commit().await?;
 
     mark_db_write();
     debug!("Inserted {:?} tracks", amount_inserts);
@@ -314,11 +320,12 @@ pub async fn create_scrobbles(input: Vec<ScrobbleWrite>, _fail_on_existing: bool
     let mut result: HashMap<ScrobbleWrite, i64> = HashMap::new();
 
     // ok so for scrobbles, where the ID is set before, we can do batch inserts and match by id
+    let txn = db.begin().await?;
     let amount_inserts = &inserts.len();
     for chunk in inserts.iter().collect::<Vec<_>>().chunks(BATCH_SIZE) {
         let chunk_inserts = chunk.to_vec();
         let actual_inserts: Vec<ScrobbleActiveModel> = chunk_inserts.into_iter().map(|(w,am)| am.to_owned()).collect();
-        let db_result: Vec<i64> = Scrobble::insert_many(actual_inserts).exec_with_returning_keys(&db).await?;
+        let db_result: Vec<i64> = Scrobble::insert_many(actual_inserts).exec_with_returning_keys(&txn).await?;
         for id in db_result {
             // we basically just get the key to match by input ts even tho we already have that
             // this in the model and could just build a result map based on that
@@ -328,6 +335,8 @@ pub async fn create_scrobbles(input: Vec<ScrobbleWrite>, _fail_on_existing: bool
             result.insert(key, id);
         }
     }
+    txn.commit().await?;
+
     mark_db_write();
     debug!("Inserted {:?} Scrobbles", amount_inserts);
     Ok(result)
