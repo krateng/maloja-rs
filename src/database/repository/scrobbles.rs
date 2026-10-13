@@ -1,6 +1,6 @@
 use crate::database::connect;
 use crate::database::errors::MalojaError;
-use crate::database::repository::{resolve_track_ids_to_models, scrobble_model_to_read};
+use crate::database::repository::{ensure_single_filter, resolve_track_ids_to_models, scrobble_model_to_read, SingleFilter};
 use crate::entity::scrobble::{
     Column as ScrobbleColumn, Entity as ScrobbleEntity, Model as ScrobbleModel,
     Relation as ScrobbleRelation, ScrobbleRead,
@@ -10,7 +10,7 @@ use crate::entity::track::{
 };
 use crate::entity::track_artist::Column as TrackArtistColumn;
 use crate::timeranges::TimeRange;
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QueryOrder, QuerySelect, RelationTrait};
+use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QueryOrder, QuerySelect, QueryTrait, RelationTrait};
 use sea_query::JoinType;
 
 pub async fn scrobbles(
@@ -20,35 +20,38 @@ pub async fn scrobbles(
     track_id: Option<u32>,
     new_to_old: bool,
 ) -> Result<Vec<ScrobbleRead>, MalojaError> {
-    assert!(
-        (artist_id.is_none() && album_id.is_none())
-            || (artist_id.is_none() && track_id.is_none())
-            || (track_id.is_none() && album_id.is_none())
-    );
+    let real_filter = ensure_single_filter(artist_id, album_id, track_id)?;
+
     let db = connect().await?;
     let (from_ts, to_ts) = timerange.timestamp_boundaries();
     let mut query =
         ScrobbleEntity::find().filter(ScrobbleColumn::Timestamp.between(from_ts, to_ts));
-    if let Some(artist_id) = artist_id {
-        query = query
-            .join(JoinType::LeftJoin, ScrobbleRelation::Track.def())
-            .join(JoinType::LeftJoin, TrackRelation::TrackArtist.def())
-            .filter(TrackArtistColumn::ArtistId.eq(artist_id));
-    };
-    if let Some(album_id) = album_id {
-        query = query
-            .join(JoinType::LeftJoin, ScrobbleRelation::Track.def())
-            .filter(TrackColumn::AlbumId.eq(album_id));
-    };
-    if let Some(track_id) = track_id {
-        query = query.filter(ScrobbleColumn::TrackId.eq(track_id));
-    };
+
+    match real_filter {
+        SingleFilter::Artist(artist_id) => {
+            query = query
+                .join(JoinType::LeftJoin, ScrobbleRelation::Track.def())
+                .join(JoinType::LeftJoin, TrackRelation::TrackArtist.def())
+                .filter(TrackArtistColumn::ArtistId.eq(artist_id));
+        }
+        SingleFilter::Album(album_id) => {
+            query = query
+                .join(JoinType::LeftJoin, ScrobbleRelation::Track.def())
+                .filter(TrackColumn::AlbumId.eq(album_id));
+        }
+        SingleFilter::Track(track_id) => {
+            query = query.filter(ScrobbleColumn::TrackId.eq(track_id));
+        }
+        SingleFilter::None => {}
+    }
 
     if new_to_old {
         query = query.order_by_desc(ScrobbleColumn::Timestamp);
     } else {
         query = query.order_by_asc(ScrobbleColumn::Timestamp);
     }
+
+    println!("query: {:?}", query.build(db.get_database_backend()));
 
     let result: Vec<ScrobbleModel> = query.all(&db).await?;
     let track_ids = result.iter().map(|s| s.track_id).collect();

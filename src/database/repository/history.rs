@@ -1,6 +1,6 @@
 use crate::database::connect;
 use crate::database::errors::MalojaError;
-use crate::database::repository::{charts_albums, charts_artists, charts_tracks, scrobbles};
+use crate::database::repository::{charts_albums, charts_artists, charts_tracks, ensure_single_filter, scrobbles, SingleFilter};
 use crate::database::views::{PerformanceEntry, PulseEntry};
 use crate::timeranges::TimeRange;
 
@@ -31,19 +31,28 @@ pub async fn performance(
 ) -> Result<Vec<PerformanceEntry>, MalojaError> {
     let _db = connect().await?;
     let mut result = vec![];
+    let real_filter = ensure_single_filter(artist_id, album_id, track_id)?;
+
     for subrange in sub_ranges {
-        if let Some(artist_id) = artist_id {
-            let charts = charts_artists(subrange.clone()).await?; //TODO save DB calls, we only need ID here
-            let rank = charts.iter().find(|x| x.entry.id == artist_id).map(|x| x.rank).unwrap_or(0);
-            result.push(PerformanceEntry { time_range: subrange, rank: rank as u32 })
-        } else if let Some(album_id) = album_id {
-            let charts = charts_albums(subrange.clone(), None).await?; //TODO save DB calls, we only need ID here
-            let rank = charts.iter().find(|x| x.entry.id == album_id).map(|x| x.rank).unwrap_or(0);
-            result.push(PerformanceEntry { time_range: subrange, rank: rank as u32 })
-        } else if let Some(track_id) = track_id {
-            let charts = charts_tracks(subrange.clone(), None, None).await?; //TODO save DB calls, we only need ID here
-            let rank = charts.iter().find(|x| x.entry.id == track_id).map(|x| x.rank).unwrap_or(0);
-            result.push(PerformanceEntry { time_range: subrange, rank: rank as u32 })
+        match real_filter {
+            SingleFilter::Artist(artist_id) => {
+                let charts = charts_artists(subrange.clone()).await?; //TODO save DB calls, we only need ID here
+                let rank = charts.iter().find(|x| x.entry.id == artist_id).map(|x| x.rank).unwrap_or(0);
+                result.push(PerformanceEntry { time_range: subrange, rank: rank as u32 })
+            }
+            SingleFilter::Album(album_id) => {
+                let charts = charts_albums(subrange.clone(), None).await?; //TODO save DB calls, we only need ID here
+                let rank = charts.iter().find(|x| x.entry.id == album_id).map(|x| x.rank).unwrap_or(0);
+                result.push(PerformanceEntry { time_range: subrange, rank: rank as u32 })
+            }
+            SingleFilter::Track(track_id) => {
+                let charts = charts_tracks(subrange.clone(), None, None).await?; //TODO save DB calls, we only need ID here
+                let rank = charts.iter().find(|x| x.entry.id == track_id).map(|x| x.rank).unwrap_or(0);
+                result.push(PerformanceEntry { time_range: subrange, rank: rank as u32 })
+            }
+            SingleFilter::None => {
+                return Err(MalojaError::QueryError { message: "Need to specify an artist, album or track.".parse().unwrap() })
+            }
         }
     }
 

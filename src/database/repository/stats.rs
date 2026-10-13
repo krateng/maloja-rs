@@ -1,6 +1,6 @@
 use crate::database::connect;
 use crate::database::errors::MalojaError;
-use crate::database::repository::{resolve_album_ids, resolve_artist_ids, resolve_track_ids};
+use crate::database::repository::{ensure_single_filter, resolve_album_ids, resolve_artist_ids, resolve_track_ids, SingleFilter};
 use crate::database::views::ChartsEntry;
 use crate::entity;
 use crate::entity::{
@@ -33,6 +33,8 @@ pub async fn charts_tracks(
     artist_id: Option<u32>,
     album_id: Option<u32>,
 ) -> Result<Vec<ChartsEntry<TrackRead>>, MalojaError> {
+    let real_filter = ensure_single_filter(artist_id, album_id, None)?;
+
     let db = connect().await?;
     let (from_ts, to_ts) = timerange.timestamp_boundaries();
     let mut query = Track::find()
@@ -43,14 +45,19 @@ pub async fn charts_tracks(
         .column_as(Expr::cust("RANK() OVER (ORDER BY COUNT(scrobbles.timestamp) DESC)"), "rank")
         .group_by(TrackColumn::Id);
 
-    if let Some(artist_id) = artist_id {
-        query = query
-            .join(JoinType::LeftJoin, entity::track::Relation::TrackArtist.def())
-            .filter(TrackArtistColumn::ArtistId.eq(artist_id));
+    match real_filter {
+        SingleFilter::Artist(artist_id) => {
+            query = query
+                .join(JoinType::LeftJoin, entity::track::Relation::TrackArtist.def())
+                .filter(TrackArtistColumn::ArtistId.eq(artist_id));
+        }
+        SingleFilter::Album(album_id) => {
+            query = query.filter(TrackColumn::AlbumId.eq(album_id));
+        }
+        SingleFilter::None => {}
+        _ => unreachable!(),
     }
-    if let Some(album_id) = album_id {
-        query = query.filter(TrackColumn::AlbumId.eq(album_id));
-    }
+   
     query = query
         .filter(ScrobbleColumn::Timestamp.between(from_ts, to_ts))
         .order_by_desc(ScrobbleColumn::Timestamp.count());

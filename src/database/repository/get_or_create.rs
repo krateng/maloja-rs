@@ -14,7 +14,7 @@ use crate::entity::artist::UniqueArtist;
 use crate::entity::track::UniqueTrack;
 
 /// How many entities should be inserted into the Database in one go
-const BATCH_SIZE: usize = 250;
+const BATCH_SIZE: usize = 2048;
 
 
 // alrighty this time we're doing it organized from the start unlike the python monstrosity
