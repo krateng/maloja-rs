@@ -6,8 +6,12 @@ use sea_orm::ActiveValue::Set;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, NotSet, QueryFilter, TransactionSession, TransactionTrait};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use tokio::task::id;
 use crate::database::repository::resolve_scrobble_ids;
 use crate::database::repository::writes_to_models::{album_write_to_model, artist_write_to_model, scrobble_write_to_model, track_write_to_model};
+use crate::entity::album::UniqueAlbum;
+use crate::entity::artist::UniqueArtist;
+use crate::entity::track::UniqueTrack;
 
 /// How many entities should be inserted into the Database in one go
 const BATCH_SIZE: usize = 250;
@@ -23,100 +27,93 @@ const BATCH_SIZE: usize = 250;
 
 #[allow(clippy::collapsible_else_if)]
 #[rustfmt::skip]
-async fn get_existing_artist_ids(input: Vec<ArtistWrite>, db: &DatabaseConnection) -> Result<HashMap<ArtistWrite, Option<u32>>, MalojaError> {
+async fn get_existing_artist_ids(input: HashSet<UniqueArtist>, db: &DatabaseConnection) -> Result<HashMap<UniqueArtist, Option<u32>>, MalojaError> {
 
-    type UniqueArtistIdentifier = Option<String>;
-    // write, identifier, resulting ID
-    let mut all_info: Vec<(ArtistWrite, UniqueArtistIdentifier, Option<u32>)> = input.into_iter()
-        .map(|write| (write.clone(), write.name.map(|x| normalize(x.as_str())), None) ).collect();
-
+    let mut result: HashMap<UniqueArtist, Option<u32>> = input
+        .into_iter().map(|u| (u, None)).collect();
     // if the user specified an entity by its ID, we just check if it exists
     // no other fields are checked
-    let ids: HashSet<u32> = all_info.iter().filter_map(|(write, _, _)| write.id).collect();
     // TODO
 
     // get all artists that fit in name
-    let names_normalized: HashSet<String> = all_info.iter()
-        .filter(|(_, _, result)| result.is_none()) // ignore the ones already matched
-        .map(|(_, identifier, _)| -> Result<_,_> { identifier.clone().ok_or_else(|| MalojaError::MissingField { field: "name".to_string() }) }) // get all titles, error if missing title
-        .collect::<Result<HashSet<_>, _>>()?;
+    let names_normalized: HashSet<String> = result.iter() // ignore the ones already matched
+        .filter_map(|(u, _)| {
+            match u {
+                UniqueArtist::ById(_) => None,
+                UniqueArtist::ByInfo { normalized_name } => Some(normalized_name.clone()),
+            }
+        }).collect();
+
     let db_result: Vec<ArtistModel> = Artist::find()
         .filter(ArtistColumn::NameNormalized.is_in(names_normalized))
         .all(db).await?;
 
     for artist in db_result {
-        let unique: UniqueArtistIdentifier = Some(artist.name_normalized);
-        for (_, identifier, result) in &mut all_info {
-            if *identifier == unique {
-                *result = Some(artist.id);
-            }
-        }
+        let identifier = UniqueArtist::ByInfo {
+            normalized_name: artist.name_normalized
+        };
+        result.insert(identifier, Some(artist.id));
     }
 
-    let result: HashMap<ArtistWrite, Option<u32>> = all_info.into_iter().map(|(write, _, result)| (write, result)).collect();
     Ok(result)
 }
 
 #[allow(clippy::collapsible_else_if)]
 #[rustfmt::skip]
-async fn get_existing_album_ids(input: Vec<(AlbumWrite, HashSet<u32>)>, db: &DatabaseConnection) -> Result<HashMap<AlbumWrite, Option<u32>>, MalojaError> {
+async fn get_existing_album_ids(input: HashSet<UniqueAlbum>, db: &DatabaseConnection) -> Result<HashMap<UniqueAlbum, Option<u32>>, MalojaError> {
 
-    type UniqueAlbumIdentifier = (Option<String>, HashSet<u32>);
-    // write, identifier, resulting ID
-    let mut all_info: Vec<(AlbumWrite, UniqueAlbumIdentifier, Option<u32>)> = input.into_iter()
-        .map(|(write, artist_ids)| (write.clone(), (write.album_title.map(|x| normalize(x.as_str())), artist_ids), None) ).collect();
-
+    let mut result: HashMap<UniqueAlbum, Option<u32>> = input
+        .into_iter().map(|u| (u, None)).collect();
     // if the user specified an entity by its ID, we just check if it exists
     // no other fields are checked
-    let ids: HashSet<u32> = all_info.iter().filter_map(|(write, _, _)| write.id).collect();
     // TODO
 
     // get all albums that fit in name
     // not elegant, but doing some quick rust filtering seems more reasonable than crazy db queries
     // this is a one user application after all
-    let titles_normalized: HashSet<String> = all_info.iter()
-        .filter(|(_, _, result)| result.is_none()) // ignore the ones already matched
-        .map(|(_, identifier, _)| -> Result<_,_> { identifier.clone().0.ok_or_else(|| MalojaError::MissingField { field: "album_title".to_string() }) }) // get all titles, error if missing title
-        .collect::<Result<HashSet<_>, _>>()?;
+    let titles_normalized: HashSet<String> = result.iter() // ignore the ones already matched
+        .filter_map(|(u, _)| {
+            match u {
+                UniqueAlbum::ById(_) => None,
+                UniqueAlbum::ByInfo { normalized_title, .. } => Some(normalized_title.clone()),
+            }
+        }).collect();
+
     let db_result: Vec<(AlbumModel, Vec<AlbumArtistModel>)> = Album::find()
         .filter(AlbumColumn::AlbumTitleNormalized.is_in(titles_normalized))
         .find_with_related(AlbumArtist)
         .all(db).await?;
 
     for (album, album_artists) in db_result {
-        let unique: UniqueAlbumIdentifier = (Some(album.album_title_normalized), album_artists.iter().map(|x| x.artist_id).collect::<HashSet<_>>());
-        for (_, identifier, result) in &mut all_info {
-            if *identifier == unique {
-                *result = Some(album.id);
-            }
-        }
+        let identifier = UniqueAlbum::ByInfo {
+            normalized_title: album.album_title_normalized,
+            artist_ids: album_artists.iter().map(|x| x.artist_id).collect()
+        };
+        result.insert(identifier, Some(album.id));
     }
-
-    let result: HashMap<AlbumWrite, Option<u32>> = all_info.into_iter().map(|(write, _, result)| (write, result)).collect();
     Ok(result)
 }
 
 #[allow(clippy::collapsible_else_if)]
 #[rustfmt::skip]
-async fn get_existing_track_ids(input: Vec<(TrackWrite, HashSet<u32>)>, db: &DatabaseConnection) -> Result<HashMap<TrackWrite, Option<u32>>, MalojaError> {
+async fn get_existing_track_ids(input: HashSet<UniqueTrack>, db: &DatabaseConnection) -> Result<HashMap<UniqueTrack, Option<u32>>, MalojaError> {
 
-    type UniqueTrackIdentifier = (Option<String>, HashSet<u32>);
-    // write, identifier, resulting ID
-    let mut all_info: Vec<(TrackWrite, UniqueTrackIdentifier, Option<u32>)> = input.into_iter()
-        .map(|(write, artist_ids)| (write.clone(), (write.title.map(|x| normalize(x.as_str())), artist_ids), None) ).collect();
-
+    let mut result: HashMap<UniqueTrack, Option<u32>> = input
+        .into_iter().map(|u| (u, None)).collect();
     // if the user specified an entity by its ID, we just check if it exists
     // no other fields are checked
-    let ids: HashSet<u32> = all_info.iter().filter_map(|(write, _, _)| write.id).collect();
     // TODO
 
     // get all tracks that fit in name
     // not elegant, but doing some quick rust filtering seems more reasonable than crazy db queries
     // this is a one user application after all
-    let titles_normalized: HashSet<String> = all_info.iter()
-        .filter(|(_, _, result)| result.is_none()) // ignore the ones already matched
-        .map(|(_, identifier, _)| -> Result<_,_> { identifier.clone().0.ok_or_else(|| MalojaError::MissingField { field: "title".to_string() }) }) // get all titles, error if missing title
-        .collect::<Result<HashSet<_>, _>>()?;
+    let titles_normalized: HashSet<String> = result.iter()
+        .filter_map(|(u, _)| {
+            match u {
+                UniqueTrack::ById(_) => None,
+                UniqueTrack::ByInfo{ normalized_title, .. } => Some(normalized_title.clone()),
+            }
+        }).collect();
 
     let db_result: Vec<(TrackModel, Vec<TrackArtistModel>)> = Track::find()
         .filter(TrackColumn::TitleNormalized.is_in(titles_normalized))
@@ -124,15 +121,12 @@ async fn get_existing_track_ids(input: Vec<(TrackWrite, HashSet<u32>)>, db: &Dat
         .all(db).await?;
 
     for (track, track_artists) in db_result {
-        let unique: UniqueTrackIdentifier = (Some(track.title_normalized), track_artists.iter().map(|x| x.artist_id).collect::<HashSet<_>>());
-        for (_, identifier, result) in &mut all_info {
-            if *identifier == unique {
-                *result = Some(track.id);
-            }
-        }
+        let identifier = UniqueTrack::ByInfo {
+            normalized_title: track.title_normalized,
+            artist_ids: track_artists.iter().map(|x| x.artist_id).collect()
+        };
+        result.insert(identifier, Some(track.id));
     }
-
-    let result: HashMap<TrackWrite, Option<u32>> = all_info.into_iter().map(|(write, _, result)| (write, result)).collect();
     Ok(result)
 }
 
@@ -143,23 +137,40 @@ async fn get_existing_track_ids(input: Vec<(TrackWrite, HashSet<u32>)>, db: &Dat
 pub async fn get_or_create_artists(input: Vec<ArtistWrite>) -> Result<HashMap<ArtistWrite, u32>, MalojaError> {
     let db = connect().await?;
 
-    // fill in existing ones
-    let artist_info: Vec<ArtistWrite> = input.clone();
-    let existing = get_existing_artist_ids(artist_info, &db).await?;
+    let map_to_unique: HashMap<ArtistWrite, UniqueArtist> = input.into_iter()
+        .map(|write| {
+            let unique = write.unique()?;
+            Ok((write, unique))
+        }).collect::<Result<HashMap<_, _>, MalojaError>>()?;
 
-    // put the ones we already have in the result
-    let mut result: HashMap<ArtistWrite, u32> = existing.into_iter()
-        .filter_map(|(k, v)| {
-            v.map(|id| (k, id))
-        }).collect();
+    type ArtistInfo = (ArtistWrite,);
+    let mut unique_map: HashMap<UniqueArtist, (ArtistInfo, Option<u32>)> = map_to_unique
+        .iter().map(|(write, unique)| (
+            unique.clone(),
+            (
+                (
+                    write.clone(),
+                ),
+                None
+            )
+        )).collect();
+
+    // fill in existing ones
+    let unique_set: HashSet<UniqueArtist> = unique_map.keys().cloned().collect();
+    let unique_result_map = get_existing_artist_ids(unique_set, &db).await?;
+    unique_result_map.into_iter().for_each(|(u, r)| {
+        if let Some(id) = r {
+            unique_map.get_mut(&u).expect("Uniques from result should be in the originally provided map").1 = Some(id);
+        }
+    } );
 
     // create inserts for all remaining ones
-    let inserts: HashMap<ArtistWrite, ArtistActiveModel> = input
-        .into_iter()
-        .filter(|write| !result.contains_key(write))
-        .map(|a| {
-            let mut model = artist_write_to_model(a.clone());
-            (a, model)
+    let inserts: HashMap<UniqueArtist, (ArtistActiveModel, )> = unique_map
+        .iter()
+        .filter(|(_, (_, result))| result.is_none())
+        .map(|(unique, ((artist, ), result))| {
+            let mut model = artist_write_to_model(artist.clone());
+            (unique.clone(), (model,))
         }).collect();
 
     // not as pretty as batch inserts, but to keep track of which model got which ID (sqlite doesnt guarantee order),
@@ -168,15 +179,20 @@ pub async fn get_or_create_artists(input: Vec<ArtistWrite>) -> Result<HashMap<Ar
     // expect for the initial import
     let txn = db.begin().await?;
     let amount_inserts = &inserts.len();
-    for (write, insert) in inserts {
+    for (unique, (insert, )) in inserts {
         let db_result = Artist::insert(insert).exec(&txn).await?;
-        result.insert(write, db_result.last_insert_id);
+        let artist_id = db_result.last_insert_id;
+        unique_map.get_mut(&unique)
+            .expect("Uniques from insert map should be in the originally provided map")
+            .1 = Some(artist_id);
     }
     txn.commit().await?;
 
     mark_db_write();
     debug!("Inserted {:?} artists", amount_inserts);
-    Ok(result)
+    Ok(map_to_unique.into_iter().map(|(write, unique)| {
+        (write, unique_map[&unique].1.expect("At this point no entities should be unresolved"))
+    }).collect())
 }
 
 
@@ -188,42 +204,52 @@ pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> Result<HashMap<Albu
     let artist_writes: Vec<ArtistWrite> = input.iter().flat_map(|x| x.album_artists.clone().unwrap_or_else(Vec::new)).map(|x| x.into_artist_write()).collect();
     let artist_map = get_or_create_artists(artist_writes).await?;
 
-    let combined_list: Vec<(AlbumWrite, Vec<(u32, ArtistWriteContext)>)> = input.into_iter()
-        .map(|x| (
-                x.clone(),
-                x.album_artists.unwrap_or_else(Vec::new).iter().map(|x| {
-                    (artist_map[&x.clone().into_artist_write()], x.clone())
-                }).collect::<Vec<(u32, ArtistWriteContext)>>()
+    let map_to_unique: HashMap<AlbumWrite, UniqueAlbum> = input.into_iter()
+        .map(|write| {
+            let unique = write.unique(&artist_map)?;
+            Ok((write, unique))
+        }).collect::<Result<HashMap<_, _>, MalojaError>>()?;
+
+    // album, artists
+    type AlbumInfo = (AlbumWrite, Vec<(u32, ArtistWriteContext)>);
+    let mut unique_map: HashMap<UniqueAlbum, (AlbumInfo, Option<u32>)> = map_to_unique
+        .iter().map(|(write, unique)| (
+            unique.clone(),
+            (
+                (
+                    write.clone(),
+                    write.album_artists.clone().unwrap_or_else(Vec::new).iter().map(|x| {
+                        (artist_map[&x.clone().into_artist_write()], x.clone())
+                    }).collect::<Vec<(u32, ArtistWriteContext)>>()
+                ),
+                None
             )
-        ).collect();
+        )).collect();
 
     // fill in existing ones
-    let album_info: Vec<(AlbumWrite, HashSet<u32>)> = combined_list.iter().map(|(write, artists)|
-        (write.clone(), artists.iter().map(|(id, _)| *id).collect())
-    ).collect();
-    let existing = get_existing_album_ids(album_info, &db).await?;
-
-    // put the ones we already have in the result
-    let mut result: HashMap<AlbumWrite, u32> = existing.into_iter()
-        .filter_map(|(k, v)| {
-            v.map(|id| (k, id))
-        }).collect();
+    let unique_set: HashSet<UniqueAlbum> = unique_map.keys().cloned().collect();
+    let unique_result_map = get_existing_album_ids(unique_set, &db).await?;
+    unique_result_map.into_iter().for_each(|(u, r)| {
+        if let Some(id) = r {
+            unique_map.get_mut(&u).expect("Uniques from result should be in the originally provided map").1 = Some(id);
+        }
+    });
 
     // create inserts for all remaining ones
-    let inserts: Vec<(AlbumWrite, AlbumActiveModel, Vec<AlbumArtistActiveModel>)> = combined_list
-        .into_iter()
-        .filter(|(write, _)| !result.contains_key(write))
-        .map(|(album,artists)| {
+    let inserts: HashMap<UniqueAlbum, (AlbumActiveModel, Vec<AlbumArtistActiveModel>)> = unique_map
+        .iter()
+        .filter(|(_, (_, result))| result.is_none())
+        .map(|(unique, ((album, artists), result))| {
             let mut model = album_write_to_model(album.clone());
             let album_artist_inserts = artists.into_iter().map(|(id, context)| {
                     AlbumArtistActiveModel {
                         album_id: NotSet,
-                        artist_id: Set(id),
+                        artist_id: Set(*id),
                         primary: Set(context.primary),
-                        artist_alias: Set(context.alias),
+                        artist_alias: Set(context.alias.clone()),
                     }
                 }).collect();
-            (album, model, album_artist_inserts)
+            (unique.clone(), (model, album_artist_inserts))
         }).collect();
 
     // not as pretty as batch inserts, but to keep track of which model got which ID (sqlite doesnt guarantee order),
@@ -232,10 +258,12 @@ pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> Result<HashMap<Albu
     // expect for the initial import
     let txn = db.begin().await?;
     let amount_inserts = &inserts.len();
-    for (write, insert, mut album_artists) in inserts {
+    for (unique, (insert, mut album_artists)) in inserts {
         let db_result = Album::insert(insert).exec(&txn).await?;
         let album_id: u32 = db_result.last_insert_id;
-        result.insert(write, album_id);
+        unique_map.get_mut(&unique)
+            .expect("Uniques from insert map should be in the originally provided map")
+            .1 = Some(album_id);
 
         for aux_insert in &mut album_artists {
             aux_insert.album_id = Set(album_id);
@@ -247,7 +275,9 @@ pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> Result<HashMap<Albu
 
     mark_db_write();
     debug!("Inserted {:?} albums", amount_inserts);
-    Ok(result)
+    Ok(map_to_unique.into_iter().map(|(write, unique)| {
+        (write, unique_map[&unique].1.expect("At this point no entities should be unresolved"))
+    }).collect())
 }
 
 #[allow(clippy::collapsible_else_if)]
@@ -260,44 +290,56 @@ pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> Result<HashMap<Trac
     let artist_map = get_or_create_artists(artist_writes).await?;
     let album_map = get_or_create_albums(album_writes).await?;
 
-    let combined_list: Vec<(TrackWrite, Vec<(u32, ArtistWriteContext)>, Option<u32>)> = input.into_iter()
-        .map(|x| (
-                x.clone(),
-                x.artists.unwrap_or_else(Vec::new).iter().map(|x| {
-                    (artist_map[&x.clone().into_artist_write()], x.clone())
-                }).collect::<Vec<(u32, ArtistWriteContext)>>(),
-                x.album.and_then(|x| Some(album_map[&x].clone()))
+    let map_to_unique: HashMap<TrackWrite, UniqueTrack> = input.into_iter()
+        .map(|write| {
+            let unique = write.unique(&artist_map)?;
+            Ok((write, unique))
+        }).collect::<Result<HashMap<_, _>, MalojaError>>()?;
+
+    // track, artists, album
+    type TrackInfo = (TrackWrite, Vec<(u32, ArtistWriteContext)>, Option<u32>);
+    let mut unique_map: HashMap<UniqueTrack, (TrackInfo, Option<u32>)> = map_to_unique
+        .iter().map(|(write, unique)| (
+            // we will go through duplicates twice here and one write will be used as representative
+            // for metadata that does not break identity (alias etc)
+            unique.clone(),
+            (
+                (
+                    write.clone(),
+                    write.artists.clone().unwrap_or_else(Vec::new).iter().map(|x| {
+                        (artist_map[&x.clone().into_artist_write()], x.clone())
+                    }).collect::<Vec<(u32, ArtistWriteContext)>>(),
+                    write.album.clone().and_then(|x| Some(album_map[&x].clone())),
+                ),
+                None
             )
-        ).collect();
+        )).collect();
 
     // fill in existing ones
-    let track_info: Vec<(TrackWrite, HashSet<u32>)> = combined_list.iter().map(|(write, artists, _)|
-        (write.clone(), artists.iter().map(|(id, _)| *id).collect())
-    ).collect();
-    let existing = get_existing_track_ids(track_info, &db).await?;
-
-    // put the ones we already have in the result
-    let mut result: HashMap<TrackWrite, u32> = existing.into_iter()
-        .filter_map(|(k, v)| {
-            v.map(|id| (k, id))
-        }).collect();
+    let unique_set: HashSet<UniqueTrack> = unique_map.keys().cloned().collect();
+    let unique_result_map = get_existing_track_ids(unique_set, &db).await?;
+    unique_result_map.into_iter().for_each(|(u, r)| {
+        if let Some(id) = r {
+            unique_map.get_mut(&u).expect("Uniques from result should be in the originally provided map").1 = Some(id);
+        }
+    } );
 
     // create inserts for all remaining ones
-    let inserts: Vec<(TrackWrite, TrackActiveModel, Vec<TrackArtistActiveModel>)> = combined_list
-        .into_iter()
-        .filter(|(write, _, _)| !result.contains_key(write))
-        .map(|(track,artists, album)| {
+    let inserts: HashMap<UniqueTrack, (TrackActiveModel, Vec<TrackArtistActiveModel>)> = unique_map
+        .iter()
+        .filter(|(_, (_, result))| result.is_none())
+        .map(|(unique, ((track, artists, album), result))| {
             let mut model = track_write_to_model(track.clone());
             model.album_id = album.map(|x| Set(Some(x))).unwrap_or(NotSet);
             let track_artist_inserts = artists.into_iter().map(|(id, context)| {
                 TrackArtistActiveModel {
                     track_id: NotSet,
-                    artist_id: Set(id),
+                    artist_id: Set(*id),
                     primary: Set(context.primary),
-                    artist_alias: Set(context.alias),
+                    artist_alias: Set(context.alias.clone()),
                 }
             }).collect();
-            (track, model, track_artist_inserts)
+            (unique.clone(), (model, track_artist_inserts))
         }).collect();
 
     // not as pretty as batch inserts, but to keep track of which model got which ID (sqlite doesnt guarantee order),
@@ -306,10 +348,12 @@ pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> Result<HashMap<Trac
     // expect for the initial import
     let txn = db.begin().await?;
     let amount_inserts = &inserts.len();
-    for (write, insert, mut track_artists) in inserts {
+    for (unique, (insert, mut track_artists)) in inserts {
         let db_result = Track::insert(insert).exec(&txn).await?;
         let track_id: u32 = db_result.last_insert_id;
-        result.insert(write, track_id);
+        unique_map.get_mut(&unique)
+            .expect("Uniques from insert map should be in the originally provided map")
+            .1 = Some(track_id);
 
         for aux_insert in &mut track_artists {
             aux_insert.track_id = Set(track_id);
@@ -321,7 +365,9 @@ pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> Result<HashMap<Trac
 
     mark_db_write();
     debug!("Inserted {:?} tracks", amount_inserts);
-    Ok(result)
+    Ok(map_to_unique.into_iter().map(|(write, unique)| {
+        (write, unique_map[&unique].1.expect("At this point no entities should be unresolved"))
+    }).collect())
 }
 
 #[allow(clippy::collapsible_else_if)]

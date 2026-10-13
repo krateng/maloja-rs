@@ -2,6 +2,8 @@ use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_inline_default::serde_inline_default;
 use utoipa::ToSchema;
+use crate::database::errors::MalojaError;
+use crate::database::normalize;
 use super::{
     TrackArtistRelation, AlbumArtistRelation,
     Track, Album,
@@ -119,5 +121,29 @@ impl ArtistWriteContext {
     pub(crate) fn into_artist_write(self) -> ArtistWrite {
         let result: ArtistWrite = self.into();
         result
+    }
+}
+
+#[derive(PartialEq, Eq, Hash, Clone)]
+pub(crate) enum UniqueArtist {
+    ById(u32),
+    ByInfo{ normalized_name: String },
+}
+
+impl ArtistWrite {
+    pub(crate) fn unique(&self) -> Result<UniqueArtist, MalojaError> {
+        match self.id {
+            Some(id) => Ok(UniqueArtist::ById(id)),
+            None => {
+                if let Some(name) = self.name.as_ref() {
+                    Ok(UniqueArtist::ByInfo { normalized_name: normalize(name) })
+                }
+                else {
+                    Err(MalojaError::MissingField {
+                        field: "name".parse().unwrap()
+                    })
+                }
+            }
+        }
     }
 }

@@ -12,6 +12,7 @@ pub enum MalojaError {
     DatabaseError { message: String },
     FilesystemError { message: String },
     ParseError { message: String },
+    InternalError { message: String },
 }
 
 impl std::error::Error for MalojaError {

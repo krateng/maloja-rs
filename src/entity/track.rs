@@ -1,12 +1,10 @@
-use super::{
-    AlbumRead, AlbumWrite,
-    ArtistReadContext, ArtistWriteContext,
-    Album, Scrobble, Artist, TrackArtist,
-    TrackArtistRelation
-};
+use std::collections::{BTreeSet, HashMap, HashSet};
+use super::{AlbumRead, AlbumWrite, ArtistReadContext, ArtistWriteContext, Album, Scrobble, Artist, TrackArtist, TrackArtistRelation, ArtistWrite};
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+use crate::database::errors::MalojaError;
+use crate::database::normalize;
 
 #[derive(Eq, PartialEq, Hash, Debug, Clone, DeriveEntityModel, Serialize)]
 #[sea_orm(table_name = "tracks")]
@@ -105,4 +103,36 @@ pub struct TrackRead {
     pub album: Option<AlbumRead>,
     #[schema(examples(195))]
     pub track_length: Option<u32>,
+}
+
+#[derive(PartialEq, Eq, Hash, Clone)]
+pub(crate) enum UniqueTrack {
+    ById(u32),
+    ByInfo{ normalized_title: String, artist_ids: BTreeSet<u32> },
+}
+
+impl TrackWrite {
+    pub(crate) fn unique(&self, map: &HashMap<ArtistWrite, u32>) -> Result<UniqueTrack, MalojaError> {
+        match self.id {
+            Some(id) => Ok(UniqueTrack::ById(id)),
+            None => {
+                if let Some(title) = self.title.as_ref() {
+                    let artist_ids: Vec<u32> = self.artists.clone().unwrap_or_else(Vec::new).iter().map(
+                        |a| map.get(&a.clone().into_artist_write()).ok_or_else(
+                            || MalojaError::InternalError { message: "Map provided to resolve Artist IDs did not contain entry".to_string() }
+                        ).map(|x| x.to_owned()),
+                    ).collect::<Result<_, _>>()?;
+                    Ok(UniqueTrack::ByInfo {
+                        normalized_title: normalize(title),
+                        artist_ids: artist_ids.into_iter().collect(),
+                    })
+                }
+                else {
+                    Err(MalojaError::MissingField {
+                        field: "title".parse().unwrap()
+                    })
+                }
+            }
+        }
+    }
 }
