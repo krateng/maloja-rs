@@ -7,11 +7,12 @@ use axum::Router;
 use pages::*;
 use tower_http::services::{ServeDir, ServeFile};
 
-pub async fn run_server() {
+pub async fn run_server() -> Result<(), std::io::Error> {
     let app = create_app().await;
     let bind_address = format!("{}:{}", CONFIG.bind_address, CONFIG.port);
-    let listener = tokio::net::TcpListener::bind(bind_address).await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    let listener = tokio::net::TcpListener::bind(bind_address).await?;
+    axum::serve(listener, app).await?;
+    Ok(())
 }
 
 pub async fn create_app() -> Router {

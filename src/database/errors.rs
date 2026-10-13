@@ -14,6 +14,10 @@ pub enum MalojaError {
     ParseError { message: String },
 }
 
+impl std::error::Error for MalojaError {
+    
+}
+
 impl From<sea_orm::DbErr> for MalojaError {
     fn from(e: sea_orm::DbErr) -> Self {
         MalojaError::DatabaseError { message: e.to_string() }

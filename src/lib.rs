@@ -13,25 +13,27 @@ mod timeranges;
 mod uri;
 
 
-pub async fn setup(headless: bool) {
+pub async fn setup(headless: bool) -> Result<(), Box<dyn std::error::Error>> {
     let env_file = if cfg!(test) { ".env.test" } else { ".env" };
     dotenvy::from_filename(env_file).ok();
 
     // just get the config object to start to make sure we get those errors at the start
     let _ = &configuration::CONFIG;
 
-    configuration::logging::setup_logger().unwrap();
+    configuration::logging::setup_logger()?;
     if !headless {
         debug_info();
     }
 
     // create files
     info!("Creating local files...");
-    configuration::create_config_template().unwrap();
+    configuration::create_config_template()?;
 
     // DATABASE
     info!("Initializing database...");
-    database::init_db().await.unwrap();
+    database::init_db().await?;
+
+    Ok(())
 }
 
 fn debug_info() {
