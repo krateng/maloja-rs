@@ -17,14 +17,19 @@ pub type AlbumModelWithRelated = (AlbumModel, HashSet<AlbumArtistFull>);
 pub type TrackModelWithRelated = (TrackModel, HashSet<TrackArtistFull>, Option<AlbumModelWithRelated>);
 pub type ScrobbleModelWithRelated = (ScrobbleModel, TrackModelWithRelated);
 
+// getting my ID requires all IDs as parameters, which sqlite caps at around 32k
+const BATCH_SIZE: usize = 16384;
 
 pub async fn resolve_track_ids_to_models(ids: Vec<u32>, db: &DatabaseConnection) -> Result<HashMap<u32, TrackModelWithRelated>, MalojaError> {
     // we can resolve one relation directly with a db call instead of the function
-    let db_result: Vec<(TrackModel, Vec<TrackArtistModel>)> = Track::find()
-        .filter(TrackColumn::Id.is_in(ids))
-        .find_with_related(TrackArtist)
-        .all(db)
-        .await?;
+    let mut db_result: Vec<(TrackModel, Vec<TrackArtistModel>)> = Vec::new();
+    for chunk in ids.chunks(BATCH_SIZE) {
+        db_result.extend(Track::find()
+            .filter(TrackColumn::Id.is_in(chunk))
+            .find_with_related(TrackArtist)
+            .all(db)
+            .await?);
+    }
 
     let artist_ids: Vec<u32> = db_result.iter().flat_map(|(t, tas)| tas).map(|ta| ta.artist_id).collect();
     let artist_map: HashMap<u32, ArtistModel> = resolve_artist_ids_to_models(artist_ids, &db).await?;
@@ -56,11 +61,14 @@ pub async fn resolve_track_ids_to_models(ids: Vec<u32>, db: &DatabaseConnection)
 }
 
 pub async fn resolve_album_ids_to_models(ids: Vec<u32>, db: &DatabaseConnection) -> Result<HashMap<u32, AlbumModelWithRelated>, MalojaError> {
-    let db_result: Vec<(AlbumModel, Vec<AlbumArtistModel>)> = Album::find()
-        .filter(AlbumColumn::Id.is_in(ids))
-        .find_with_related(AlbumArtist)
-        .all(db)
-        .await?;
+    let mut db_result: Vec<(AlbumModel, Vec<AlbumArtistModel>)> = Vec::new();
+    for chunk in ids.chunks(BATCH_SIZE) {
+        db_result.extend(Album::find()
+            .filter(AlbumColumn::Id.is_in(chunk))
+            .find_with_related(AlbumArtist)
+            .all(db)
+            .await?);
+    }
 
     let artist_ids: Vec<u32> = db_result.iter().flat_map(|(a, aas)| aas).map(|aa| aa.artist_id).collect();
     let artist_map: HashMap<u32, ArtistModel> = resolve_artist_ids_to_models(artist_ids, &db).await?;
@@ -87,10 +95,13 @@ pub async fn resolve_album_ids_to_models(ids: Vec<u32>, db: &DatabaseConnection)
 }
 
 pub async fn resolve_artist_ids_to_models(ids: Vec<u32>, db: &DatabaseConnection) -> Result<HashMap<u32, ArtistModel>, MalojaError> {
-    let db_result: Vec<ArtistModel> = Artist::find()
-        .filter(ArtistColumn::Id.is_in(ids))
-        .all(db)
-        .await?;
+    let mut db_result: Vec<ArtistModel> = Vec::new();
+    for chunk in ids.chunks(BATCH_SIZE) {
+        db_result.extend(Artist::find()
+            .filter(ArtistColumn::Id.is_in(chunk))
+            .all(db)
+            .await?);
+    }
 
     let mut result: HashMap<u32, ArtistModel> = HashMap::new();
 
@@ -106,10 +117,13 @@ pub async fn resolve_artist_ids_to_models(ids: Vec<u32>, db: &DatabaseConnection
 }
 
 pub async fn resolve_scrobble_ids_to_models(ids: Vec<i64>, db: &DatabaseConnection) -> Result<HashMap<i64, ScrobbleModelWithRelated>, MalojaError> {
-    let db_result: Vec<ScrobbleModel> = Scrobble::find()
-        .filter(ScrobbleColumn::Timestamp.is_in(ids))
-        .all(db)
-        .await?;
+    let mut db_result: Vec<ScrobbleModel> = Vec::new();
+    for chunk in ids.chunks(BATCH_SIZE) {
+        db_result.extend(Scrobble::find()
+            .filter(ScrobbleColumn::Timestamp.is_in(chunk))
+            .all(db)
+            .await?);
+    }
 
     // no point getting the track in the same query if we call the other func anyway
     // technically we could save some performance by introducing a weird middle query so that we
