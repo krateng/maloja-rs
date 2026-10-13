@@ -15,9 +15,9 @@ pub async fn pulse(
     let _db = connect().await?;
     let mut result = vec![];
     for subrange in sub_ranges {
-        let scrobbles =
+        let amount_scrobbles =
             scrobbles(subrange.clone(), artist_id, album_id, track_id, false).await?.len();
-        result.push(PulseEntry { time_range: subrange, scrobbles: scrobbles as u32 })
+        result.push(PulseEntry { time_range: subrange, scrobbles: amount_scrobbles as u32 })
     }
 
     Ok(result)

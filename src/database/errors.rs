@@ -13,10 +13,12 @@ pub enum MalojaError {
     FilesystemError { message: String },
     ParseError { message: String },
     InternalError { message: String },
+    TimeError { message: String },
+    QueryError { message: String },
 }
 
 impl std::error::Error for MalojaError {
-    
+
 }
 
 impl From<sea_orm::DbErr> for MalojaError {

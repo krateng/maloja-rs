@@ -104,6 +104,12 @@ impl IntoResponse for MalojaError {
             MalojaError::ParseError { message } => {
                 create_response(&self, StatusCode::BAD_REQUEST, message.clone())
             }
+            MalojaError::TimeError { message } => {
+                create_response(&self, StatusCode::INTERNAL_SERVER_ERROR, message.clone())
+            }
+            MalojaError::QueryError { message } => {
+                create_response(&self, StatusCode::BAD_REQUEST, message.clone())
+            }
             e => create_response(&self, StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
         }
     }
@@ -233,6 +239,7 @@ async fn info_album(
     params(QueryTimerange, QueryLimitArtist, QueryLimitAlbum),
     responses(
         (status = OK, body = inline(Charts<TrackRead>), description = "Successful request"),
+        (status = BAD_REQUEST, body = inline(APIError), description = "Error in request"),
         (status = INTERNAL_SERVER_ERROR, body = inline(APIError), description = "Server error while handling the request"),
     )
 )]
@@ -265,6 +272,7 @@ async fn charts_tracks(
     params(QueryTimerange),
     responses(
         (status = OK, body = inline(Charts<ArtistRead>), description = "Successful request"),
+        (status = BAD_REQUEST, body = inline(APIError), description = "Error in request"),
         (status = INTERNAL_SERVER_ERROR, body = inline(APIError), description = "Server error while handling the request"),
     )
 )]
@@ -293,6 +301,7 @@ async fn charts_artists(
     params(QueryTimerange, QueryLimitArtist),
     responses(
         (status = OK, body = inline(Charts<AlbumRead>), description = "Successful request"),
+        (status = BAD_REQUEST, body = inline(APIError), description = "Error in request"),
         (status = INTERNAL_SERVER_ERROR, body = inline(APIError), description = "Server error while handling the request"),
     )
 )]
@@ -323,6 +332,7 @@ async fn charts_albums(
     params(QueryTimerange, QueryLimitArtist, QueryLimitAlbum, QueryLimitTrack, QueryPagination),
     responses(
         (status = OK, body = inline(Paginated<ScrobbleRead>), description = "Successful request"),
+        (status = BAD_REQUEST, body = inline(APIError), description = "Error in request"),
         (status = INTERNAL_SERVER_ERROR, body = inline(APIError), description = "Server error while handling the request"),
     )
 )]
@@ -349,6 +359,7 @@ async fn scrobbles(
     params(QueryTimerange, QueryTimesteps, QueryLimitArtist, QueryLimitAlbum, QueryLimitTrack, QueryPagination),
     responses(
         (status = OK, body = inline(Paginated<PulseEntry>), description = "Successful request"),
+        (status = BAD_REQUEST, body = inline(APIError), description = "Error in request"),
         (status = INTERNAL_SERVER_ERROR, body = inline(APIError), description = "Server error while handling the request"),
     )
 )]
@@ -377,6 +388,7 @@ async fn pulse(
     params(QueryTimerange, QueryTimesteps, QueryLimitArtist, QueryLimitAlbum, QueryLimitTrack, QueryPagination),
     responses(
         (status = OK, body = inline(Paginated<PerformanceEntry>), description = "Successful request"),
+        (status = BAD_REQUEST, body = inline(APIError), description = "Error in request"),
         (status = INTERNAL_SERVER_ERROR, body = inline(APIError), description = "Server error while handling the request"),
     )
 )]
@@ -407,6 +419,7 @@ async fn performance(
     request_body = Vec<ScrobbleWrite>,
     responses(
         (status = OK, body = inline(Vec<ScrobbleRead>), description = "Successful scrobble"),
+        (status = BAD_REQUEST, body = inline(APIError), description = "Error in request"),
         (status = INTERNAL_SERVER_ERROR, body = inline(APIError), description = "Server error while handling the request"),
     )
 )]
