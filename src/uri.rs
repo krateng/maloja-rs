@@ -68,32 +68,23 @@ impl MalojaQuery for QueryTimerange {}
 
 impl QueryTimerange {
     pub fn to_timerange(&self) -> Result<TimeRange, MalojaError> {
-        if self.during.is_some() && (self.from.is_some() || self.to.is_some()) {
-            return Err(MalojaError::ParseError {
+        match (&self.during, &self.from, &self.to) {
+            (Some(during), None, None) => Ok(TimeRange::Simple(Self::match_string(during)?)),
+            (None, Some(from), Some(to)) => {
+                let tr = TimeRange::Composite { start: Some(Self::match_string(from)?), end: Some(Self::match_string(to)?) };
+                match tr.validate() {
+                    true => Ok(tr),
+                    false => Err(MalojaError::TimeError {
+                        message: "From range must be before to range".parse().unwrap()
+                    })
+                }
+            },
+            (None, Some(from), None) => Ok(TimeRange::Composite { start: Some(Self::match_string(from)?), end: None }),
+            (None, None, Some(to)) => Ok(TimeRange::Composite { start: None, end: Some(Self::match_string(to)?) }),
+            (None, None, None) => Ok(ALL_TIME),
+            _ => Err(MalojaError::QueryError {
                 message: "Can either specify a timerange with during, or start and end with from and to; not combine them".to_string(),
-            });
-        }
-        if self.during.is_none() && self.from.is_none() && self.to.is_none() {
-            return Ok(ALL_TIME);
-        }
-        if let Some(during) = &self.during {
-            Ok(TimeRange::Simple(Self::match_string(during)?))
-        } else {
-            let tr = TimeRange::Composite {
-                start: if let Some(from) = &self.from {
-                    Some(Self::match_string(from)?)
-                } else {
-                    None
-                },
-                end: if let Some(to) = &self.to { Some(Self::match_string(to)?) } else { None },
-            };
-            if tr.validate() {
-                Ok(tr)
-            } else {
-                Err(MalojaError::ParseError {
-                    message: "From range must be before to range".to_string(),
-                })
-            }
+            })
         }
     }
 
