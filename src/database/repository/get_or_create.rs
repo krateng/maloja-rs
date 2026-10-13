@@ -211,7 +211,7 @@ pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> Result<HashMap<Albu
         }).collect::<Result<HashMap<_, _>, MalojaError>>()?;
 
     // album, artists
-    type AlbumInfo = (AlbumWrite, Vec<(u32, ArtistWriteContext)>);
+    type AlbumInfo = (AlbumWrite, HashMap<u32, ArtistWriteContext>);
     let mut unique_map: HashMap<UniqueAlbum, (AlbumInfo, Option<u32>)> = map_to_unique
         .iter().map(|(write, unique)| (
             unique.clone(),
@@ -220,7 +220,7 @@ pub async fn get_or_create_albums(input: Vec<AlbumWrite>) -> Result<HashMap<Albu
                     write.clone(),
                     write.album_artists.clone().unwrap_or_else(Vec::new).iter().map(|x| {
                         (artist_map[&x.clone().into_artist_write()], x.clone())
-                    }).collect::<Vec<(u32, ArtistWriteContext)>>()
+                    }).collect::<HashMap<u32, ArtistWriteContext>>()
                 ),
                 None
             )
@@ -297,7 +297,7 @@ pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> Result<HashMap<Trac
         }).collect::<Result<HashMap<_, _>, MalojaError>>()?;
 
     // track, artists, album
-    type TrackInfo = (TrackWrite, Vec<(u32, ArtistWriteContext)>, Option<u32>);
+    type TrackInfo = (TrackWrite, HashMap<u32, ArtistWriteContext>, Option<u32>);
     let mut unique_map: HashMap<UniqueTrack, (TrackInfo, Option<u32>)> = map_to_unique
         .iter().map(|(write, unique)| (
             // we will go through duplicates twice here and one write will be used as representative
@@ -308,7 +308,7 @@ pub async fn get_or_create_tracks(input: Vec<TrackWrite>) -> Result<HashMap<Trac
                     write.clone(),
                     write.artists.clone().unwrap_or_else(Vec::new).iter().map(|x| {
                         (artist_map[&x.clone().into_artist_write()], x.clone())
-                    }).collect::<Vec<(u32, ArtistWriteContext)>>(),
+                    }).collect::<HashMap<u32, ArtistWriteContext>>(),
                     write.album.clone().and_then(|x| Some(album_map[&x].clone())),
                 ),
                 None
