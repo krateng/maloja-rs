@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use chrono::Utc;
 use crate::database;
 use crate::entity::artist::ArtistWrite;
 use crate::entity::{ArtistRead, ArtistWriteContext, TrackRead};
@@ -10,11 +11,11 @@ use crate::timeranges::TimeRange;
 type TrackInfo = (Vec<&'static str>, &'static str);
 
 fn create_scrobble_writes(tracks: Vec<TrackInfo>) -> Vec<ScrobbleWrite> {
-    let mut ts = 100000;
+    let mut ts = Utc::now().timestamp();
     let writes: Vec<ScrobbleWrite> = tracks
         .into_iter()
         .map(|track| {
-            ts += 200;
+            ts -= 200;
             ScrobbleWrite {
                 timestamp: Some(ts),
                 track: TrackWrite {
