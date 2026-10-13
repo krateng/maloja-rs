@@ -1,10 +1,8 @@
-use chrono::{
-    naive::Days, DateTime, Datelike, Local, Months, NaiveDate, Utc,
-    Weekday,
-};
+use chrono::{naive::Days, DateTime, Datelike, Local, Months, NaiveDate, NaiveTime, Utc, Weekday};
 use chrono_tz::Tz;
 use serde::{Serialize, Serializer};
 use std::fmt::{Display, Formatter};
+use std::ops::Add;
 use strum_macros::Display;
 use utoipa::ToSchema;
 
@@ -222,10 +220,11 @@ impl TimeRange {
         let max: DateTime<Tz> = Utc::now()
             .with_timezone(&TIMEZONE)
             .date_naive()
-            .and_hms_opt(0, 0, 0)
-            .unwrap()
+            .succ_opt().expect("Now this is just a silly thing to happen.")
+            .and_time(NaiveTime::MIN)
             .and_local_timezone(TIMEZONE)
-            .unwrap();
+            .earliest()
+            .expect("Why is there no midnight?");
 
         match self {
             TimeRange::Simple(base) => base.datetime_boundaries(),
