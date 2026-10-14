@@ -98,6 +98,9 @@ impl IntoResponse for MalojaError {
             MalojaError::AlbumNotFound { id } => {
                 create_response(&self, StatusCode::NOT_FOUND, format!("Album {} not found", id))
             }
+            MalojaError::DatabaseError { message } => {
+                create_response(&self, StatusCode::INTERNAL_SERVER_ERROR, message.clone())
+            }
             MalojaError::DatabaseConnectionError { message } => {
                 create_response(&self, StatusCode::INTERNAL_SERVER_ERROR, message.clone())
             }
@@ -110,7 +113,15 @@ impl IntoResponse for MalojaError {
             MalojaError::QueryError { message } => {
                 create_response(&self, StatusCode::BAD_REQUEST, message.clone())
             }
-            e => create_response(&self, StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+            MalojaError::MissingField { field } => {
+                create_response(&self, StatusCode::BAD_REQUEST, format!("Missing field: {}", field.clone()))
+            }
+            MalojaError::FilesystemError { message } => {
+                create_response(&self, StatusCode::INTERNAL_SERVER_ERROR, message.clone())
+            }
+            MalojaError::InternalError { message } => {
+                create_response(&self, StatusCode::INTERNAL_SERVER_ERROR, message.clone())
+            }
         }
     }
 }
