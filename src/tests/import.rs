@@ -9,7 +9,7 @@ use crate::entity::{AlbumRead, ArtistRead, TrackRead};
 use crate::tests::common;
 use crate::timeranges::ALL_TIME;
 
-const TEST_FILES_FOLDER: &str = "/testing/data/import";
+const TEST_FILES_FOLDER: &str = "./tests_input/import";
 
 fn assert_track_title(track: &TrackRead, expected: &str) {
     assert_eq!(track.title, expected);
@@ -40,16 +40,17 @@ fn assert_album_artists(track: &TrackRead, expected: Option<Vec<&str>>) {
         }
         _ => panic!(),
     }
-
 }
 
 #[tokio::test]
 async fn import_maloja() {
     let state = common().await;
 
+    let target_folder = state.folders.data.join("import");
+    fs::create_dir_all(&target_folder).unwrap();
     fs::copy(
         PathBuf::from(TEST_FILES_FOLDER).join("maloja_export.json"),
-        state.folders.data.join("import").join("maloja_export.json"),
+        target_folder.join("maloja_export.json"),
     ).unwrap();
 
     import(&state).await.unwrap();

@@ -26,10 +26,6 @@ jobs:
   test:
     env:
       RUSTFLAGS: "-Awarnings"
-      RUST_TEST_THEADS: 1
-      MALOJA_DATA_PATH: "${{ github.workspace }}/testing/data"
-      MALOJA_CONFIG_PATH: "${{ github.workspace }}/testing/config"
-      MALOJA_LOG_PATH: "${{ github.workspace }}/testing/log"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
