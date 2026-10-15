@@ -7,6 +7,7 @@ use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, NotSet, QueryFilter,
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tokio::task::id;
+use itertools::{Either, Itertools};
 use crate::database::repository::resolve_scrobble_ids;
 use crate::database::repository::writes_to_models::{album_write_to_model, artist_write_to_model, scrobble_write_to_model, track_write_to_model};
 use crate::entity::album::UniqueAlbum;
@@ -33,16 +34,22 @@ async fn get_existing_artist_ids(input: HashSet<UniqueArtist>, db: &DatabaseConn
         .into_iter().map(|u| (u, None)).collect();
     // if the user specified an entity by its ID, we just check if it exists
     // no other fields are checked
-    // TODO
-
-    // get all artists that fit in name
-    let names_normalized: HashSet<String> = result.iter() // ignore the ones already matched
-        .filter_map(|(u, _)| {
+    let (ids, names_normalized): (HashSet<u32>, HashSet<String>) = result.iter().
+        partition_map(|(u, _)| {
             match u {
-                UniqueArtist::ById(_) => None,
-                UniqueArtist::ByInfo { normalized_name } => Some(normalized_name.clone()),
+                UniqueArtist::ById(id) => Either::Left(*id),
+                UniqueArtist::ByInfo { normalized_name } => Either::Right(normalized_name.clone())
             }
-        }).collect();
+        });
+
+    let db_result: Vec<ArtistModel> = Artist::find()
+        .filter(ArtistColumn::Id.is_in(ids))
+        .all(db).await?;
+
+    for artist in db_result {
+        let identifier = UniqueArtist::ById(artist.id);
+        result.insert(identifier, Some(artist.id));
+    }
 
     let db_result: Vec<ArtistModel> = Artist::find()
         .filter(ArtistColumn::NameNormalized.is_in(names_normalized))
@@ -66,19 +73,26 @@ async fn get_existing_album_ids(input: HashSet<UniqueAlbum>, db: &DatabaseConnec
         .into_iter().map(|u| (u, None)).collect();
     // if the user specified an entity by its ID, we just check if it exists
     // no other fields are checked
-    // TODO
+    let (ids, titles_normalized): (HashSet<u32>, HashSet<String>) = result.iter().
+        partition_map(|(u, _)| {
+            match u {
+                UniqueAlbum::ById(id) => Either::Left(*id),
+                UniqueAlbum::ByInfo { normalized_title, .. } => Either::Right(normalized_title.clone())
+            }
+        });
+
+    let db_result: Vec<AlbumModel> = Album::find()
+        .filter(AlbumColumn::Id.is_in(ids))
+        .all(db).await?;
+
+    for album in db_result {
+        let identifier = UniqueAlbum::ById(album.id);
+        result.insert(identifier, Some(album.id));
+    }
 
     // get all albums that fit in name
     // not elegant, but doing some quick rust filtering seems more reasonable than crazy db queries
     // this is a one user application after all
-    let titles_normalized: HashSet<String> = result.iter() // ignore the ones already matched
-        .filter_map(|(u, _)| {
-            match u {
-                UniqueAlbum::ById(_) => None,
-                UniqueAlbum::ByInfo { normalized_title, .. } => Some(normalized_title.clone()),
-            }
-        }).collect();
-
     let db_result: Vec<(AlbumModel, Vec<AlbumArtistModel>)> = Album::find()
         .filter(AlbumColumn::AlbumTitleNormalized.is_in(titles_normalized))
         .find_with_related(AlbumArtist)
@@ -102,19 +116,26 @@ async fn get_existing_track_ids(input: HashSet<UniqueTrack>, db: &DatabaseConnec
         .into_iter().map(|u| (u, None)).collect();
     // if the user specified an entity by its ID, we just check if it exists
     // no other fields are checked
-    // TODO
+    let (ids, titles_normalized): (HashSet<u32>, HashSet<String>) = result.iter().
+        partition_map(|(u, _)| {
+            match u {
+                UniqueTrack::ById(id) => Either::Left(*id),
+                UniqueTrack::ByInfo { normalized_title, .. } => Either::Right(normalized_title.clone())
+            }
+        });
+
+    let db_result: Vec<TrackModel> = Track::find()
+        .filter(TrackColumn::Id.is_in(ids))
+        .all(db).await?;
+
+    for track in db_result {
+        let identifier = UniqueTrack::ById(track.id);
+        result.insert(identifier, Some(track.id));
+    }
 
     // get all tracks that fit in name
     // not elegant, but doing some quick rust filtering seems more reasonable than crazy db queries
     // this is a one user application after all
-    let titles_normalized: HashSet<String> = result.iter()
-        .filter_map(|(u, _)| {
-            match u {
-                UniqueTrack::ById(_) => None,
-                UniqueTrack::ByInfo{ normalized_title, .. } => Some(normalized_title.clone()),
-            }
-        }).collect();
-
     let db_result: Vec<(TrackModel, Vec<TrackArtistModel>)> = Track::find()
         .filter(TrackColumn::TitleNormalized.is_in(titles_normalized))
         .find_with_related(TrackArtist)
