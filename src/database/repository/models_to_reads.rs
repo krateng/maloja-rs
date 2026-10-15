@@ -41,9 +41,9 @@ pub fn track_model_to_read((track, track_artists, album): TrackModelWithRelated)
     TrackRead {
         id: track.id,
         title: track.title,
-        artists: track_artists.into_iter().map(|x| track_artist_model_to_read(x)).collect(),
-        album: album.and_then(|x| Some(album_model_to_read(x)) ),
-        track_length: None,
+        artists: track_artists.into_iter().map(track_artist_model_to_read).collect(),
+        album: album.map(album_model_to_read),
+        track_length: track.track_length,
     }
 
 }
@@ -52,14 +52,14 @@ pub fn album_model_to_read((album, album_artists): AlbumModelWithRelated) -> Alb
     AlbumRead {
         id: album.id,
         album_title: album.album_title,
-        album_artists: album_artists.into_iter().map(|x| album_artist_model_to_read(x) ).collect(),
+        album_artists: album_artists.into_iter().map(album_artist_model_to_read ).collect(),
     }
 
 }
 
 pub fn scrobble_model_to_read((scrobble, track): ScrobbleModelWithRelated) -> ScrobbleRead {
     ScrobbleRead {
-        timestamp: scrobble.timestamp.clone(),
+        timestamp: scrobble.timestamp,
         time_local: timestamp_to_local(scrobble.timestamp),
         track: track_model_to_read(track),
     }
