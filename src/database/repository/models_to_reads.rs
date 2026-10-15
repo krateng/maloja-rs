@@ -1,4 +1,4 @@
-use crate::database::repository::{AlbumArtistFull, AlbumModelWithRelated, ScrobbleModelWithRelated, TrackArtistFull, TrackModelWithRelated};
+use crate::database::repository::resolve::{AlbumArtistFull, AlbumModelWithRelated, ScrobbleModelWithRelated, TrackArtistFull, TrackModelWithRelated};
 use crate::entity::{
     AlbumRead, ArtistModel, ArtistRead,
     ArtistReadContext,

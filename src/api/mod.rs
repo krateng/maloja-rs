@@ -2,9 +2,11 @@ use axum::http::header;
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use axum::{Json, Router};
+use axum::handler::Handler;
 use serde_json::json;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
+use crate::configuration::app_state::AppState;
 
 mod audioscrobbler;
 mod listenbrainz;
@@ -17,7 +19,7 @@ pub struct ScrobbleAPI {
     pub prefix: &'static str,
     pub tag: &'static str,
     //endpoints: UtoipaMethodRouter,
-    register: fn(OpenApiRouter) -> OpenApiRouter,
+    register: fn(OpenApiRouter<AppState>) -> OpenApiRouter<AppState>,
 }
 impl ScrobbleAPI {
     //pub fn register_routes(&self) -> OpenApiRouter {
@@ -47,13 +49,12 @@ impl ScrobbleAPI {
 )]
 pub struct ApiDoc {}
 
-pub fn mount_apis(root_router: Router) -> Router {
-    let mut api_router = OpenApiRouter::new();
+pub fn mount_apis(root_router: Router<AppState>) -> Router<AppState> {
+    let mut api_router: OpenApiRouter<AppState> = OpenApiRouter::new();
     api_router = api_router.route("/openapi.json", get(openapi));
-    //let mut api_explorer = SwaggerUi::new("/api_explorer2");
 
     for api in APIS {
-        let mut specific_api_router = OpenApiRouter::new();
+        let mut specific_api_router: OpenApiRouter<AppState> = OpenApiRouter::new();
         specific_api_router = (api.register)(specific_api_router);
         api_router = api_router.nest(&api.prefix, specific_api_router);
     }

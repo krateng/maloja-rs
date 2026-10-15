@@ -1,6 +1,6 @@
 use axum::extract::path::ErrorKind;
 use axum::extract::rejection::PathRejection;
-use axum::extract::{FromRequestParts, Query};
+use axum::extract::{FromRequestParts, Query, State};
 use axum::http::request::Parts;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
@@ -13,9 +13,9 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::api::ScrobbleAPI;
-use crate::database;
+use crate::configuration::app_state::AppState;
 use crate::database::errors::MalojaError;
-use crate::database::views::{ChartsEntry, Paginated, PaginationInfo, PerformanceEntry, PulseEntry};
+use crate::database::views::{ChartsEntry, Paginated, PerformanceEntry, PulseEntry};
 use crate::entity::{
     AlbumRead, ArtistRead, TrackRead, ScrobbleRead,
     ScrobbleWrite,
@@ -28,7 +28,7 @@ use crate::uri::{
 pub const API: ScrobbleAPI =
     ScrobbleAPI { prefix: "/maloja_2", tag: "Maloja v2", register: register_routes };
 
-fn register_routes(mut router: OpenApiRouter) -> OpenApiRouter {
+fn register_routes(mut router: OpenApiRouter<AppState>) -> OpenApiRouter<AppState> {
     router = router
         .routes(routes!(info_artist))
         .routes(routes!(info_track))
@@ -203,9 +203,10 @@ pub async fn notfound() -> Response {
     )
 )]
 async fn info_artist(
+    State(state): State<AppState>,
     Path(params_path): Path<PathEntity>,
 ) -> Result<(StatusCode, Json<ArtistRead>), MalojaError> {
-    let result = database::repository::artist_info(params_path.id).await?;
+    let result = state.db.artist_info(params_path.id).await?;
     Ok((StatusCode::OK, Json(result)))
 }
 
@@ -220,9 +221,10 @@ async fn info_artist(
     )
 )]
 async fn info_track(
+    State(state): State<AppState>,
     Path(params_path): Path<PathEntity>,
 ) -> Result<(StatusCode, Json<TrackRead>), MalojaError> {
-    let result = database::repository::track_info(params_path.id).await?;
+    let result = state.db.track_info(params_path.id).await?;
     Ok((StatusCode::OK, Json(result)))
 }
 
@@ -237,9 +239,10 @@ async fn info_track(
     )
 )]
 async fn info_album(
+    State(state): State<AppState>,
     Path(params_path): Path<PathEntity>,
 ) -> Result<(StatusCode, Json<AlbumRead>), MalojaError> {
-    let result = database::repository::album_info(params_path.id).await?;
+    let result = state.db.album_info(params_path.id).await?;
     Ok((StatusCode::OK, Json(result)))
 }
 
@@ -254,6 +257,7 @@ async fn info_album(
     )
 )]
 async fn charts_tracks(
+    State(state): State<AppState>,
     Query(params_time): Query<QueryTimerange>,
     Query(params_limit_artist): Query<QueryLimitArtist>,
     Query(params_limit_album): Query<QueryLimitAlbum>,
@@ -262,7 +266,7 @@ async fn charts_tracks(
     let timerange = params_time.to_timerange()?;
     let artist_id = params_limit_artist.to_artist_id();
     let album_id = params_limit_album.to_album_id();
-    let tracks = database::repository::charts_tracks(&timerange, artist_id, album_id).await?;
+    let tracks = state.db.charts_tracks(&timerange, artist_id, album_id).await?;
     let paginated = params_pagination.paginate_results(tracks);
     Ok((
         StatusCode::OK,
@@ -281,11 +285,12 @@ async fn charts_tracks(
     )
 )]
 async fn charts_artists(
+    State(state): State<AppState>,
     Query(params_time): Query<QueryTimerange>,
     Query(params_pagination): Query<QueryPagination>,
 ) -> Result<(StatusCode, Json<Paginated<ChartsEntry<ArtistRead>>>), MalojaError> {
     let timerange = params_time.to_timerange()?;
-    let artists = database::repository::charts_artists(&timerange).await?;
+    let artists = state.db.charts_artists(&timerange).await?;
     let paginated = params_pagination.paginate_results(artists);
     Ok((
         StatusCode::OK,
@@ -304,13 +309,14 @@ async fn charts_artists(
     )
 )]
 async fn charts_albums(
+    State(state): State<AppState>,
     Query(params_time): Query<QueryTimerange>,
     Query(params_limit_artist): Query<QueryLimitArtist>,
     Query(params_pagination): Query<QueryPagination>,
 ) -> Result<(StatusCode, Json<Paginated<ChartsEntry<AlbumRead>>>), MalojaError> {
     let timerange = params_time.to_timerange()?;
     let artist_id = params_limit_artist.to_artist_id();
-    let albums = database::repository::charts_albums(&timerange, artist_id).await?;
+    let albums = state.db.charts_albums(&timerange, artist_id).await?;
     let paginated_albums = params_pagination.paginate_results(albums);
     Ok((
         StatusCode::OK,
@@ -329,6 +335,7 @@ async fn charts_albums(
     )
 )]
 async fn scrobbles(
+    State(state): State<AppState>,
     Query(params_time): Query<QueryTimerange>,
     Query(params_limit_artist): Query<QueryLimitArtist>,
     Query(params_limit_album): Query<QueryLimitAlbum>,
@@ -340,7 +347,7 @@ async fn scrobbles(
     let album_id = params_limit_album.to_album_id();
     let track_id = params_limit_track.to_track_id();
     let scrobbles =
-        database::repository::scrobbles(&timerange, artist_id, album_id, track_id, true).await?;
+        state.db.scrobbles(&timerange, artist_id, album_id, track_id, true).await?;
     let paginated_scrobbles = params_pagination.paginate_results(scrobbles);
     Ok((StatusCode::OK, Json(paginated_scrobbles)))
 }
@@ -356,6 +363,7 @@ async fn scrobbles(
     )
 )]
 async fn pulse(
+    State(state): State<AppState>,
     Query(params_time): Query<QueryTimerange>,
     Query(params_timesteps): Query<QueryTimesteps>,
     Query(params_limit_artist): Query<QueryLimitArtist>,
@@ -369,7 +377,7 @@ async fn pulse(
     let album_id = params_limit_album.to_album_id();
     let track_id = params_limit_track.to_track_id();
 
-    let result = database::repository::pulse(subranges, artist_id, album_id, track_id).await?;
+    let result = state.db.pulse(subranges, artist_id, album_id, track_id).await?;
     let paginated_pulse = params_pagination.paginate_results(result);
     Ok((StatusCode::OK, Json(paginated_pulse)))
 }
@@ -385,6 +393,7 @@ async fn pulse(
     )
 )]
 async fn performance(
+    State(state): State<AppState>,
     Query(params_time): Query<QueryTimerange>,
     Query(params_timesteps): Query<QueryTimesteps>,
     Query(params_limit_artist): Query<QueryLimitArtist>,
@@ -399,7 +408,7 @@ async fn performance(
     let track_id = params_limit_track.to_track_id();
 
     let result =
-        database::repository::performance(subranges, artist_id, album_id, track_id).await?;
+        state.db.performance(subranges, artist_id, album_id, track_id).await?;
     let paginated_pulse = params_pagination.paginate_results(result);
     Ok((StatusCode::OK, Json(paginated_pulse)))
 }
@@ -415,7 +424,10 @@ async fn performance(
         (status = INTERNAL_SERVER_ERROR, body = inline(APIError), description = "Server error while handling the request"),
     )
 )]
-async fn submit_scrobbles(Json(scrobbles): Json<Vec<ScrobbleWrite>>) -> Result<(StatusCode, Json<Vec<ScrobbleRead>>), MalojaError> {
-    let result = database::repository::create_scrobbles_return_reads(scrobbles, true).await?;
+async fn submit_scrobbles(
+    State(state): State<AppState>,
+    Json(scrobbles): Json<Vec<ScrobbleWrite>>
+) -> Result<(StatusCode, Json<Vec<ScrobbleRead>>), MalojaError> {
+    let result = state.db.create_scrobbles_return_reads(scrobbles, true).await?;
     Ok((StatusCode::OK, Json(result)))
 }

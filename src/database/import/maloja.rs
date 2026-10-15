@@ -1,7 +1,5 @@
 use crate::configuration::logging::display_path;
-use crate::database::connect;
 use crate::database::errors::MalojaError;
-use crate::database::repository::create_scrobbles;
 use crate::entity::album::AlbumWrite;
 use crate::entity::artist::ArtistWrite;
 use crate::entity::scrobble::ScrobbleWrite;
@@ -11,6 +9,7 @@ use serde::Deserialize;
 use serde_json::Value;
 use std::fs;
 use std::path::PathBuf;
+use crate::configuration::app_state::AppState;
 use crate::entity::ArtistWriteContext;
 
 #[derive(Deserialize, Debug, Clone)]
@@ -38,12 +37,10 @@ struct MalojaExportAlbum {
     albumtitle: String,
 }
 
-pub async fn import_maloja(file: PathBuf) -> Result<(), MalojaError> {
+pub async fn import_maloja(file: PathBuf, state: &AppState) -> Result<(), MalojaError> {
     info!("Importing from Maloja export {}. This could take a while...", display_path(&file));
 
     let parsed: MalojaExport = serde_json::from_reader(fs::File::open(file)?)?;
-
-    let _db = connect().await?;
 
     let scrobbles: Vec<ScrobbleWrite> = parsed
         .scrobbles
@@ -100,7 +97,7 @@ pub async fn import_maloja(file: PathBuf) -> Result<(), MalojaError> {
         })
         .collect();
 
-    create_scrobbles(scrobbles, false).await?;
+    state.db.create_scrobbles(scrobbles, false).await?;
 
     Ok(())
 }

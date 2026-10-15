@@ -2,18 +2,17 @@ use chrono::Utc;
 use colored::{ColoredString, Colorize};
 use fern;
 use std::path::PathBuf;
+use crate::configuration::app_state::{AppState, ApplicationFolders};
 
-use crate::configuration::FOLDERS;
-
-fn get_logfile_path() -> PathBuf {
-    FOLDERS.logs.join("maloja.log")
+fn get_logfile_path(folders: &ApplicationFolders) -> PathBuf {
+    folders.logs.join("maloja.log")
 }
 
-pub fn setup_logger() -> Result<(), fern::InitError> {
-    let logfile = match fern::log_file(get_logfile_path()) {
+pub fn setup_logger(state: &AppState) -> Result<(), fern::InitError> {
+    let logfile = match fern::log_file(get_logfile_path(&state.folders)) {
         Ok(logfile) => logfile,
         Err(e) => {
-            println!("Cannot set up log file {}: {}", display_path(&get_logfile_path()), e);
+            println!("Cannot set up log file {}: {}", display_path(&get_logfile_path(&state.folders)), e);
             panic!("Failed to setup logging");
         }
     };

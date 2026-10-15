@@ -4,6 +4,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::api::ScrobbleAPI;
+use crate::configuration::app_state::AppState;
 
 pub const API: ScrobbleAPI = ScrobbleAPI {
     prefix: "/listenbrainz/1",
@@ -12,7 +13,7 @@ pub const API: ScrobbleAPI = ScrobbleAPI {
     register: register_routes,
 };
 
-fn register_routes(mut router: OpenApiRouter) -> OpenApiRouter {
+fn register_routes(mut router: OpenApiRouter<AppState>) -> OpenApiRouter<AppState> {
     router = router.routes(routes!(submit, validate));
     router
 }

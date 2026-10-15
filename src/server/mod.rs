@@ -1,24 +1,24 @@
 mod pages;
 
 use crate::api::mount_apis;
-use crate::configuration::CONFIG;
 use axum::routing::get;
 use axum::Router;
 use pages::*;
 use tower_http::services::{ServeDir, ServeFile};
+use crate::configuration::app_state::AppState;
 
-pub async fn run_server() -> Result<(), std::io::Error> {
+pub async fn run_server(state: &AppState) -> Result<(), std::io::Error> {
     let app = create_app().await;
-    let bind_address = format!("{}:{}", CONFIG.bind_address, CONFIG.port);
+    let bind_address = format!("{}:{}", state.config.bind_address, state.config.port);
     let listener = tokio::net::TcpListener::bind(bind_address).await?;
-    axum::serve(listener, app).await?;
+    let stateful_app = app.with_state(state.clone());
+    axum::serve(listener, stateful_app).await?;
     Ok(())
 }
 
-pub async fn create_app() -> Router {
+pub async fn create_app() -> Router<AppState> {
     // TODO: files in package
-
-    let mut app = Router::new();
+    let mut app: Router<AppState> = Router::new();
     // APIS
     app = mount_apis(app);
     // SPECIAL PATHS

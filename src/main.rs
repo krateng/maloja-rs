@@ -1,28 +1,22 @@
 #![forbid(unsafe_code)]
 
-mod api;
-mod configuration;
-mod database;
-mod entity;
-mod server;
-mod timeranges;
-mod uri;
-
 use log::info;
 use std::io;
 use std::io::Write;
 use tokio::time::{sleep, Duration};
-use maloja_rs::setup;
+use maloja_rs::{setup, AppState, server};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!();
 
-    setup(false).await?;
+    let state = AppState::new(None).await?;
+
+    setup(false, &state).await?;
 
     // SERVER
     info!("Starting up server...");
-    server::run_server().await?;
+    server::run_server(&state).await?;
 
     info!("Shutting down...");
     sleep(Duration::from_secs(2)).await;

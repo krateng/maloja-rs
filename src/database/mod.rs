@@ -3,7 +3,6 @@ pub mod import;
 pub mod repository;
 pub mod views;
 
-use crate::configuration::FOLDERS;
 use crate::database::errors::MalojaError;
 use crate::entity::{
     album::Entity as Album, album_artist::Entity as AlbumArtist, artist::Entity as Artist,
@@ -15,13 +14,14 @@ use sea_orm::{
     Schema, Statement,
 };
 use std::path::PathBuf;
+use crate::configuration::app_state::{AppState, ApplicationFolders};
 
-fn get_database_path() -> PathBuf {
-    FOLDERS.data.join("maloja.sqlite")
+fn get_database_path(folders: &ApplicationFolders) -> PathBuf {
+    folders.data.join("maloja.sqlite")
 }
 
-pub async fn init_db() -> Result<(), MalojaError> {
-    let db = connect().await?;
+pub async fn init_db(state: &AppState) -> Result<(), MalojaError> {
+    let db = connect(&state.folders).await?;
     assert_eq!(db.get_database_backend(), DbBackend::Sqlite);
 
     let version: String = db
@@ -38,7 +38,7 @@ pub async fn init_db() -> Result<(), MalojaError> {
     log::info!("Checking Database schema...");
     create_tables(&db).await?;
     log::info!("Checking imports...");
-    match import().await {
+    match import(state).await {
         Ok((imported, failed)) => {
             log::info!("Imported {} files, failed {}.", imported, failed);
         }
@@ -56,8 +56,8 @@ pub fn mark_db_write() {
     // for the future
 }
 
-pub async fn connect() -> Result<DatabaseConnection, MalojaError> {
-    let dbfile = get_database_path().display().to_string();
+pub async fn connect(folders: &ApplicationFolders) -> Result<DatabaseConnection, MalojaError> {
+    let dbfile = get_database_path(folders).display().to_string();
     let dbstring = format!("sqlite://{}?mode=rwc", dbfile);
     let mut dboptions = ConnectOptions::new(dbstring);
     dboptions.sqlx_logging(false);
