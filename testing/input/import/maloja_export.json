@@ -1,0 +1,61 @@
+{
+  "maloja": {
+    "export_time": 1739022364
+  },
+  "scrobbles": [
+    {
+      "time": 1731970471,
+      "track": {
+        "artists": [
+          "Soyeon"
+        ],
+        "title": "Soyeon's Day Off",
+        "album": {
+          "artists": [
+            "(G)I-DLE"
+          ],
+          "albumtitle": "The Big Journey"
+        },
+        "length": null
+      },
+      "duration": null,
+      "origin": "client:navidrome"
+    },
+    {
+      "time": 1731985643,
+      "track": {
+        "artists": [
+          "(G)I-DLE"
+        ],
+        "title": "Arrival at the Castle",
+        "album": {
+          "artists": [
+            "(G)I-DLE"
+          ],
+          "albumtitle": "The Big Journey"
+        },
+        "length": null
+      },
+      "duration": null,
+      "origin": "client:navidrome"
+    },
+    {
+      "time": 1731985874,
+      "track": {
+        "artists": [
+          "Yuqi", "Soyeon"
+        ],
+        "title": "Evening at the Campfire",
+        "album": {
+          "artists": [
+            "(G)I-DLE"
+          ],
+          "albumtitle": "The Big Journey"
+        },
+        "length": null
+      },
+      "duration": null,
+      "origin": "client:navidrome"
+    }
+  ]
+}
