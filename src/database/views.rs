@@ -4,6 +4,8 @@ use crate::timeranges::{ValidTimeRange};
 use serde::Serialize;
 use utoipa::ToSchema;
 
+
+// TODO do we need this? we just use the paginated generic for now
 #[derive(Serialize, ToSchema)]
 pub struct Charts<T: Clone> {
     #[schema(inline)]

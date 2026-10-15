@@ -15,7 +15,7 @@ use utoipa_axum::routes;
 use crate::api::ScrobbleAPI;
 use crate::database;
 use crate::database::errors::MalojaError;
-use crate::database::views::{Charts, Paginated, PaginationInfo, PerformanceEntry, PulseEntry};
+use crate::database::views::{ChartsEntry, Paginated, PaginationInfo, PerformanceEntry, PulseEntry};
 use crate::entity::{
     AlbumRead, ArtistRead, TrackRead, ScrobbleRead,
     ScrobbleWrite,
@@ -246,9 +246,9 @@ async fn info_album(
 #[utoipa::path(
     get,
     path = "/charts_tracks",
-    params(QueryTimerange, QueryLimitArtist, QueryLimitAlbum),
+    params(QueryTimerange, QueryLimitArtist, QueryLimitAlbum, QueryPagination),
     responses(
-        (status = OK, body = inline(Charts<TrackRead>), description = "Successful request"),
+        (status = OK, body = inline(Paginated<ChartsEntry<TrackRead>>), description = "Successful request"),
         (status = BAD_REQUEST, body = inline(APIError), description = "Error in request"),
         (status = INTERNAL_SERVER_ERROR, body = inline(APIError), description = "Server error while handling the request"),
     )
@@ -257,60 +257,48 @@ async fn charts_tracks(
     Query(params_time): Query<QueryTimerange>,
     Query(params_limit_artist): Query<QueryLimitArtist>,
     Query(params_limit_album): Query<QueryLimitAlbum>,
-) -> Result<(StatusCode, Json<Charts<TrackRead>>), MalojaError> {
+    Query(params_pagination): Query<QueryPagination>,
+) -> Result<(StatusCode, Json<Paginated<ChartsEntry<TrackRead>>>), MalojaError> {
     let timerange = params_time.to_timerange()?;
     let artist_id = params_limit_artist.to_artist_id();
     let album_id = params_limit_album.to_album_id();
     let tracks = database::repository::charts_tracks(&timerange, artist_id, album_id).await?;
+    let paginated = params_pagination.paginate_results(tracks);
     Ok((
         StatusCode::OK,
-        Json(Charts {
-            pagination: PaginationInfo {
-                page: 1,
-                pages: 1,
-                items_per_page: tracks.len() as u32,
-                items_total: tracks.len() as u32,
-            },
-            result: tracks,
-        }),
+        Json(paginated),
     ))
 }
 
 #[utoipa::path(
     get,
     path = "/charts_artists",
-    params(QueryTimerange),
+    params(QueryTimerange, QueryPagination),
     responses(
-        (status = OK, body = inline(Charts<ArtistRead>), description = "Successful request"),
+        (status = OK, body = inline(Paginated<ChartsEntry<ArtistRead>>), description = "Successful request"),
         (status = BAD_REQUEST, body = inline(APIError), description = "Error in request"),
         (status = INTERNAL_SERVER_ERROR, body = inline(APIError), description = "Server error while handling the request"),
     )
 )]
 async fn charts_artists(
     Query(params_time): Query<QueryTimerange>,
-) -> Result<(StatusCode, Json<Charts<ArtistRead>>), MalojaError> {
+    Query(params_pagination): Query<QueryPagination>,
+) -> Result<(StatusCode, Json<Paginated<ChartsEntry<ArtistRead>>>), MalojaError> {
     let timerange = params_time.to_timerange()?;
     let artists = database::repository::charts_artists(&timerange).await?;
+    let paginated = params_pagination.paginate_results(artists);
     Ok((
         StatusCode::OK,
-        Json(Charts {
-            pagination: PaginationInfo {
-                page: 1,
-                pages: 1,
-                items_per_page: artists.len() as u32,
-                items_total: artists.len() as u32,
-            },
-            result: artists,
-        }),
+        Json(paginated),
     ))
 }
 
 #[utoipa::path(
     get,
     path = "/charts_albums",
-    params(QueryTimerange, QueryLimitArtist),
+    params(QueryTimerange, QueryLimitArtist, QueryPagination),
     responses(
-        (status = OK, body = inline(Charts<AlbumRead>), description = "Successful request"),
+        (status = OK, body = inline(Paginated<ChartsEntry<AlbumRead>>), description = "Successful request"),
         (status = BAD_REQUEST, body = inline(APIError), description = "Error in request"),
         (status = INTERNAL_SERVER_ERROR, body = inline(APIError), description = "Server error while handling the request"),
     )
@@ -318,21 +306,15 @@ async fn charts_artists(
 async fn charts_albums(
     Query(params_time): Query<QueryTimerange>,
     Query(params_limit_artist): Query<QueryLimitArtist>,
-) -> Result<(StatusCode, Json<Charts<AlbumRead>>), MalojaError> {
+    Query(params_pagination): Query<QueryPagination>,
+) -> Result<(StatusCode, Json<Paginated<ChartsEntry<AlbumRead>>>), MalojaError> {
     let timerange = params_time.to_timerange()?;
     let artist_id = params_limit_artist.to_artist_id();
     let albums = database::repository::charts_albums(&timerange, artist_id).await?;
+    let paginated_albums = params_pagination.paginate_results(albums);
     Ok((
         StatusCode::OK,
-        Json(Charts {
-            pagination: PaginationInfo {
-                page: 1,
-                pages: 1,
-                items_per_page: albums.len() as u32,
-                items_total: albums.len() as u32,
-            },
-            result: albums,
-        }),
+        Json(paginated_albums),
     ))
 }
 
