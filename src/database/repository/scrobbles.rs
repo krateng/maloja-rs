@@ -9,12 +9,12 @@ use crate::entity::track::{
     Column as TrackColumn, Relation as TrackRelation,
 };
 use crate::entity::track_artist::Column as TrackArtistColumn;
-use crate::timeranges::TimeRange;
+use crate::timeranges::{ValidTimeRange};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QueryOrder, QuerySelect, QueryTrait, RelationTrait};
 use sea_query::JoinType;
 
 pub async fn scrobbles(
-    timerange: TimeRange,
+    timerange: &ValidTimeRange,
     artist_id: Option<u32>,
     album_id: Option<u32>,
     track_id: Option<u32>,
@@ -50,8 +50,6 @@ pub async fn scrobbles(
     } else {
         query = query.order_by_asc(ScrobbleColumn::Timestamp);
     }
-
-    println!("query: {:?}", query.build(db.get_database_backend()));
 
     let result: Vec<ScrobbleModel> = query.all(&db).await?;
     let track_ids = result.iter().map(|s| s.track_id).collect();

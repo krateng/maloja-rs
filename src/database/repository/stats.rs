@@ -20,7 +20,7 @@ use crate::entity::{
     },
     track_artist::Column as TrackArtistColumn,
 };
-use crate::timeranges::TimeRange;
+use crate::timeranges::{ValidTimeRange};
 use sea_orm::{
     ColumnTrait, EntityTrait, JoinType, QueryFilter, QueryOrder, QuerySelect, RelationTrait,
 };
@@ -29,7 +29,7 @@ use sea_query::Expr;
 // we generate stats over IDs and use batch resolve with id maps
 
 pub async fn charts_tracks(
-    timerange: TimeRange,
+    timerange: &ValidTimeRange,
     artist_id: Option<u32>,
     album_id: Option<u32>,
 ) -> Result<Vec<ChartsEntry<TrackRead>>, MalojaError> {
@@ -80,7 +80,7 @@ pub async fn charts_tracks(
 }
 
 pub async fn charts_artists(
-    timerange: TimeRange,
+    timerange: &ValidTimeRange,
 ) -> Result<Vec<ChartsEntry<ArtistRead>>, MalojaError> {
     let db = connect().await?;
     let (from_ts, to_ts) = timerange.timestamp_boundaries();
@@ -114,7 +114,7 @@ pub async fn charts_artists(
 }
 
 pub async fn charts_albums(
-    timerange: TimeRange,
+    timerange: &ValidTimeRange,
     artist_id: Option<u32>,
 ) -> Result<Vec<ChartsEntry<AlbumRead>>, MalojaError> {
     let db = connect().await?;

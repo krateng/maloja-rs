@@ -6,7 +6,7 @@ use crate::entity::{ArtistRead, ArtistWriteContext, TrackRead};
 use crate::entity::scrobble::{Model, ScrobbleWrite};
 use crate::entity::track::TrackWrite;
 use crate::tests::common;
-use crate::timeranges::TimeRange;
+use crate::timeranges::{ValidTimeRange, ALL_TIME};
 
 type TrackInfo = (Vec<&'static str>, &'static str);
 
@@ -67,7 +67,7 @@ async fn ignore_capitalization_separate() {
         database::repository::create_scrobbles(vec![write], false).await.unwrap();
     }
     let scrobbles = database::repository::scrobbles(
-        TimeRange::Infinite, None, None, None,false
+        &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
     let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
@@ -81,7 +81,7 @@ async fn ignore_capitalization_batch() {
     let writes_amount = writes.len();
     database::repository::create_scrobbles(writes, false).await.unwrap();
     let scrobbles = database::repository::scrobbles(
-        TimeRange::Infinite, None, None, None,false
+        &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
     let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
@@ -106,7 +106,7 @@ async fn ignore_artist_order_separate() {
         database::repository::create_scrobbles(vec![write], false).await.unwrap();
     }
     let scrobbles = database::repository::scrobbles(
-        TimeRange::Infinite, None, None, None,false
+        &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
     let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
@@ -120,7 +120,7 @@ async fn ignore_artist_order_batch() {
     let writes_amount = writes.len();
     database::repository::create_scrobbles(writes, false).await.unwrap();
     let scrobbles = database::repository::scrobbles(
-        TimeRange::Infinite, None, None, None,false
+        &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
     let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
@@ -147,7 +147,7 @@ async fn ignore_duplicate_artists_separate() {
         database::repository::create_scrobbles(vec![write], false).await.unwrap();
     }
     let scrobbles = database::repository::scrobbles(
-        TimeRange::Infinite, None, None, None,false
+        &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
     let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
@@ -161,7 +161,7 @@ async fn ignore_duplicate_artists_batch() {
     let writes_amount = writes.len();
     database::repository::create_scrobbles(writes, false).await.unwrap();
     let scrobbles = database::repository::scrobbles(
-        TimeRange::Infinite, None, None, None,false
+        &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
     let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
@@ -198,7 +198,7 @@ async fn parse_multi_artists_separate() {
         database::repository::create_scrobbles(vec![write], false).await.unwrap();
     }
     let scrobbles = database::repository::scrobbles(
-        TimeRange::Infinite, None, None, None,false
+        &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
     let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
@@ -212,7 +212,7 @@ async fn parse_multi_artists_batch() {
     let writes_amount = writes.len();
     database::repository::create_scrobbles(writes, false).await.unwrap();
     let scrobbles = database::repository::scrobbles(
-        TimeRange::Infinite, None, None, None,false
+        &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
     let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
@@ -228,7 +228,7 @@ async fn provide_artist_by_id() {
     database::repository::create_scrobbles(writes, false).await.unwrap();
 
     let scrobbles = database::repository::scrobbles(
-        TimeRange::Infinite, None, None, None,false
+        &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), 1, "The incorrect amount of scrobbles has been generated");
     let jihyo_id = scrobbles.first().unwrap().track.artists.first().unwrap().id;
@@ -259,7 +259,7 @@ async fn provide_artist_by_id() {
 
     database::repository::create_scrobbles(vec![new_scrobble], false).await.unwrap();
     let scrobbles = database::repository::scrobbles(
-        TimeRange::Infinite, None, None, None,false
+        &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), 2, "The incorrect amount of scrobbles has been generated");
     let artist_ids: HashSet<u32> = scrobbles.into_iter().map(|scrobble| scrobble.track).flat_map(|x| x.artists).map(|x| x.id).collect();
@@ -275,7 +275,7 @@ async fn provide_track_by_id() {
     database::repository::create_scrobbles(writes, false).await.unwrap();
 
     let scrobbles = database::repository::scrobbles(
-        TimeRange::Infinite, None, None, None,false
+        &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), 1, "The incorrect amount of scrobbles has been generated");
     let song_id = scrobbles.first().unwrap().track.id;
@@ -297,7 +297,7 @@ async fn provide_track_by_id() {
 
     database::repository::create_scrobbles(vec![new_scrobble], false).await.unwrap();
     let scrobbles = database::repository::scrobbles(
-        TimeRange::Infinite, None, None, None,false
+        &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), 2, "The incorrect amount of scrobbles has been generated");
     let track_ids: HashSet<u32> = scrobbles.into_iter().map(|scrobble| scrobble.track).map(|x| x.id).collect();

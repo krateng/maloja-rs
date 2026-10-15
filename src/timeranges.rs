@@ -4,6 +4,8 @@ use serde::{Serialize, Serializer};
 use std::fmt::{Display, Formatter};
 use std::iter::successors;
 use std::ops::Add;
+use std::sync::LazyLock;
+use regex::Regex;
 use sea_orm::prelude::Date;
 use sea_query::Iden;
 use sea_query::prelude::rust_decimal::prelude::FromPrimitive;
@@ -60,6 +62,51 @@ impl BaseTimeRange {
         Ok(Self::Week { week: week_start.week(WEEK_BEGIN) })
 
     }
+
+    fn from_string(input: &str) -> Result<Self, MalojaError> {
+        static YEAR_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+            Regex::new(r"^(\d{3,4})$").expect("Hard-coded Regex")
+        });
+        static MONTH_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+            Regex::new(r"^(\d{3,4})/([0-9]{1,2})$").expect("Hard-coded Regex")
+        });
+        static DAY_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+            Regex::new(r"^(\d{3,4})/([0-9]{1,2})/([0-9]{1,2})$").expect("Hard-coded Regex")
+        });
+        static WEEK_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+            Regex::new(r"^(\d{3,4})[wW]([0-9]{1,2})$").expect("Hard-coded Regex")
+        });
+
+        if let Some(caps) = YEAR_REGEX.captures(input)
+        {
+            return BaseTimeRange::year(
+                caps[1].parse().expect("Regex should have prevented non-digits"),
+            );
+        }
+        if let Some(caps) = MONTH_REGEX.captures(input)
+        {
+            return BaseTimeRange::month(
+                caps[1].parse().expect("Regex should have prevented non-digits"),
+                caps[2].parse().expect("Regex should have prevented non-digits"),
+            );
+        }
+        if let Some(caps) = DAY_REGEX.captures(input)
+        {
+            return BaseTimeRange::day(
+                caps[1].parse().expect("Regex should have prevented non-digits"),
+                caps[2].parse().expect("Regex should have prevented non-digits"),
+                caps[3].parse().expect("Regex should have prevented non-digits"),
+            );
+        }
+        if let Some(caps) = WEEK_REGEX.captures(input)
+        {
+            return BaseTimeRange::week(
+                caps[1].parse().expect("Regex should have prevented non-digits"),
+                caps[2].parse().expect("Regex should have prevented non-digits"),
+            );
+        }
+        Err(MalojaError::ParseError { message: format!("Could not parse timerange specifier: {}", input) })
+    }
 }
 
 /// A fieldless enum simply to select the different types of time ranges as used by [`BaseTimeRange`]
@@ -83,7 +130,7 @@ impl RangeType {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 // TODO better toschema
-pub enum TimeRange {
+enum TimeRange {
     Simple(BaseTimeRange),
     Composite { start: Option<BaseTimeRange>, end: Option<BaseTimeRange> },
 }
@@ -91,9 +138,35 @@ pub enum TimeRange {
 // this should be the only one we construct from outside
 // the inner one is still public to make pattern matching work,
 // but you cant create it without access to basetimerange
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ValidTimeRange(TimeRange);
 
 impl ValidTimeRange {
+    pub fn from_string(input: &str) -> Result<Self, MalojaError> {
+        Ok(ValidTimeRange(TimeRange::Simple(BaseTimeRange::from_string(input)?)))
+    }
+    pub fn from_start_and_end_string(start: Option<&str>, end: Option<&str>) -> Result<Self, MalojaError> {
+        let mut result = Self::composite();
+        if let Some(start) = start {
+            result = result.set_new_start(BaseTimeRange::from_string(start)?)?;
+        }
+        if let Some(end) = end {
+            result = result.set_new_end(BaseTimeRange::from_string(end)?)?;
+        }
+        Ok(result)
+    }
+
+    pub fn to_strings(&self) -> (Option<String>, Option<String>, Option<String>) {
+        match &self.0 {
+            TimeRange::Simple(range) => (Some(range.to_query_argument()), None, None),
+            TimeRange::Composite { start, end } => (
+                None,
+                start.clone().map(|x| x.to_query_argument()),
+                end.clone().map(|x| x.to_query_argument())
+            ),
+        }
+    }
+
     pub fn year(year: u16) -> Result<Self, MalojaError> {
         Ok(ValidTimeRange(TimeRange::Simple(BaseTimeRange::year(year)?)))
     }
@@ -210,7 +283,7 @@ impl ValidTimeRange {
 
     pub fn previous(&self) -> Option<Self> {
         match &self.0 {
-            TimeRange::Simple(_) => None,
+            TimeRange::Simple(inner) => inner.previous().map(|prev_inner| ValidTimeRange(TimeRange::Simple(prev_inner))),
             TimeRange::Composite { start: Some(start), end: Some(end) } => {
                 todo!()
             },
@@ -228,7 +301,7 @@ impl ValidTimeRange {
     }
     pub fn next(&self) -> Option<Self> {
         match &self.0 {
-            TimeRange::Simple(_) => None,
+            TimeRange::Simple(inner) => inner.next().map(|next_inner| ValidTimeRange(TimeRange::Simple(next_inner))),
             TimeRange::Composite { start: Some(start), end: Some(end) } => {
                 todo!()
             },
@@ -319,8 +392,9 @@ impl ValidTimeRange {
         let first_range = ValidTimeRange(TimeRange::Simple(first_base_obj));
 
         let ranges: Vec<ValidTimeRange> = successors(Some(first_range), |prev| {
-            (!prev.includes_timestamp(last.timestamp()))
-                .then(|| prev.next()).unwrap_or(None)
+            // datetime boundaries always get the border, which means if we convert to timestamp, we get
+            // the one that counts for the next range
+            if !prev.includes_timestamp(last.timestamp()-1) { prev.next() } else { None }
         }).collect();
 
         ranges
@@ -425,7 +499,7 @@ impl BaseTimeRange {
     }
     fn describe_short(&self) -> String {
         match self {
-            BaseTimeRange::Day { date } => date.format("%Y/%B/%d").to_string(),
+            BaseTimeRange::Day { date } => date.format("%Y/%m/%d").to_string(),
             BaseTimeRange::Week { week } => {
                 let (y, w) = get_year_and_number_of_week(week);
                 format!("{}W{}", y, w)
@@ -433,6 +507,10 @@ impl BaseTimeRange {
             BaseTimeRange::Month { year, month } => format!("{}/{}", year, month.number_from_month()),
             BaseTimeRange::Year { year } => format!("{}", year),
         }
+    }
+
+    fn to_query_argument(&self) -> String {
+        self.describe_short()
     }
 
 }

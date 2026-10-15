@@ -1,6 +1,6 @@
 // These are essentially the API schemas, but we store them here because they will also be used internally
 
-use crate::timeranges::TimeRange;
+use crate::timeranges::{ValidTimeRange};
 use serde::Serialize;
 use utoipa::ToSchema;
 
@@ -50,7 +50,7 @@ pub struct ChartsEntry<T> {
 #[derive(Serialize, ToSchema, Clone, Debug)]
 pub struct TopEntry<T> {
     #[schema(value_type = String, examples("2024"))]
-    pub time_range: TimeRange,
+    pub time_range: ValidTimeRange,
     pub entry: T,
     #[schema(examples(313))]
     pub scrobbles: u32,
@@ -60,7 +60,7 @@ pub struct TopEntry<T> {
 #[derive(Serialize, ToSchema, Clone, Debug)]
 pub struct PulseEntry {
     #[schema(value_type = String, examples("2024"))]
-    pub time_range: TimeRange,
+    pub time_range: ValidTimeRange,
     #[schema(examples(313))]
     pub scrobbles: u32,
 }
@@ -68,7 +68,7 @@ pub struct PulseEntry {
 #[derive(Serialize, ToSchema, Clone, Debug)]
 pub struct PerformanceEntry {
     #[schema(value_type = String, examples("2024"))]
-    pub time_range: TimeRange,
+    pub time_range: ValidTimeRange,
     #[schema(examples(3))]
     pub rank: u32,
 }

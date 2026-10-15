@@ -20,7 +20,6 @@ use crate::entity::{
     AlbumRead, ArtistRead, TrackRead, ScrobbleRead,
     ScrobbleWrite,
 };
-use crate::timeranges::TimeRange;
 use crate::uri::{
     PathEntity, QueryLimitAlbum, QueryLimitArtist, QueryLimitTrack, QueryPagination,
     QueryTimerange, QueryTimesteps,
@@ -262,7 +261,7 @@ async fn charts_tracks(
     let timerange = params_time.to_timerange()?;
     let artist_id = params_limit_artist.to_artist_id();
     let album_id = params_limit_album.to_album_id();
-    let tracks = database::repository::charts_tracks(timerange, artist_id, album_id).await?;
+    let tracks = database::repository::charts_tracks(&timerange, artist_id, album_id).await?;
     Ok((
         StatusCode::OK,
         Json(Charts {
@@ -291,7 +290,7 @@ async fn charts_artists(
     Query(params_time): Query<QueryTimerange>,
 ) -> Result<(StatusCode, Json<Charts<ArtistRead>>), MalojaError> {
     let timerange = params_time.to_timerange()?;
-    let artists = database::repository::charts_artists(timerange).await?;
+    let artists = database::repository::charts_artists(&timerange).await?;
     Ok((
         StatusCode::OK,
         Json(Charts {
@@ -322,7 +321,7 @@ async fn charts_albums(
 ) -> Result<(StatusCode, Json<Charts<AlbumRead>>), MalojaError> {
     let timerange = params_time.to_timerange()?;
     let artist_id = params_limit_artist.to_artist_id();
-    let albums = database::repository::charts_albums(timerange, artist_id).await?;
+    let albums = database::repository::charts_albums(&timerange, artist_id).await?;
     Ok((
         StatusCode::OK,
         Json(Charts {
@@ -359,7 +358,7 @@ async fn scrobbles(
     let album_id = params_limit_album.to_album_id();
     let track_id = params_limit_track.to_track_id();
     let scrobbles =
-        database::repository::scrobbles(timerange, artist_id, album_id, track_id, true).await?;
+        database::repository::scrobbles(&timerange, artist_id, album_id, track_id, true).await?;
     let paginated_scrobbles = params_pagination.paginate_results(scrobbles);
     Ok((StatusCode::OK, Json(paginated_scrobbles)))
 }
@@ -383,7 +382,7 @@ async fn pulse(
     Query(params_pagination): Query<QueryPagination>,
 ) -> Result<(StatusCode, Json<Paginated<PulseEntry>>), MalojaError> {
     let timerange = params_time.to_timerange()?;
-    let subranges: Vec<TimeRange> = timerange.get_subranges(params_timesteps.to_rangetype()?);
+    let subranges = timerange.get_subranges(params_timesteps.to_rangetype()?);
     let artist_id = params_limit_artist.to_artist_id();
     let album_id = params_limit_album.to_album_id();
     let track_id = params_limit_track.to_track_id();

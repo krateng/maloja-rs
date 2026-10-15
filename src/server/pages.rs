@@ -5,7 +5,7 @@ use crate::entity::album::AlbumRead;
 use crate::entity::artist::ArtistRead;
 use crate::entity::scrobble::ScrobbleRead;
 use crate::entity::track::TrackRead;
-use crate::timeranges::{RangeType, TimeRange, ALL_TIME};
+use crate::timeranges::{RangeType, ValidTimeRange, ALL_TIME};
 use crate::uri::{
     EntityLimit, MalojaQuery, PathEntity, QueryLimitAlbum, QueryLimitArtist, QueryLimitTrack,
     QueryTimerange, QueryTimesteps,
@@ -31,8 +31,8 @@ mod filters {
 const RANGE_TYPES: [RangeType; 4] =
     [RangeType::Year, RangeType::Month, RangeType::Week, RangeType::Day];
 
-fn get_last_ranges(amount: usize) -> Vec<(RangeType, Vec<TimeRange>)> {
-    let range_types_and_ranges: Vec<(RangeType, Vec<TimeRange>)> = RANGE_TYPES
+fn get_last_ranges(amount: usize) -> Vec<(RangeType, Vec<ValidTimeRange>)> {
+    let range_types_and_ranges: Vec<(RangeType, Vec<ValidTimeRange>)> = RANGE_TYPES
         .into_iter()
         .map(|range_type| {
             // get the last ranges for each type
@@ -45,8 +45,8 @@ fn get_last_ranges(amount: usize) -> Vec<(RangeType, Vec<TimeRange>)> {
     range_types_and_ranges
 }
 
-fn get_preset_ranges() -> Vec<TimeRange> {
-    let mut result: Vec<TimeRange> =
+fn get_preset_ranges() -> Vec<ValidTimeRange> {
+    let mut result: Vec<ValidTimeRange> =
         RANGE_TYPES.into_iter().map(|range_type| range_type.get_current()).collect();
     result.insert(0, ALL_TIME);
     result
@@ -66,9 +66,9 @@ struct ArtistPage {
 pub async fn info_artist(Path(params_path): Path<PathEntity>) -> Response {
     let result = database::repository::artist_info(params_path.id).await.unwrap();
     let tracks =
-        database::repository::charts_tracks(ALL_TIME, Some(result.id), None).await.unwrap();
+        database::repository::charts_tracks(&ALL_TIME, Some(result.id), None).await.unwrap();
     let scrobbles =
-        database::repository::scrobbles(ALL_TIME, Some(result.id), None, None, true).await.unwrap();
+        database::repository::scrobbles(&ALL_TIME, Some(result.id), None, None, true).await.unwrap();
 
     let range_types_and_ranges = get_last_ranges(12);
     // async closures unstable
@@ -120,7 +120,7 @@ struct TrackPage {
 pub async fn info_track(Path(params_path): Path<PathEntity>) -> Response {
     let result = database::repository::track_info(params_path.id).await.unwrap();
     let scrobbles =
-        database::repository::scrobbles(ALL_TIME, None, None, Some(result.id), true).await.unwrap();
+        database::repository::scrobbles(&ALL_TIME, None, None, Some(result.id), true).await.unwrap();
 
     let range_types_and_ranges = get_last_ranges(12);
     let mut pulses = vec![];
@@ -165,9 +165,9 @@ struct AlbumPage {
 pub async fn info_album(Path(params_path): Path<PathEntity>) -> Response {
     let result = database::repository::album_info(params_path.id).await.unwrap();
     let tracks =
-        database::repository::charts_tracks(ALL_TIME, None, Some(result.id)).await.unwrap();
+        database::repository::charts_tracks(&ALL_TIME, None, Some(result.id)).await.unwrap();
     let scrobbles =
-        database::repository::scrobbles(ALL_TIME, None, Some(result.id), None, true).await.unwrap();
+        database::repository::scrobbles(&ALL_TIME, None, Some(result.id), None, true).await.unwrap();
 
     let range_types_and_ranges = get_last_ranges(12);
     let mut pulses = vec![];
@@ -204,11 +204,11 @@ pub async fn info_album(Path(params_path): Path<PathEntity>) -> Response {
 struct PulsePage {
     config: &'static MalojaConfig,
     pulse: Vec<PulseEntry>,
-    timerange: TimeRange,
+    timerange: ValidTimeRange,
     timestep: RangeType,
     entity_limit: EntityLimit,
     preset_steps: Vec<RangeType>,
-    preset_ranges: Vec<TimeRange>,
+    preset_ranges: Vec<ValidTimeRange>,
 }
 pub async fn pulse(
     Query(params_timesteps): Query<QueryTimesteps>,
@@ -258,11 +258,11 @@ pub async fn pulse(
 struct PerformancePage {
     config: &'static MalojaConfig,
     performance: Vec<PerformanceEntry>,
-    timerange: TimeRange,
+    timerange: ValidTimeRange,
     timestep: RangeType,
     entity_limit: EntityLimit,
     preset_steps: Vec<RangeType>,
-    preset_ranges: Vec<TimeRange>,
+    preset_ranges: Vec<ValidTimeRange>,
 }
 pub async fn performance(
     Query(params_timesteps): Query<QueryTimesteps>,
@@ -313,8 +313,8 @@ struct ScrobblesPage {
     config: &'static MalojaConfig,
     scrobbles: Vec<ScrobbleRead>,
     entity_limit: EntityLimit,
-    timerange: TimeRange,
-    preset_ranges: Vec<TimeRange>,
+    timerange: ValidTimeRange,
+    preset_ranges: Vec<ValidTimeRange>,
 }
 pub async fn scrobbles(
     Query(params_artist): Query<QueryLimitArtist>,
@@ -324,7 +324,7 @@ pub async fn scrobbles(
 ) -> Response {
     let timerange = params_timerange.to_timerange().unwrap();
     let scrobbles = database::repository::scrobbles(
-        timerange.clone(),
+        &timerange,
         params_artist.to_artist_id(),
         params_album.to_album_id(),
         params_track.to_track_id(),

@@ -3,10 +3,13 @@ use crate::database::views::{Paginated, PaginationInfo};
 use crate::entity::album::AlbumRead;
 use crate::entity::artist::ArtistRead;
 use crate::entity::track::TrackRead;
-use crate::timeranges::{BaseTimeRange, RangeType, TimeRange, ALL_TIME};
+use crate::timeranges::{RangeType, ValidTimeRange, ALL_TIME};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::cmp::min;
+use std::collections::HashMap;
+use std::convert::identity;
+use sea_query::Iden;
 use utoipa::IntoParams;
 
 // Every category of query / path arguments should have struct that converts both to and from the backend object that we use to represent its meaning
@@ -67,79 +70,23 @@ pub struct QueryTimerange {
 impl MalojaQuery for QueryTimerange {}
 
 impl QueryTimerange {
-    pub fn to_timerange(&self) -> Result<TimeRange, MalojaError> {
+    pub fn to_timerange(&self) -> Result<ValidTimeRange, MalojaError> {
         match (&self.during, &self.from, &self.to) {
-            (Some(during), None, None) => Ok(TimeRange::Simple(Self::match_string(during)?)),
-            (None, Some(from), Some(to)) => {
-                let tr = TimeRange::Composite { start: Some(Self::match_string(from)?), end: Some(Self::match_string(to)?) };
-                match tr.validate() {
-                    true => Ok(tr),
-                    false => Err(MalojaError::TimeError {
-                        message: "From range must be before to range".parse().unwrap()
-                    })
-                }
-            },
-            (None, Some(from), None) => Ok(TimeRange::Composite { start: Some(Self::match_string(from)?), end: None }),
-            (None, None, Some(to)) => Ok(TimeRange::Composite { start: None, end: Some(Self::match_string(to)?) }),
-            (None, None, None) => Ok(ALL_TIME),
+            (Some(during), None, None) => ValidTimeRange::from_string(during),
+            (None, from, to) => ValidTimeRange::from_start_and_end_string(from.as_deref(), to.as_deref()),
             _ => Err(MalojaError::QueryError {
                 message: "Can either specify a timerange with during, or start and end with from and to; not combine them".to_string(),
             })
         }
     }
-
-    fn match_string(input: &str) -> Result<BaseTimeRange, MalojaError> {
-        if let Some(caps) = Regex::new(r"^(\d{3,4})$").unwrap().captures(input) {
-            return Ok(BaseTimeRange::Year { year: caps[1].parse().unwrap() });
-        }
-        if let Some(caps) = Regex::new(r"^(\d{3,4})/(1[0-2]|0?[1-9])$").unwrap().captures(input) {
-            return Ok(BaseTimeRange::Month {
-                year: caps[1].parse().unwrap(),
-                month: caps[2].parse().unwrap(),
-            });
-        }
-        if let Some(caps) = Regex::new(r"^(\d{3,4})/(1[0-2]|0?[1-9])/(3[01]|[12][0-9]|0?[1-9])$")
-            .unwrap()
-            .captures(input)
-        {
-            return Ok(BaseTimeRange::Day {
-                year: caps[1].parse().unwrap(),
-                month: caps[2].parse().unwrap(),
-                day: caps[3].parse().unwrap(),
-            });
-        }
-        if let Some(caps) =
-            Regex::new(r"^(\d{3,4})w(5[0-2]|[1-4][0-9]|[1-9])$").unwrap().captures(input)
-        {
-            return Ok(BaseTimeRange::Week {
-                year: caps[1].parse().unwrap(),
-                week: caps[2].parse().unwrap(),
-            });
-        }
-        Err(MalojaError::ParseError { message: "Timerange could not be parsed".to_string() })
-    }
 }
-impl TimeRange {
+impl ValidTimeRange {
     pub fn to_query(&self) -> QueryTimerange {
-        match self {
-            TimeRange::Simple(base) => {
-                QueryTimerange { from: None, to: None, during: Some(Self::base_to_str(base)) }
-            }
-            TimeRange::Composite { start, end } => QueryTimerange {
-                from: start.clone().map(|x| Self::base_to_str(&x)),
-                to: end.clone().map(|x| Self::base_to_str(&x)),
-                during: None,
-            },
-            TimeRange::Infinite => QueryTimerange { from: None, to: None, during: None },
-        }
-    }
-
-    fn base_to_str(input: &BaseTimeRange) -> String {
-        match input {
-            BaseTimeRange::Day { year, month, day } => format!("{}/{}/{}", year, month, day),
-            BaseTimeRange::Week { year, week } => format!("{}w{}", year, week),
-            BaseTimeRange::Month { year, month } => format!("{}/{}", year, month),
-            BaseTimeRange::Year { year } => format!("{}", year),
+        let strings = self.to_strings();
+        QueryTimerange {
+            during: strings.0,
+            from: strings.1,
+            to: strings.2,
         }
     }
 }
@@ -153,15 +100,22 @@ pub struct QueryTimesteps {
 }
 impl MalojaQuery for QueryTimesteps {}
 
+const RANGE_IDENTIFIERS: [(&str, RangeType); 4] = [
+    ("day", RangeType::Day),
+    ("week", RangeType::Week),
+    ("month", RangeType::Month),
+    ("year", RangeType::Year),
+];
+
 impl QueryTimesteps {
     pub fn to_rangetype(&self) -> Result<RangeType, MalojaError> {
-        match self.step.as_str() {
-            "day" => Ok(RangeType::Day),
-            "week" => Ok(RangeType::Week),
-            "month" => Ok(RangeType::Month),
-            "year" => Ok(RangeType::Year),
-            _ => Err(MalojaError::ParseError { message: "Unknown range type".to_string() }),
-        }
+        let map: HashMap<&str, RangeType> = RANGE_IDENTIFIERS.iter().cloned().collect();
+        let keys: Vec<&str> = map.keys().cloned().collect();
+        map.get(self.step.as_str())
+            .cloned()
+            .ok_or(
+                MalojaError::ParseError { message: format!("Valid range types are: {}", keys.join(", ")) }
+            )
     }
 }
 impl RangeType {
