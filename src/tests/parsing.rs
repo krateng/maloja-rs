@@ -60,13 +60,13 @@ fn ignore_capitalization_data() -> Vec<ScrobbleWrite> {
 
 #[tokio::test]
 async fn ignore_capitalization_separate() {
-    common().await;
+    let state = common().await;
     let writes = ignore_capitalization_data();
     let writes_amount = writes.len();
     for write in writes {
-        database::repository::create_scrobbles(vec![write], false).await.unwrap();
+        state.db.create_scrobbles(vec![write], false).await.unwrap();
     }
-    let scrobbles = database::repository::scrobbles(
+    let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
@@ -76,11 +76,11 @@ async fn ignore_capitalization_separate() {
 
 #[tokio::test]
 async fn ignore_capitalization_batch() {
-    common().await;
+    let state = common().await;
     let writes = ignore_capitalization_data();
     let writes_amount = writes.len();
-    database::repository::create_scrobbles(writes, false).await.unwrap();
-    let scrobbles = database::repository::scrobbles(
+    state.db.create_scrobbles(writes, false).await.unwrap();
+    let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
@@ -99,13 +99,13 @@ fn ignore_artist_order_data() -> Vec<ScrobbleWrite> {
 
 #[tokio::test]
 async fn ignore_artist_order_separate() {
-    common().await;
+    let state = common().await;
     let writes = ignore_artist_order_data();
     let writes_amount = writes.len();
     for write in writes {
-        database::repository::create_scrobbles(vec![write], false).await.unwrap();
+        state.db.create_scrobbles(vec![write], false).await.unwrap();
     }
-    let scrobbles = database::repository::scrobbles(
+    let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
@@ -115,11 +115,11 @@ async fn ignore_artist_order_separate() {
 
 #[tokio::test]
 async fn ignore_artist_order_batch() {
-    common().await;
+    let state = common().await;
     let writes = ignore_artist_order_data();
     let writes_amount = writes.len();
-    database::repository::create_scrobbles(writes, false).await.unwrap();
-    let scrobbles = database::repository::scrobbles(
+    state.db.create_scrobbles(writes, false).await.unwrap();
+    let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
@@ -140,13 +140,13 @@ fn ignore_duplicate_artists_data() -> Vec<ScrobbleWrite> {
 
 #[tokio::test]
 async fn ignore_duplicate_artists_separate() {
-    common().await;
+    let state = common().await;
     let writes = ignore_duplicate_artists_data();
     let writes_amount = writes.len();
     for write in writes {
-        database::repository::create_scrobbles(vec![write], false).await.unwrap();
+        state.db.create_scrobbles(vec![write], false).await.unwrap();
     }
-    let scrobbles = database::repository::scrobbles(
+    let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
@@ -156,11 +156,11 @@ async fn ignore_duplicate_artists_separate() {
 
 #[tokio::test]
 async fn ignore_duplicate_artists_batch() {
-    common().await;
+    let state = common().await;
     let writes = ignore_duplicate_artists_data();
     let writes_amount = writes.len();
-    database::repository::create_scrobbles(writes, false).await.unwrap();
-    let scrobbles = database::repository::scrobbles(
+    state.db.create_scrobbles(writes, false).await.unwrap();
+    let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
@@ -191,13 +191,13 @@ fn parse_multi_artists_data() -> Vec<ScrobbleWrite> {
 
 #[tokio::test]
 async fn parse_multi_artists_separate() {
-    common().await;
+    let state = common().await;
     let writes = parse_multi_artists_data();
     let writes_amount = writes.len();
     for write in writes {
-        database::repository::create_scrobbles(vec![write], false).await.unwrap();
+        state.db.create_scrobbles(vec![write], false).await.unwrap();
     }
-    let scrobbles = database::repository::scrobbles(
+    let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
@@ -207,11 +207,11 @@ async fn parse_multi_artists_separate() {
 
 #[tokio::test]
 async fn parse_multi_artists_batch() {
-    common().await;
+    let state = common().await;
     let writes = parse_multi_artists_data();
     let writes_amount = writes.len();
-    database::repository::create_scrobbles(writes, false).await.unwrap();
-    let scrobbles = database::repository::scrobbles(
+    state.db.create_scrobbles(writes, false).await.unwrap();
+    let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
@@ -221,13 +221,13 @@ async fn parse_multi_artists_batch() {
 
 #[tokio::test]
 async fn provide_artist_by_id() {
-    common().await;
+    let state = common().await;
     let writes = create_scrobble_writes(vec![
         (vec!["Jihyo"], "The Elven Priestess"),
     ]);
-    database::repository::create_scrobbles(writes, false).await.unwrap();
+    state.db.create_scrobbles(writes, false).await.unwrap();
 
-    let scrobbles = database::repository::scrobbles(
+    let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), 1, "The incorrect amount of scrobbles has been generated");
@@ -257,8 +257,8 @@ async fn provide_artist_by_id() {
         listen_duration: None,
     };
 
-    database::repository::create_scrobbles(vec![new_scrobble], false).await.unwrap();
-    let scrobbles = database::repository::scrobbles(
+    state.db.create_scrobbles(vec![new_scrobble], false).await.unwrap();
+    let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), 2, "The incorrect amount of scrobbles has been generated");
@@ -268,13 +268,13 @@ async fn provide_artist_by_id() {
 
 #[tokio::test]
 async fn provide_track_by_id() {
-    common().await;
+    let state = common().await;
     let writes = create_scrobble_writes(vec![
         (vec!["Jihyo"], "The Elven Priestess"),
     ]);
-    database::repository::create_scrobbles(writes, false).await.unwrap();
+    state.db.create_scrobbles(writes, false).await.unwrap();
 
-    let scrobbles = database::repository::scrobbles(
+    let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), 1, "The incorrect amount of scrobbles has been generated");
@@ -295,8 +295,8 @@ async fn provide_track_by_id() {
         listen_duration: None,
     };
 
-    database::repository::create_scrobbles(vec![new_scrobble], false).await.unwrap();
-    let scrobbles = database::repository::scrobbles(
+    state.db.create_scrobbles(vec![new_scrobble], false).await.unwrap();
+    let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), 2, "The incorrect amount of scrobbles has been generated");

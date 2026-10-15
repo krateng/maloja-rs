@@ -1,4 +1,4 @@
-use crate::database;
+use crate::{database, AppState};
 use crate::entity::artist::ArtistWrite;
 use crate::entity::scrobble::ScrobbleWrite;
 use crate::entity::track::TrackWrite;
@@ -58,7 +58,7 @@ const SONG_NOUNS_PLURAL: &[&str] = &[
     "Dreams", "Spirits", "Secrets", "Storms",
 ];
 
-pub async fn fixture(amount_artists: u32, amount_tracks: u32, amount_scrobbles: u32) {
+pub async fn fixture(amount_artists: u32, amount_tracks: u32, amount_scrobbles: u32, state: &AppState) {
     let mut rng = rand::rng();
 
     let mut artists = vec![];
@@ -126,5 +126,5 @@ pub async fn fixture(amount_artists: u32, amount_tracks: u32, amount_scrobbles: 
         timestamp += rng.random_range(200..2000);
     }
 
-    database::repository::create_scrobbles(scrobbles, false).await.unwrap();
+    state.db.create_scrobbles(scrobbles, false).await.unwrap();
 }

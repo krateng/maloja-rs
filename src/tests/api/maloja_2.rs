@@ -1,3 +1,4 @@
+use std::fs::read;
 use crate::server::create_app;
 use crate::tests::common;
 use crate::tests::fixtures::fixture;
@@ -9,8 +10,14 @@ use axum::{
 use http_body_util::BodyExt;
 use serde_json::Value;
 use tower::ServiceExt;
+use crate::AppState;
 
 const SERVER_ADDRESS: &str = "http://localhost:42010/apis/maloja_2";
+
+async fn setup_test_router(state: &AppState) -> Router {
+    let router = create_app().await;
+    router.with_state(state.clone())
+}
 
 async fn get_json_response(app: Router, path: &str) -> Value {
     let url = format!("{}{}", SERVER_ADDRESS, path);
@@ -23,11 +30,11 @@ async fn get_json_response(app: Router, path: &str) -> Value {
 
 #[tokio::test]
 async fn get_scrobbles_all() {
-    common().await;
+    let state = common().await;
+    let app = setup_test_router(&state).await;
 
-    fixture(5, 5, 3).await;
+    fixture(5, 5, 3, &state).await;
 
-    let app = create_app().await;
     let result = get_json_response(app, "/scrobbles").await;
     assert_eq!(result["pagination"]["items_total"], 3);
 }

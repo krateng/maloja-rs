@@ -22,7 +22,11 @@ pub async fn setup(headless: bool, state: &AppState) -> Result<(), Box<dyn std::
     // but per default we will use a ram directory
 
 
-    configuration::logging::setup_logger(state)?;
+    if cfg!(test) {}
+    else {
+        configuration::logging::setup_logger(state)?;
+    }
+
     if !headless {
         debug_info(state);
     }

@@ -2,19 +2,14 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::PathBuf;
 use sea_query::Iden;
+use utoipa::openapi::path::ParameterIn::Path;
 use crate::database;
 use crate::database::import::import;
 use crate::entity::{AlbumRead, ArtistRead, TrackRead};
 use crate::tests::common;
 use crate::timeranges::ALL_TIME;
 
-async fn shared() -> (PathBuf, PathBuf) {
-    common().await;
-    let target_folder = PathBuf::from("./testing/data/import");
-    fs::create_dir_all(&target_folder).unwrap();
-    let file_folder = PathBuf::from("./testing/input/import");
-    (file_folder, target_folder)
-}
+const TEST_FILES_FOLDER: &str = "/testing/data/import";
 
 fn assert_track_title(track: &TrackRead, expected: &str) {
     assert_eq!(track.title, expected);
@@ -50,15 +45,16 @@ fn assert_album_artists(track: &TrackRead, expected: Option<Vec<&str>>) {
 
 #[tokio::test]
 async fn import_maloja() {
-    let (src, target) = shared().await;
+    let state = common().await;
+
     fs::copy(
-        src.join("maloja_export.json"),
-        target.join("maloja_export.json"),
+        PathBuf::from(TEST_FILES_FOLDER).join("maloja_export.json"),
+        state.folders.data.join("import").join("maloja_export.json"),
     ).unwrap();
 
-    import().await.unwrap();
+    import(&state).await.unwrap();
 
-    let scrobbles = database::repository::scrobbles(
+    let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
     ).await.unwrap();
 
