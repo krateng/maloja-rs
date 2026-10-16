@@ -2,6 +2,7 @@ pub mod errors;
 pub mod import;
 pub mod repository;
 pub mod views;
+mod transform;
 
 use crate::database::errors::MalojaError;
 use crate::entity::{

@@ -1,5 +1,5 @@
 use crate::database::errors::MalojaError;
-use crate::database::repository::{scrobble_model_to_read, MalojaDB};
+use crate::database::repository::{MalojaDB};
 use crate::entity::scrobble::{
     Column as ScrobbleColumn, Entity as ScrobbleEntity, Model as ScrobbleModel,
     Relation as ScrobbleRelation, ScrobbleRead,
@@ -12,6 +12,7 @@ use crate::timeranges::{ValidTimeRange};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QueryOrder, QuerySelect, QueryTrait, RelationTrait};
 use sea_query::JoinType;
 use crate::database::repository::helpers::{ensure_single_filter, SingleFilter};
+use crate::database::transform::models_to_reads::scrobble_model_to_read;
 
 impl MalojaDB {
     pub async fn scrobbles(

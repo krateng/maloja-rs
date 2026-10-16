@@ -9,7 +9,8 @@ use crate::entity::{
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use std::collections::{HashMap, HashSet};
 use crate::database::errors::MalojaError;
-use crate::database::repository::{album_model_to_read, artist_model_to_read, scrobble_model_to_read, track_model_to_read, MalojaDB};
+use crate::database::repository::{MalojaDB};
+use crate::database::transform::models_to_reads::{album_model_to_read, artist_model_to_read, scrobble_model_to_read, track_model_to_read};
 
 pub type TrackArtistFull = (TrackArtistModel, ArtistModel);
 pub type AlbumArtistFull = (AlbumArtistModel, ArtistModel);
