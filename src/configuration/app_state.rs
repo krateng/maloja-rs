@@ -1,10 +1,8 @@
 use std::{env, fs};
-use std::fs::{remove_file, OpenOptions};
+use std::fs::{exists, remove_file, OpenOptions};
 use std::path::PathBuf;
 use confique::Config;
 use log::warn;
-use sea_orm::DatabaseConnection;
-use crate::configuration::logging::{display_envvar, display_path};
 use crate::configuration::config::{get_config_file_path, MalojaConfig};
 use crate::database::errors::MalojaError;
 use crate::database::repository::MalojaDB;
@@ -24,57 +22,15 @@ pub struct ApplicationFolders {
     pub logs: PathBuf,
 }
 
-fn ensure_all_folders(folders: &ApplicationFolders) -> Result<(), MalojaError> {
-    let mut success: bool = true;
-
-    let folder_logic: [(&PathBuf, &str, &str, bool); 3] = [
-        (&folders.data, "MALOJA_DATA_PATH", "/var/lib/maloja", true),
-        (&folders.config, "MALOJA_CONFIG_PATH", "/etc/maloja", false),
-        (&folders.logs, "MALOJA_LOG_PATH", "/var/log/maloja", true),
-    ];
-
-    for (folder, envvar, _default, writable) in folder_logic.iter() {
-        match fs::create_dir_all(folder) {
-            Ok(_) => {
-                if *writable {
-                    let test_file = folder.join(".write_test");
-                    let result = OpenOptions::new().write(true).create(true).open(&test_file);
-                    match result {
-                        Ok(_) => {
-                            let _ = remove_file(test_file);
-                        }
-                        Err(e) => {
-                            println!(
-                                "No write access to {}: {}. Make sure to set the environment variable {} to a writable directory.",
-                                display_path(folder),
-                                e,
-                                display_envvar(envvar)
-                            );
-                            success = false;
-                        }
-                    }
-                }
-            }
-            Err(e) => {
-                // logging isn't setup yet
-                println!(
-                    "Failed to create {}: {}. Make sure to set the environment variable {} to a writable directory.",
-                    display_path(folder),
-                    e,
-                    display_envvar(envvar)
-                );
-                success = false;
-            }
-        }
-    }
-    if !success {
-        panic!("Failed to initialize application folders");
+async fn ensure_folder(folder: &PathBuf, write: bool) -> Result<(), MalojaError> {
+    fs::create_dir_all(folder)?;
+    if write {
+        let test_file = folder.join(".write_test");
+        OpenOptions::new().write(true).create(true).truncate(true).open(&test_file)?;
+        remove_file(&test_file)?;
     }
     Ok(())
-
-    // TODO makes this all errors
 }
-
 
 
 impl AppState {
@@ -90,7 +46,17 @@ impl AppState {
             ),
             logs: PathBuf::from(env::var("MALOJA_LOG_PATH").unwrap_or(String::from("/var/log/maloja"))),
         });
-        ensure_all_folders(&af)?;
+
+        ensure_folder(&af.data, true).await?;
+        ensure_folder(&af.logs, true).await?;
+        ensure_folder(&af.config, false).await?;
+
+        if exists(af.data.join("malojadb.sqlite"))? {
+            return Err(MalojaError::FilesystemError {
+                message: "Old Maloja installation found. Please use a clean directory and import your data manually.".to_string()
+            });
+        }
+
         let mc = MalojaConfig::from_file(get_config_file_path(&af)).unwrap_or_else(|_| {
             // we just load the default values
             warn!("Configuration file loading failed");
