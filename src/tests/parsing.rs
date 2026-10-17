@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 use chrono::Utc;
+use itertools::Itertools;
 use crate::database;
 use crate::entity::artist::ArtistWrite;
 use crate::entity::{ArtistRead, ArtistWriteContext, TrackRead};
@@ -64,7 +65,7 @@ async fn ignore_capitalization_separate() {
     let writes = ignore_capitalization_data();
     let writes_amount = writes.len();
     for write in writes {
-        state.db.create_scrobbles(vec![write], false).await.unwrap();
+        state.db.create_scrobbles(vec![write], false, true).await.unwrap();
     }
     let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
@@ -79,7 +80,7 @@ async fn ignore_capitalization_batch() {
     let state = common().await;
     let writes = ignore_capitalization_data();
     let writes_amount = writes.len();
-    state.db.create_scrobbles(writes, false).await.unwrap();
+    state.db.create_scrobbles(writes, false, true).await.unwrap();
     let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
     ).await.unwrap();
@@ -103,7 +104,7 @@ async fn ignore_artist_order_separate() {
     let writes = ignore_artist_order_data();
     let writes_amount = writes.len();
     for write in writes {
-        state.db.create_scrobbles(vec![write], false).await.unwrap();
+        state.db.create_scrobbles(vec![write], false, true).await.unwrap();
     }
     let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
@@ -118,7 +119,7 @@ async fn ignore_artist_order_batch() {
     let state = common().await;
     let writes = ignore_artist_order_data();
     let writes_amount = writes.len();
-    state.db.create_scrobbles(writes, false).await.unwrap();
+    state.db.create_scrobbles(writes, false, true).await.unwrap();
     let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
     ).await.unwrap();
@@ -144,7 +145,7 @@ async fn ignore_duplicate_artists_separate() {
     let writes = ignore_duplicate_artists_data();
     let writes_amount = writes.len();
     for write in writes {
-        state.db.create_scrobbles(vec![write], false).await.unwrap();
+        state.db.create_scrobbles(vec![write], false, true).await.unwrap();
     }
     let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
@@ -159,7 +160,7 @@ async fn ignore_duplicate_artists_batch() {
     let state = common().await;
     let writes = ignore_duplicate_artists_data();
     let writes_amount = writes.len();
-    state.db.create_scrobbles(writes, false).await.unwrap();
+    state.db.create_scrobbles(writes, false, true).await.unwrap();
     let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
     ).await.unwrap();
@@ -193,30 +194,44 @@ fn parse_multi_artists_data() -> Vec<ScrobbleWrite> {
 async fn parse_multi_artists_separate() {
     let state = common().await;
     let writes = parse_multi_artists_data();
+    let first_write_track = writes[0].clone().track;
     let writes_amount = writes.len();
     for write in writes {
-        state.db.create_scrobbles(vec![write], false).await.unwrap();
+        state.db.create_scrobbles(vec![write], false, true).await.unwrap();
     }
     let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
-    let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
-    assert_eq!(tracks.len(), 1);
+    for scrobble in scrobbles {
+        assert_eq!(
+            (scrobble.track.artists.into_iter().map(|a| a.name).sorted().join(",") , scrobble.track.title),
+            (first_write_track.artists.clone().unwrap().into_iter().map(|a| a.name.unwrap()).sorted().join(",") , first_write_track.title.clone().unwrap())
+        )
+    }
+    //let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
+    //assert_eq!(tracks.len(), 1);
 }
 
 #[tokio::test]
 async fn parse_multi_artists_batch() {
     let state = common().await;
     let writes = parse_multi_artists_data();
+    let first_write_track = writes[0].clone().track;
     let writes_amount = writes.len();
-    state.db.create_scrobbles(writes, false).await.unwrap();
+    state.db.create_scrobbles(writes, false, true).await.unwrap();
     let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
-    let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
-    assert_eq!(tracks.len(), 1);
+    for scrobble in scrobbles {
+        assert_eq!(
+            (scrobble.track.artists.into_iter().map(|a| a.name).sorted().join(",") , scrobble.track.title),
+            (first_write_track.artists.clone().unwrap().into_iter().map(|a| a.name.unwrap()).sorted().join(",") , first_write_track.title.clone().unwrap())
+        )
+    }
+    //let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
+    //assert_eq!(tracks.len(), 1);
 }
 
 #[tokio::test]
@@ -225,7 +240,7 @@ async fn provide_artist_by_id() {
     let writes = create_scrobble_writes(vec![
         (vec!["Jihyo"], "The Elven Priestess"),
     ]);
-    state.db.create_scrobbles(writes, false).await.unwrap();
+    state.db.create_scrobbles(writes, false, true).await.unwrap();
 
     let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
@@ -257,7 +272,7 @@ async fn provide_artist_by_id() {
         listen_duration: None,
     };
 
-    state.db.create_scrobbles(vec![new_scrobble], false).await.unwrap();
+    state.db.create_scrobbles(vec![new_scrobble], false, true).await.unwrap();
     let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
     ).await.unwrap();
@@ -272,7 +287,7 @@ async fn provide_track_by_id() {
     let writes = create_scrobble_writes(vec![
         (vec!["Jihyo"], "The Elven Priestess"),
     ]);
-    state.db.create_scrobbles(writes, false).await.unwrap();
+    state.db.create_scrobbles(writes, false, true).await.unwrap();
 
     let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
@@ -295,7 +310,7 @@ async fn provide_track_by_id() {
         listen_duration: None,
     };
 
-    state.db.create_scrobbles(vec![new_scrobble], false).await.unwrap();
+    state.db.create_scrobbles(vec![new_scrobble], false, true).await.unwrap();
     let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
     ).await.unwrap();

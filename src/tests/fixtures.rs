@@ -126,5 +126,5 @@ pub async fn fixture(amount_artists: u32, amount_tracks: u32, amount_scrobbles: 
         timestamp += rng.random_range(200..2000);
     }
 
-    state.db.create_scrobbles(scrobbles, false).await.unwrap();
+    state.db.create_scrobbles(scrobbles, false, false).await.unwrap();
 }

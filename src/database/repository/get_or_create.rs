@@ -6,6 +6,7 @@ use sea_orm::ActiveValue::Set;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, NotSet, QueryFilter, TransactionSession, TransactionTrait};
 use std::collections::{HashMap, HashSet};
 use itertools::{Either, Itertools};
+use crate::configuration::rules::apply_track_rules;
 use crate::database::repository::MalojaDB;
 use crate::database::transform::writes_to_models::{album_write_to_model, artist_write_to_model, scrobble_write_to_model, track_write_to_model};
 use crate::entity::album::UniqueAlbum;
@@ -309,7 +310,7 @@ impl MalojaDB {
 
         let map_to_unique: HashMap<TrackWrite, UniqueTrack> = input.into_iter()
             .map(|write| {
-                let unique = write.unique(&artist_map)?;
+                let unique =  write.unique(&artist_map)?;
                 Ok((write, unique))
             }).collect::<Result<HashMap<_, _>, MalojaError>>()?;
 
@@ -389,11 +390,15 @@ impl MalojaDB {
 
     #[allow(clippy::collapsible_else_if)]
     #[rustfmt::skip]
-    pub async fn create_scrobbles(&self, input: Vec<ScrobbleWrite>, _fail_on_existing: bool) -> Result<HashMap<ScrobbleWrite, i64>, MalojaError> {
+    pub async fn create_scrobbles(&self, input: Vec<ScrobbleWrite>, _fail_on_existing: bool, apply_rules: bool) -> Result<HashMap<ScrobbleWrite, i64>, MalojaError> {
         // this one is a bit different that the other entity ones because we never supply a scrobblewrite
         // as part of another entity to either create or fetch - scrobbles are only ever created (or patched?)
 
-        let scrobble_track_write_map: HashMap<ScrobbleWrite, TrackWrite> = input.clone().into_iter().map(|x| (x.clone(), x.track)).collect();
+        let mut scrobble_track_write_map: HashMap<ScrobbleWrite, TrackWrite> = input.clone().into_iter().map(|x| (x.clone(), x.track)).collect();
+        // slightly inelegant place to do this but pragmatic
+        if apply_rules {
+            scrobble_track_write_map = scrobble_track_write_map.into_iter().map(|(scrobble, track)| (scrobble, apply_track_rules(track)) ).collect();
+        }
         let track_writes: Vec<TrackWrite> = scrobble_track_write_map.iter().map(|(_, v)| v.clone()).collect();
         let track_id_map: HashMap<TrackWrite, u32> = self.get_or_create_tracks(track_writes).await?;
         let scrobble_track_id_map: HashMap<ScrobbleWrite, u32> = scrobble_track_write_map
@@ -432,8 +437,8 @@ impl MalojaDB {
         Ok(result)
     }
 
-    pub async fn create_scrobbles_return_reads(&self, input: Vec<ScrobbleWrite>, _fail_on_existing: bool) -> Result<Vec<ScrobbleRead>, MalojaError> {
-        let map = self.create_scrobbles(input.clone(), _fail_on_existing).await?;
+    pub async fn create_scrobbles_return_reads(&self, input: Vec<ScrobbleWrite>, _fail_on_existing: bool, apply_rules: bool) -> Result<Vec<ScrobbleRead>, MalojaError> {
+        let map = self.create_scrobbles(input.clone(), _fail_on_existing, apply_rules).await?;
         let reads_map: HashMap<i64, ScrobbleRead> = self.resolve_scrobble_ids(map.values().cloned().collect()).await?;
         let mut reads = vec![];
         for input_write in input {

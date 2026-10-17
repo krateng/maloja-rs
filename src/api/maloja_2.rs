@@ -428,6 +428,6 @@ async fn submit_scrobbles(
     State(state): State<AppState>,
     Json(scrobbles): Json<Vec<ScrobbleWrite>>
 ) -> Result<(StatusCode, Json<Vec<ScrobbleRead>>), MalojaError> {
-    let result = state.db.create_scrobbles_return_reads(scrobbles, true).await?;
+    let result = state.db.create_scrobbles_return_reads(scrobbles, true, true).await?;
     Ok((StatusCode::OK, Json(result)))
 }

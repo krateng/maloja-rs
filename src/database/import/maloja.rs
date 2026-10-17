@@ -97,7 +97,7 @@ pub async fn import_maloja(file: PathBuf, state: &AppState) -> Result<(), Maloja
         })
         .collect();
 
-    state.db.create_scrobbles(scrobbles, false).await?;
+    state.db.create_scrobbles(scrobbles, false, false).await?;
 
     Ok(())
 }
