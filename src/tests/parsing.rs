@@ -49,6 +49,17 @@ fn create_scrobble_writes(tracks: Vec<TrackInfo>) -> Vec<ScrobbleWrite> {
 
     writes
 }
+
+fn assert_same_track(read: &TrackRead, compare: &TrackRead) {
+    // for better debugging
+    assert_eq!(
+        (read.artists.clone().into_iter().map(|a| a.name).sorted().join(",") , read.title.clone()),
+        (compare.artists.clone().into_iter().map(|a| a.name).sorted().join(",") , compare.title.clone())
+    );
+    assert_eq!(read.id, compare.id);
+}
+
+
 fn ignore_capitalization_data() -> Vec<ScrobbleWrite> {
     let tracks: Vec<TrackInfo> = vec![
         (vec!["Jennie", "Lalisa"], "The Ballad of Ace LeBaron"),
@@ -71,8 +82,11 @@ async fn ignore_capitalization_separate() {
         &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
-    let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
-    assert_eq!(tracks.len(), 1);
+    for scrobble in scrobbles.iter() {
+        assert_same_track(&scrobble.track, &scrobbles[0].track);
+    }
+    //let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
+    //assert_eq!(tracks.len(), 1);
 }
 
 #[tokio::test]
@@ -85,8 +99,11 @@ async fn ignore_capitalization_batch() {
         &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
-    let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
-    assert_eq!(tracks.len(), 1);
+    for scrobble in scrobbles.iter() {
+        assert_same_track(&scrobble.track, &scrobbles[0].track);
+    }
+    //let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
+    //assert_eq!(tracks.len(), 1);
 }
 
 fn ignore_artist_order_data() -> Vec<ScrobbleWrite> {
@@ -110,8 +127,11 @@ async fn ignore_artist_order_separate() {
         &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
-    let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
-    assert_eq!(tracks.len(), 1);
+    for scrobble in scrobbles.iter() {
+        assert_same_track(&scrobble.track, &scrobbles[0].track);
+    }
+    //let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
+    //assert_eq!(tracks.len(), 1);
 }
 
 #[tokio::test]
@@ -124,8 +144,11 @@ async fn ignore_artist_order_batch() {
         &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
-    let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
-    assert_eq!(tracks.len(), 1);
+    for scrobble in scrobbles.iter() {
+        assert_same_track(&scrobble.track, &scrobbles[0].track);
+    }
+    //let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
+    //assert_eq!(tracks.len(), 1);
 }
 
 fn ignore_duplicate_artists_data() -> Vec<ScrobbleWrite> {
@@ -151,8 +174,11 @@ async fn ignore_duplicate_artists_separate() {
         &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
-    let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
-    assert_eq!(tracks.len(), 1);
+    for scrobble in scrobbles.iter() {
+        assert_same_track(&scrobble.track, &scrobbles[0].track);
+    }
+    //let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
+    //assert_eq!(tracks.len(), 1);
 }
 
 #[tokio::test]
@@ -165,8 +191,11 @@ async fn ignore_duplicate_artists_batch() {
         &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
-    let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
-    assert_eq!(tracks.len(), 1);
+    for scrobble in scrobbles.iter() {
+        assert_same_track(&scrobble.track, &scrobbles[0].track);
+    }
+    //let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
+    //assert_eq!(tracks.len(), 1);
 
 }
 
@@ -194,7 +223,6 @@ fn parse_multi_artists_data() -> Vec<ScrobbleWrite> {
 async fn parse_multi_artists_separate() {
     let state = common().await;
     let writes = parse_multi_artists_data();
-    let first_write_track = writes[0].clone().track;
     let writes_amount = writes.len();
     for write in writes {
         state.db.create_scrobbles(vec![write], false, true).await.unwrap();
@@ -203,11 +231,8 @@ async fn parse_multi_artists_separate() {
         &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
-    for scrobble in scrobbles {
-        assert_eq!(
-            (scrobble.track.artists.into_iter().map(|a| a.name).sorted().join(",") , scrobble.track.title),
-            (first_write_track.artists.clone().unwrap().into_iter().map(|a| a.name.unwrap()).sorted().join(",") , first_write_track.title.clone().unwrap())
-        )
+    for scrobble in scrobbles.iter() {
+        assert_same_track(&scrobble.track, &scrobbles[0].track);
     }
     //let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
     //assert_eq!(tracks.len(), 1);
@@ -217,18 +242,14 @@ async fn parse_multi_artists_separate() {
 async fn parse_multi_artists_batch() {
     let state = common().await;
     let writes = parse_multi_artists_data();
-    let first_write_track = writes[0].clone().track;
     let writes_amount = writes.len();
     state.db.create_scrobbles(writes, false, true).await.unwrap();
     let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
     ).await.unwrap();
     assert_eq!(scrobbles.len(), writes_amount, "The incorrect amount of scrobbles has been generated");
-    for scrobble in scrobbles {
-        assert_eq!(
-            (scrobble.track.artists.into_iter().map(|a| a.name).sorted().join(",") , scrobble.track.title),
-            (first_write_track.artists.clone().unwrap().into_iter().map(|a| a.name.unwrap()).sorted().join(",") , first_write_track.title.clone().unwrap())
-        )
+    for scrobble in scrobbles.iter() {
+        assert_same_track(&scrobble.track, &scrobbles[0].track);
     }
     //let tracks: HashSet<TrackRead> = scrobbles.into_iter().map(|scrobble| scrobble.track).collect();
     //assert_eq!(tracks.len(), 1);
