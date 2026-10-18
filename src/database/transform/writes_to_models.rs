@@ -12,6 +12,7 @@ pub fn artist_write_to_model(artist: ArtistWrite) -> ArtistActiveModel {
         name_normalized: Set(normalize(&*artist.name.expect("Cannot save artist without name."))),
         mbid: Set(artist.mbid),
         spotify_id: Set(artist.spotify_id),
+        parent_artist_id: NotSet,
     }
 }
 

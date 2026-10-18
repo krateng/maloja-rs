@@ -144,13 +144,11 @@ pub fn apply_artist_rules(mut writes: Vec<ArtistWriteContext>) -> Vec<ArtistWrit
 
 pub fn apply_track_rules(mut write: TrackWrite) -> TrackWrite {
     let rules = hard_coded_rules();
-    //println!("Before: {}", debug(&write));
     for rule in rules {
+        // TODO consider the implications of this order
         write = rule.apply_to_track(write);
-        write.artists = write.artists.map(|a| apply_artist_rules(a));
-        //println!("After rule: {:?}", debug(&write));
+        write.artists = write.artists.map(apply_artist_rules);
     }
-    //println!("Done!");
     write
 }
 

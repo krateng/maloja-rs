@@ -12,7 +12,7 @@ use super::{
 #[derive(Eq, PartialEq, Hash, Debug, Clone, DeriveEntityModel, Serialize)]
 #[sea_orm(table_name = "artists")]
 pub struct Model {
-    #[sea_orm(primary_key, auto_increment = true)]
+    #[sea_orm(primary_key, auto_increment = true, unique_key = "association")]
     pub id: u32,
 
     /// Canonical Artist name
@@ -27,12 +27,25 @@ pub struct Model {
 
     #[sea_orm(unique)]
     pub spotify_id: Option<String>,
+
+    #[sea_orm(unique_key = "association")]
+    // this should never be none, but we need to allow it so we can insert entities
+    // without knowing their own id yet
+    pub parent_artist_id: Option<u32>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(has_many = "super::track_artist::Entity")]
     TrackArtist,
+    #[sea_orm(
+        belongs_to = "Entity",
+        // we require the parent id to have itself as parent
+        // this makes sure we cant have chained associations
+        from = "(Column::ParentArtistId, Column::ParentArtistId)",
+        to = "(Column::Id, Column::ParentArtistId)",
+    )]
+    ParentArtist,
 }
 
 #[rustfmt::skip]

@@ -6,6 +6,7 @@ use sea_orm::ActiveValue::Set;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, NotSet, QueryFilter, TransactionSession, TransactionTrait};
 use std::collections::{HashMap, HashSet};
 use itertools::{Either, Itertools};
+use sea_query::Expr;
 use crate::configuration::rules::apply_track_rules;
 use crate::database::repository::MalojaDB;
 use crate::database::transform::writes_to_models::{album_write_to_model, artist_write_to_model, scrobble_write_to_model, track_write_to_model};
@@ -206,6 +207,14 @@ impl MalojaDB {
                 .expect("Uniques from insert map should be in the originally provided map")
                 .1 = Some(artist_id);
         }
+
+        // make sure all artists have parent artist set (not even filtering by new ones, if there are
+        // missing ones just fix them here)
+        Artist::update_many()
+            .col_expr(ArtistColumn::ParentArtistId, Expr::col(ArtistColumn::Id))
+            .filter(ArtistColumn::ParentArtistId.is_null())
+            .exec(&txn).await?;
+
         txn.commit().await?;
 
         mark_db_write();
@@ -338,6 +347,7 @@ impl MalojaDB {
         let unique_result_map = self.get_existing_track_ids(unique_set).await?;
         unique_result_map.into_iter().for_each(|(u, r)| {
             if let Some(id) = r {
+                // TODO this fails if the track name exists for a different artist?
                 unique_map.get_mut(&u).expect("Uniques from result should be in the originally provided map").1 = Some(id);
             }
         } );
