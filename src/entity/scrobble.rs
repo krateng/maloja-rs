@@ -1,6 +1,6 @@
 use super::{
   TrackRead, TrackWrite,
-  Track,
+  Track, Client
 };
 use sea_orm::entity::prelude::*;
 use sea_orm::prelude::Json;
@@ -18,11 +18,10 @@ pub struct Model {
     /// Raw Json of the Scrobble for later reparsing
     pub raw_scrobble: Json,
 
-    /// Identifier of the scrobble source, as reported by the submitter
-    pub origin: Option<String>,
-
     /// Duration of the scrobble in seconds
     pub listen_duration: Option<u32>,
+
+    pub origin_client_id: Option<u32>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -33,11 +32,22 @@ pub enum Relation {
         to = "super::track::Column::Id"
     )]
     Track,
+    #[sea_orm(
+        belongs_to = "super::auth::client::Entity",
+        from = "Column::OriginClientId",
+        to = "super::auth::client::Column::Id"
+    )]
+    OriginClient,
 }
 
 #[rustfmt::skip]
 impl Related<Track> for Entity {
     fn to() -> RelationDef { Relation::Track.def() }
+}
+
+#[rustfmt::skip]
+impl Related<Client> for Entity {
+    fn to() -> RelationDef { Relation::OriginClient.def() }
 }
 
 impl ActiveModelBehavior for ActiveModel {}
@@ -50,8 +60,6 @@ pub struct ScrobbleWrite {
     #[schema(examples(904098042))]
     pub timestamp: Option<i64>,
     pub track: TrackWrite,
-    #[schema(examples("navidrome"))]
-    pub origin: Option<String>,
     #[schema(examples(174))]
     pub listen_duration: Option<u32>,
 }

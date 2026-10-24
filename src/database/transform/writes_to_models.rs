@@ -43,7 +43,7 @@ pub fn scrobble_write_to_model(scrobble: ScrobbleWrite) -> ScrobbleActiveModel {
         timestamp: Set(scrobble.timestamp.unwrap_or_else(|| SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64)),
         track_id: NotSet,
         raw_scrobble: Set("{}".parse().unwrap()), //TODO
-        origin: NotSet,
         listen_duration: Set(scrobble.listen_duration),
+        origin_client_id: NotSet,
     }
 }

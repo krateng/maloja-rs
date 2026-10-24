@@ -8,6 +8,7 @@ use crate::database::errors::MalojaError;
 use crate::entity::{
     album::Entity as Album, album_artist::Entity as AlbumArtist, artist::Entity as Artist,
     scrobble::Entity as Scrobble, track::Entity as Track, track_artist::Entity as TrackArtist,
+    Client
 };
 use import::import;
 use sea_orm::{
@@ -81,6 +82,8 @@ pub async fn create_tables(db: &DbConn) -> Result<(), MalojaError> {
 
     create_table(db, TrackArtist).await?;
     create_table(db, AlbumArtist).await?;
+
+    create_table(db, Client).await?;
 
     Ok(())
 }

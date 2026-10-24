@@ -4,6 +4,7 @@ pub mod artist;
 pub mod scrobble;
 pub mod track;
 pub mod track_artist;
+mod auth;
 
 pub use album::{
     Model as AlbumModel, Entity as Album, AlbumWrite, AlbumRead,
@@ -29,6 +30,14 @@ pub use track_artist::{
 pub use album_artist::{
     Model as AlbumArtistModel, Entity as AlbumArtist,
     ActiveModel as AlbumArtistActiveModel,
+};
+
+pub use auth::{
+    client::{
+        Model as ClientModel, Entity as Client,
+        ActiveModel as ClientActiveModel,
+        Column as ClientColumn,
+    }
 };
 
 use album::Relation as AlbumRelation;
