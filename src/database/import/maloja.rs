@@ -1,3 +1,4 @@
+use std::collections::{HashMap, HashSet};
 use crate::configuration::logging::display_path;
 use crate::database::errors::MalojaError;
 use crate::entity::album::AlbumWrite;
@@ -10,6 +11,7 @@ use serde_json::Value;
 use std::fs;
 use std::path::PathBuf;
 use crate::configuration::app_state::AppState;
+use crate::database::repository::get_or_create::AttributedScrobbleWrite;
 use crate::entity::ArtistWriteContext;
 
 #[derive(Deserialize, Debug, Clone)]
@@ -37,63 +39,76 @@ struct MalojaExportAlbum {
     albumtitle: String,
 }
 
+// TODO we might want to rework this to not have the import itself call anything within the DB but just return
+// write / origin data and the db inserts it, for de-spaghettification
+
 pub async fn import_maloja(file: PathBuf, state: &AppState) -> Result<(), MalojaError> {
     info!("Importing from Maloja export {}. This could take a while...", display_path(&file));
 
     let parsed: MalojaExport = serde_json::from_reader(fs::File::open(file)?)?;
 
-    let scrobbles: Vec<ScrobbleWrite> = parsed
+    let client_identifiers: HashSet<String> = parsed.scrobbles.iter().filter_map(|s| s.origin.clone()).collect();
+    let mut client_map: HashMap<String, u32> = HashMap::new();
+    for identifier in client_identifiers {
+        let r = state.db.get_or_create_client_by_identifier(identifier.clone()).await?;
+        client_map.insert(identifier, r);
+    }
+
+    let scrobbles: Vec<AttributedScrobbleWrite> = parsed
         .scrobbles
         .into_iter()
         .map(|scrobble| {
-            ScrobbleWrite {
-                timestamp: Some(scrobble.time),
-                track: TrackWrite {
-                    id: None,
-                    title: Some(scrobble.track.title),
-                    artists: Some(
-                        scrobble
-                            .track
-                            .artists
-                            .into_iter()
-                            .map(|a| ArtistWriteContext {
-                                id: None,
-                                name: Some(a),
-                                alias: None,
-                                primary: true,
-                                mbid: None,
-                                spotify_id: None,
-                            })
-                            .collect(),
-                    ),
-                    album: scrobble.track.album.map(|al| AlbumWrite {
+            AttributedScrobbleWrite {
+                write: ScrobbleWrite {
+                    timestamp: Some(scrobble.time),
+                    track: TrackWrite {
                         id: None,
-                        album_title: Some(al.albumtitle),
-                        album_artists: al.artists.map(|aas| {
-                            aas.iter()
-                                .map(|aa| {
-                                    // outer map is to unwrap the option, inner map an actual vector map
-                                    ArtistWriteContext {
-                                        id: None,
-                                        name: Some(aa.to_owned()),
-                                        alias: None,
-                                        primary: true,
-                                        mbid: None,
-                                        spotify_id: None,
-                                    }
+                        title: Some(scrobble.track.title),
+                        artists: Some(
+                            scrobble
+                                .track
+                                .artists
+                                .into_iter()
+                                .map(|a| ArtistWriteContext {
+                                    id: None,
+                                    name: Some(a),
+                                    alias: None,
+                                    primary: true,
+                                    mbid: None,
+                                    spotify_id: None,
                                 })
-                                .collect()
+                                .collect(),
+                        ),
+                        album: scrobble.track.album.map(|al| AlbumWrite {
+                            id: None,
+                            album_title: Some(al.albumtitle),
+                            album_artists: al.artists.map(|aas| {
+                                aas.iter()
+                                    .map(|aa| {
+                                        // outer map is to unwrap the option, inner map an actual vector map
+                                        ArtistWriteContext {
+                                            id: None,
+                                            name: Some(aa.to_owned()),
+                                            alias: None,
+                                            primary: true,
+                                            mbid: None,
+                                            spotify_id: None,
+                                        }
+                                    })
+                                    .collect()
+                            }),
+                            mbid: None,
+                            spotify_id: None,
                         }),
+                        track_length: scrobble.track.length,
                         mbid: None,
                         spotify_id: None,
-                    }),
-                    track_length: scrobble.track.length,
-                    mbid: None,
-                    spotify_id: None,
+                    },
+                    listen_duration: scrobble.duration,
                 },
-                origin: scrobble.origin,
-                listen_duration: scrobble.duration,
+                client_id: scrobble.origin.and_then(|o| client_map.get(&o) ).copied(),
             }
+
         })
         .collect();
 

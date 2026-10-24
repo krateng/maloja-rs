@@ -5,6 +5,7 @@ pub mod resolve;
 pub mod scrobbles;
 pub mod stats;
 mod helpers;
+mod auth;
 
 use sea_orm::DatabaseConnection;
 use crate::configuration::app_state::ApplicationFolders;

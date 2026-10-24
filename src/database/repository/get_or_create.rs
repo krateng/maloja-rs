@@ -400,29 +400,30 @@ impl MalojaDB {
 
     #[allow(clippy::collapsible_else_if)]
     #[rustfmt::skip]
-    pub async fn create_scrobbles(&self, input: Vec<ScrobbleWrite>, _fail_on_existing: bool, apply_rules: bool) -> Result<HashMap<ScrobbleWrite, i64>, MalojaError> {
+    pub async fn create_scrobbles(&self, input: Vec<AttributedScrobbleWrite>, _fail_on_existing: bool, apply_rules: bool) -> Result<HashMap<AttributedScrobbleWrite, i64>, MalojaError> {
         // this one is a bit different that the other entity ones because we never supply a scrobblewrite
         // as part of another entity to either create or fetch - scrobbles are only ever created (or patched?)
 
-        let mut scrobble_track_write_map: HashMap<ScrobbleWrite, TrackWrite> = input.clone().into_iter().map(|x| (x.clone(), x.track)).collect();
+        let mut scrobble_track_write_map: HashMap<AttributedScrobbleWrite, TrackWrite> = input.clone().into_iter().map(|x| (x.clone(), x.write.track)).collect();
         // slightly inelegant place to do this but pragmatic
         if apply_rules {
             scrobble_track_write_map = scrobble_track_write_map.into_iter().map(|(scrobble, track)| (scrobble, apply_track_rules(track)) ).collect();
         }
         let track_writes: Vec<TrackWrite> = scrobble_track_write_map.iter().map(|(_, v)| v.clone()).collect();
         let track_id_map: HashMap<TrackWrite, u32> = self.get_or_create_tracks(track_writes).await?;
-        let scrobble_track_id_map: HashMap<ScrobbleWrite, u32> = scrobble_track_write_map
+        let scrobble_track_id_map: HashMap<AttributedScrobbleWrite, u32> = scrobble_track_write_map
             .into_iter().map(|(s,t)| (s, track_id_map[&t]) ).collect();
 
-        let inserts: HashMap<ScrobbleWrite, ScrobbleActiveModel> = scrobble_track_id_map
+        let inserts: HashMap<AttributedScrobbleWrite, ScrobbleActiveModel> = scrobble_track_id_map
             .into_iter()
             .map(|(w,tid)| {
-                let mut model = scrobble_write_to_model(w.clone());
+                let mut model = scrobble_write_to_model(w.write.clone());
                 model.track_id = Set(tid);
+                model.origin_client_id = Set(w.client_id);
                 (w, model)
             }).collect();
 
-        let mut result: HashMap<ScrobbleWrite, i64> = HashMap::new();
+        let mut result: HashMap<AttributedScrobbleWrite, i64> = HashMap::new();
 
         // ok so for scrobbles, where the ID is set before, we can do batch inserts and match by id
         let txn = self.connection.begin().await?;
@@ -435,7 +436,7 @@ impl MalojaDB {
                 // we basically just get the key to match by input ts even tho we already have that
                 // this in the model and could just build a result map based on that
                 // this is just for pattern accuracy so we actually confirm each id has a db entry
-                let key: ScrobbleWrite = inserts.iter()
+                let key: AttributedScrobbleWrite = inserts.iter()
                     .find(|(w,am)| am.timestamp.clone() == Set(id) ).unwrap().0.clone();
                 result.insert(key, id);
             }
@@ -447,7 +448,7 @@ impl MalojaDB {
         Ok(result)
     }
 
-    pub async fn create_scrobbles_return_reads(&self, input: Vec<ScrobbleWrite>, _fail_on_existing: bool, apply_rules: bool) -> Result<Vec<ScrobbleRead>, MalojaError> {
+    pub async fn create_scrobbles_return_reads(&self, input: Vec<AttributedScrobbleWrite>, _fail_on_existing: bool, apply_rules: bool) -> Result<Vec<ScrobbleRead>, MalojaError> {
         let map = self.create_scrobbles(input.clone(), _fail_on_existing, apply_rules).await?;
         let reads_map: HashMap<i64, ScrobbleRead> = self.resolve_scrobble_ids(map.values().cloned().collect()).await?;
         let mut reads = vec![];
@@ -460,5 +461,10 @@ impl MalojaDB {
     }
 }
 
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct AttributedScrobbleWrite {
+    pub(crate) write: ScrobbleWrite,
+    pub(crate) client_id: Option<u32>,
+}
 
 

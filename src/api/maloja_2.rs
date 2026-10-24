@@ -15,6 +15,7 @@ use utoipa_axum::routes;
 use crate::api::ScrobbleAPI;
 use crate::configuration::app_state::AppState;
 use crate::database::errors::MalojaError;
+use crate::database::repository::get_or_create::AttributedScrobbleWrite;
 use crate::database::views::{ChartsEntry, Paginated, PerformanceEntry, PulseEntry};
 use crate::entity::{
     AlbumRead, ArtistRead, TrackRead, ScrobbleRead,
@@ -428,6 +429,8 @@ async fn submit_scrobbles(
     State(state): State<AppState>,
     Json(scrobbles): Json<Vec<ScrobbleWrite>>
 ) -> Result<(StatusCode, Json<Vec<ScrobbleRead>>), MalojaError> {
+    // TODO proper client identification
+    let scrobbles: Vec<AttributedScrobbleWrite> = scrobbles.into_iter().map(|s| AttributedScrobbleWrite { write: s, client_id: None }).collect();
     let result = state.db.create_scrobbles_return_reads(scrobbles, true, true).await?;
     Ok((StatusCode::OK, Json(result)))
 }
