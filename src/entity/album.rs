@@ -7,7 +7,7 @@ use crate::database::errors::MalojaError;
 use crate::database::normalize;
 
 #[derive(Eq, PartialEq, Hash, Debug, Clone, DeriveEntityModel, Serialize)]
-#[sea_orm(table_name = "albums")]
+#[sea_orm(table_name = "music_albums")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = true)]
     pub id: u32,

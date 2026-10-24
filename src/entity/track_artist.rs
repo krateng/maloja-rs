@@ -5,7 +5,7 @@ use super::{
 };
 
 #[derive(Eq, PartialEq, Hash, Debug, Clone, DeriveEntityModel)]
-#[sea_orm(table_name = "track_artists")]
+#[sea_orm(table_name = "music_track_artists")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub track_id: u32,

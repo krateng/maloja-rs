@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 #[derive(Eq, PartialEq, Hash, Debug, Clone, DeriveEntityModel, Serialize)]
-#[sea_orm(table_name = "scrobbles")]
+#[sea_orm(table_name = "music_scrobbles")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub timestamp: i64,

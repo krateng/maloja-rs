@@ -7,7 +7,7 @@ use crate::database::errors::MalojaError;
 use crate::database::normalize;
 
 #[derive(Eq, PartialEq, Hash, Debug, Clone, DeriveEntityModel, Serialize)]
-#[sea_orm(table_name = "tracks")]
+#[sea_orm(table_name = "music_tracks")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = true)]
     pub id: u32,
@@ -41,7 +41,6 @@ pub enum Relation {
         from = "Column::AlbumId",
         to = "super::album::Column::Id"
     )]
-    // TODO: disable this weird pascal case conversion
     Album,
     #[sea_orm(has_many = "super::track_artist::Entity")]
     TrackArtist,
