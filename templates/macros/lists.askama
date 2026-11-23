@@ -5,7 +5,7 @@
     {% for scrobble in scrobbles %}
     <tr>
         <td class="time">{{ scrobble.time_local }}</td>
-        {% call entities::track_cell(scrobble.track.clone()) %}
+        {{ entities::track_cell(scrobble.track.clone()) }}
     </tr>
 
     {% endfor %}

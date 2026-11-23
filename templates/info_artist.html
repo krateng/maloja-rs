@@ -15,11 +15,11 @@
 {% block body_sections %}
 <section>
     <h2><a href="/charts_tracks?artist={{ artist.id }}">Track Charts</a></h2>
-    {% call charts::track_charts(track_charts[..track_charts.len().min(16)]) %}
+    {{ charts::track_charts(track_charts[..track_charts.len().min(16)]) }}
 </section>
 <section>
     <h2><a href="/scrobbles?artist={{ artist.id }}">Scrobbles</a></h2>
-    {% call lists::list_scrobbles(scrobbles[..scrobbles.len().min(16)]) %}
+    {{ lists::list_scrobbles(scrobbles[..scrobbles.len().min(16)]) }}
 </section>
 <section>
     <h2><a href="/pulse?artist={{ artist.id }}&step=year">Pulse</a></h2>

@@ -7,13 +7,13 @@
 {% block mainclass %}sections{% endblock mainclass %}
 
 {% block pre_heading %}
-    {% call entities::artist_links(track.artists) %}
+    {{ entities::artist_links(track.artists) }}
 {% endblock pre_heading %}
 {% block heading %}{{ track.title }}{% endblock heading %}
 {% block post_heading %}
     {% match track.album %}
         {% when Some with (album) %}
-            from {% call entities::album_link(album) %}
+            from {{ entities::album_link(album) }}
         {% when None %}
     {% endmatch %}
 {% endblock post_heading %}
@@ -25,7 +25,7 @@
 {% block body_sections %}
 <section>
     <h2><a href="/scrobbles?track={{ track.id }}">Scrobbles</a></h2>
-    {% call lists::list_scrobbles(scrobbles[..scrobbles.len().min(16)]) %}
+    {{ lists::list_scrobbles(scrobbles[..scrobbles.len().min(16)]) }}
 </section>
 <section>
     <!-- Empty section, we always want pulse and performance on one level -->

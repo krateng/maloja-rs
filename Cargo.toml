@@ -28,8 +28,7 @@ regex = { version = "1.11.1" }
 sea-query = { version = "1.0.2" }
 strum_macros = "0.28.0"
 strum = { version = "0.28.0" }
-askama = { version = "0.12.1", features = ["with-axum"] }
-askama_axum = { version = "0.4.0" }
+askama = { version = "0.16.1" }
 dynja = { version = "0.4.1", features = ["askama_release"] }
 serde_urlencoded = {  version = "0.7.1" }
 sqlx = "0.8.3"
@@ -39,6 +38,9 @@ http-body-util = "0.1.2"
 uuid = { version = "1.28.0", features = ["v7"] }
 dotenvy = "0.15.7"
 itertools = "0.14.0"
+parse-display = "0.11.0"
+axum-extra = { version = "0.12.6", features = ["cookie"] }
+time = "0.3.55"
 
 [dev-dependencies]
 rstest = "0.27.0"

@@ -9,13 +9,13 @@
 
 {% block heading %}Pulse{% endblock heading %}
 {% block post_heading -%}
-    {% call entities::limit_entity_desc(entity_limit.artist, entity_limit.track, entity_limit.album) %}
+    {{ entities::limit_entity_desc(entity_limit.artist, entity_limit.track, entity_limit.album) }}
 {%- endblock post_heading %}
 
 
 
 {% block top_info %}
-    {% call selector::selector(timerange, timestep, entity_limit) %}
+    {{ selector::selector(timerange, timestep, entity_limit) }}
 {% endblock top_info %}
 
 {% block body_sections %}

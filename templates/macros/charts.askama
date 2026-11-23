@@ -5,7 +5,7 @@
     {% for entry in charts %}
         <tr>
             <td class="rank">{% if loop.index == entry.rank %}#{{ entry.rank }}{% endif %}</td> {# TODO: this only works for first page #}
-            {% call entities::track_cell(entry.entry.clone()) %}
+            {{ entities::track_cell(entry.entry.clone()) }}
             <td class="amount">
                 <a href="/scrobbles">{{ entry.scrobbles }}</a>
             </td>
@@ -25,7 +25,7 @@
     {% for entry in charts %}
     <tr>
         <td class="rank">{% if loop.index == entry.rank %}#{{ entry.rank }}{% endif %}</td> {# TODO: this only works for first page #}
-        {% call entities::artist_cell(entry.entry.clone()) %}
+        {{ entities::artist_cell(entry.entry.clone()) }}
         <td class="amount">
             <a href="/scrobbles">{{ entry.scrobbles }}</a>
         </td>
@@ -45,7 +45,7 @@
     {% for entry in charts %}
     <tr>
         <td class="rank">{% if loop.index == entry.rank %}#{{ entry.rank }}{% endif %}</td> {# TODO: this only works for first page #}
-        {% call entities::album_cell(entry.entry.clone()) %}
+        {{ entities::album_cell(entry.entry.clone()) }}
         <td class="amount">
             <a href="/scrobbles">{{ entry.scrobbles }}</a>
         </td>

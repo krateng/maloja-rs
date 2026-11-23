@@ -8,7 +8,7 @@
 {% block mainclass %}sections{% endblock mainclass %}
 
 {% block pre_heading %}
-    {% call entities::artist_links(album.album_artists) %}
+    {{ entities::artist_links(album.album_artists) }}
 {% endblock pre_heading %}
 {% block heading %}{{ album.album_title }}{% endblock heading %}
 
@@ -19,11 +19,11 @@
 {% block body_sections %}
 <section>
     <h2><a href="/charts_tracks?album={{ album.id }}">Track Charts</a></h2>
-    {% call charts::track_charts(track_charts[..track_charts.len().min(16)]) %}
+    {{ charts::track_charts(track_charts[..track_charts.len().min(16)]) }}
 </section>
 <section>
     <h2><a href="/scrobbles?album={{ album.id }}">Scrobbles</a></h2>
-    {% call lists::list_scrobbles(scrobbles[..scrobbles.len().min(16)]) %}
+    {{ lists::list_scrobbles(scrobbles[..scrobbles.len().min(16)]) }}
 </section>
 <section>
     <h2><a href="/pulse?album={{ album.id }}&step=year">Pulse</a></h2>
