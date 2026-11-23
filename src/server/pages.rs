@@ -13,20 +13,9 @@ use axum::extract::{Path, Query, State};
 use axum::response::{Html, IntoResponse, Response};
 use crate::configuration::app_state::AppState;
 use crate::configuration::config::MalojaConfig;
+use super::filters;
 
-// filters dont work for me
-mod filters {
-    use askama::Result as AskamaResult;
 
-    pub fn format_in_tz(timestamp: i64) -> AskamaResult<String> {
-        // TODO later use config obv
-        let tz = chrono_tz::Tz::Europe__Vienna;
-        let time = chrono::DateTime::from_timestamp(timestamp, 0).unwrap();
-        let fmt = "%Y-%m-%dT%H:%M:%S";
-        let local_time = time.with_timezone(&tz);
-        Ok(local_time.format(fmt).to_string())
-    }
-}
 
 const RANGE_TYPES: [RangeType; 4] =
     [RangeType::Year, RangeType::Month, RangeType::Week, RangeType::Day];

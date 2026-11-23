@@ -45,10 +45,13 @@
         <label for="session">Session</label>
         <select name="session" id="session">
             <option value="0">New Device</option>
-            <optgroup label="Replace existing device">
-                <option value="1">krakow</option>
-                <option value="2">vienna</option>
-            </optgroup>
+            {% if !sessions.is_empty() %}
+            {# <optgroup label="Replace existing device"> #}
+                {% for session in sessions %}
+            <option value="{{ session.id }}">Replace: {{ session.identifier }}</option>
+                {% endfor %}
+            {# </optgroup> #}
+            {% endif %}
         </select>
         <label for="password">Password</label>
         <input name="password" id="password" type="password" />

@@ -1,0 +1,82 @@
+{% extends "abstracts/base.html" %}
+
+{% block title %}Maloja - Auth{% endblock title %}
+
+{% block heading %}Maloja{% endblock heading %}
+
+{% block mainclass %}{% endblock mainclass %}
+
+{% block top_info %}
+<span>What</span>
+{% endblock top_info%}
+
+
+{% block body_sections %}
+<section>
+    <h2>Login</h2>
+    TODO
+
+</section>
+<section>
+    <h2>Sessions</h2>
+    <table class="entity_table">
+        <thead>
+        <tr>
+            <td>Identifier</td>
+            <td>First Login</td>
+            <td>Last Seen</td>
+            <td>Expiry</td>
+            <td>Actions</td>
+        </tr>
+        </thead>
+        {% for session in sessions %}
+        <tr>
+            <td>
+                {{ session.identifier }}
+                <span class="secondary_cell_info">{{ session.display }}</span>
+            </td>
+            <td>{{ session.created_at | format_ts_short }}</td>
+            <td>{{ session.last_used_at | format_ts_short_allow_none }}</td>
+            <td>{{ session.valid_until | format_ts_short_allow_none }}</td>
+            <td>
+                <button>Logout</button>
+            </td>
+
+        </tr>
+        {% endfor %}
+
+    </table>
+
+</section>
+<section>
+    <h2>API Keys</h2>
+    <table class="entity_table">
+        <thead>
+        <tr>
+            <td>Identifier</td>
+            <td>Created</td>
+            <td>Last Used</td>
+            <td>Expiry</td>
+            <td>Actions</td>
+        </tr>
+        </thead>
+        {% for key in api_keys %}
+        <tr>
+            <td>
+                {{ key.identifier }}
+                <span class="secondary_cell_info">{{ key.display }}</span>
+            </td>
+            <td>{{ key.created_at | format_ts_short }}</td>
+            <td>{{ key.last_used_at | format_ts_short_allow_none }}</td>
+            <td>{{ key.valid_until | format_ts_short_allow_none }}</td>
+            <td>
+                <button>Revoke</button>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+
+</section>
+
+
+{% endblock body_sections %}

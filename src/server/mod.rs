@@ -1,9 +1,12 @@
 mod pages;
+mod pages_admin;
+pub mod filters;
 
 use crate::api::mount_apis;
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::Router;
 use pages::*;
+use pages_admin::*;
 use tower_http::services::{ServeDir, ServeFile};
 use crate::configuration::app_state::AppState;
 
@@ -31,7 +34,11 @@ pub async fn create_app() -> Router<AppState> {
         .route("/album/{id}", get(info_album))
         .route("/pulse", get(pulse))
         .route("/performance", get(performance))
-        .route("/scrobbles", get(scrobbles));
+        .route("/scrobbles", get(scrobbles))
+        // admin
+        .route("/login", get(login))
+        .route("/login", post(post_login))
+        .route("/admin_auth", get(admin_auth));
     // STATIC FILES
     app = app.fallback_service(ServeDir::new("src/web/static"));
 
