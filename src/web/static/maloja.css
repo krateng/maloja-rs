@@ -80,6 +80,10 @@ button, input[type="button"], input[type="submit"] {
 button:hover, input[type="button"]:hover, input[type="submit"]:hover {
     background-color: var(--button-color-bg-focus);
 }
+button:disabled {
+    background-color: var(--text-color-tertiary);
+    cursor: not-allowed;
+}
 
 /* for links in running text */
 a.textlink {
@@ -134,6 +138,13 @@ table.entity_table :not(thead) tr:hover {
 table.entity_table tr {
     background-color: var(--current-bg-color);
     border-color: var(--current-bg-color);
+}
+table.entity_table tr.inactive {
+    color: var(--text-color-tertiary);
+}
+table.entity_table tr.inactive span.secondary_cell_info {
+    color: var(--text-color-tertiary);
+    opacity: 0.5;
 }
 table.entity_table tr td {
     padding-top: 2px;

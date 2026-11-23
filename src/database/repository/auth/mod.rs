@@ -1,5 +1,5 @@
 use base64::Engine;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use itertools::{Either, Itertools};
 use crate::database::errors::MalojaError;
 use crate::database::repository::MalojaDB;
@@ -7,18 +7,15 @@ use crate::entity::{Client, ClientActiveModel, ClientColumn, ClientModel};
 use sea_orm::{ColumnTrait, EntityTrait};
 use sea_orm::{NotSet, QueryFilter, Set};
 use base64::engine::general_purpose;
-use sea_query::Token;
-use sha2::{Digest, Sha256, Sha512};
+use sha2::{Digest, Sha256};
 
 impl MalojaDB {
 
     pub async fn get_or_create_client_by_identifier(&self, identifier: String, api_key: bool) -> Result<u32, MalojaError> {
         let result = Client::find().filter(ClientColumn::Identifier.eq(&identifier)).one(&self.connection).await?;
         if let Some(client) = result {
-            println!("Found {}", identifier);
             return Ok(client.id);
         }
-        println!("Not found: {}", identifier);
 
         let new = generate_token();
         let insert = ClientActiveModel {
@@ -36,15 +33,17 @@ impl MalojaDB {
         Ok(result.last_insert_id)
     }
 
-    pub async fn get_clients(&self) -> Result<ClientList, MalojaError> {
-        let result = Client::find().all(&self.connection).await?;
-        let (sessions, api_keys) = result.into_iter().partition_map(|x| {
+    pub async fn get_clients(&self) -> Result<SortedClientList, MalojaError> {
+        let mut result = Client::find().all(&self.connection).await?;
+        result.sort_by(|x, y| x.active.cmp(&y.active).then_with(|| x.last_used_at.cmp(&y.last_used_at)) );
+        result.reverse();
+        let (sessions, api_keys): (Vec<ClientModel>, Vec<ClientModel>) = result.into_iter().partition_map(|x| {
             match x.session {
                 true => Either::Left(x),
                 false => Either::Right(x)
             }
         });
-        Ok(ClientList {
+        Ok(SortedClientList {
             api_keys,
             sessions,
         })
@@ -52,7 +51,8 @@ impl MalojaDB {
 
 }
 
-pub struct ClientList {
+/// Sorts both client types first by active, then by last used
+pub struct SortedClientList {
     pub api_keys: Vec<ClientModel>,
     pub sessions: Vec<ClientModel>,
 }

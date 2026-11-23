@@ -6,19 +6,36 @@
 
 {% block mainclass %}{% endblock mainclass %}
 
+{% block style %}
+    form#login_form {
+        width:400px;
+        display:grid;
+        grid-template-columns: max-content 1fr;
+        gap: 0.75rem 1rem;
+        align-items: center;
+    }
+{% endblock style %}
+
 {% block top_info %}
 Here you can create or revoke API Keys for your different scrobble sources. You can also manage your sessions - when you
 login in a web browser, you can decide to create a new session or replace an existing one. This allows you e.g. to model
 a new browser install after reinstalling your OS as a logical continuation of the old one.<br/><br/>
 Note that Sessions and API Keys never disappear since they reference a client being used at any point in the past - you
-can simply revoke them if you no longer use them, or rotate the key if they have been compromised.
+can simply revoke them if you no longer use them, or rotate the keys if they have been compromised.
 {% endblock top_info%}
 
 
 {% block body_sections %}
 <section>
     <h2>Login</h2>
-    TODO
+    <form id="login_form">
+        <label for="password">New Password</label>
+        <input id="password" type="password" />
+        <label for="password_confirm">Confirm Password</label>
+        <input id="password_confirm" type="password" />
+        <input type="submit" value="Change Password" />
+    </form>
+
 
 </section>
 <section>
@@ -65,16 +82,22 @@ can simply revoke them if you no longer use them, or rotate the key if they have
         </tr>
         </thead>
         {% for key in api_keys %}
-        <tr>
+        <tr {% if !key.active %}class="inactive"{% endif %}>
             <td>
                 {{ key.identifier }}
-                <span class="secondary_cell_info">{{ key.display }}</span>
+                {% if key.active %}<span class="secondary_cell_info">{{ key.display }}</span>{% endif %}
             </td>
             <td>{{ key.created_at | format_ts_short }}</td>
             <td>{{ key.last_used_at | format_ts_short_allow_none }}</td>
             <td>{{ key.valid_until | format_ts_short_allow_none }}</td>
             <td>
-                <button>Revoke</button>
+                <button
+                        {% if !key.active %}disabled{% endif %}
+                        title="Revoke the key associated with this client. It will stop working immediately, but a new key can be generated in the future."
+                >Revoke</button>
+                <button
+                        title="Generate a new key to identify this client and activate it. The existing key will stop working immediately."
+                >{% if key.active %}Rotate{% else %}Reissue{% endif %}</button>
             </td>
         </tr>
         {% endfor %}
