@@ -1,13 +1,17 @@
 {% extends "abstracts/base.html" %}
 
-{% block title %}Maloja - Auth{% endblock title %}
+{% block title %}Maloja - Authentication{% endblock title %}
 
-{% block heading %}Maloja{% endblock heading %}
+{% block heading %}Authentication{% endblock heading %}
 
 {% block mainclass %}{% endblock mainclass %}
 
 {% block top_info %}
-<span>What</span>
+Here you can create or revoke API Keys for your different scrobble sources. You can also manage your sessions - when you
+login in a web browser, you can decide to create a new session or replace an existing one. This allows you e.g. to model
+a new browser install after reinstalling your OS as a logical continuation of the old one.<br/><br/>
+Note that Sessions and API Keys never disappear since they reference a client being used at any point in the past - you
+can simply revoke them if you no longer use them, or rotate the key if they have been compromised.
 {% endblock top_info%}
 
 

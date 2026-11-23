@@ -1,7 +1,7 @@
 use sea_orm::{ActiveModelBehavior, DeriveEntityModel};
 use sea_orm::entity::prelude::*;
 use serde::Serialize;
-use crate::entity::{Scrobble, Session};
+use crate::entity::Scrobble;
 
 #[derive(Eq, PartialEq, Hash, Debug, Clone, DeriveEntityModel)]
 #[sea_orm(table_name = "auth_clients")]
