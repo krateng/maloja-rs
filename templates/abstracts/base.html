@@ -14,6 +14,9 @@
 		<meta name="darkreader" content="we-are-already-dark" />
 
 		<link rel="stylesheet" href="/maloja.css" />
+		<style>
+			{% block style %}{% endblock %}
+		</style>
 
 		<script src="/maloja.js"></script>
 
@@ -25,7 +28,7 @@
 	<body class="{% block custombodyclasses %}{% endblock custombodyclasses %}">
 		<main class="{% block mainclass %}{% endblock mainclass %}">
 		{% block content %}
-
+		{% block top_section %}
 		<section id="top_info">
 			<img src="{% block imageurl %}/favicon.png{% endblock imageurl %}" id="top_image"  alt="Maloja Logo"/>
 			<div id="top_textblock">
@@ -39,6 +42,7 @@
 			</div>
 
 		</section>
+		{% endblock top_section %}
 
 			{% block body_sections %}
 

@@ -1,0 +1,66 @@
+{% extends "abstracts/base.html" %}
+
+{% block title %}Maloja - Login{% endblock title %}
+
+{% block heading %}Maloja{% endblock heading %}
+
+{% block mainclass %}{% endblock mainclass %}
+
+{% block top_section %}
+
+{% endblock top_section %}
+
+{% block style %}
+
+    .login_box {
+        background-color: rgba(0,0,0,0.1);
+        height:150px;
+        width:400px;
+        border-radius: 15px;
+
+        padding:25px;
+
+        position:absolute;
+        top:0;
+        bottom:0;
+        left:0;
+        right:0;
+        margin:auto;
+
+        text-align: center;
+        display:grid;
+        grid-template-columns: max-content 1fr;
+        gap: 0.75rem 1rem;
+        align-items: center;
+    }
+    .login_box input[type="submit"], .login_box button {
+        grid-column: 1 / -1;
+    }
+{% endblock %}
+
+
+{% block body_sections %}
+<section>
+    <form method="post" class="login_box"> <!-- no action means same url, so we carry over the target -->
+        <label for="session">Session</label>
+        <select name="session" id="session">
+            <option value="0">New Device</option>
+            <optgroup label="Replace existing device">
+                <option value="1">krakow</option>
+                <option value="2">vienna</option>
+            </optgroup>
+        </select>
+        <label for="password">Password</label>
+        <input name="password" id="password" type="password" />
+        <input type="submit" value="Login" />
+        <br/>
+        {% if failed %}
+        <span>Login unsuccessful!</span>
+        {% endif %}
+    </form>
+
+
+</section>
+
+
+{% endblock body_sections %}

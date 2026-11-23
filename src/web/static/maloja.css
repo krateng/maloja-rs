@@ -58,7 +58,7 @@ a:hover {
 
 /** Inputs **/
 
-input[type="text"], input[type="number"] {
+input[type="text"], input[type="number"], input[type="password"], select {
     background-color: transparent;
     border: 0;
     border-bottom: 1px solid var(--text-color);
@@ -68,6 +68,17 @@ input[type="text"], input[type="number"] {
 input:focus {
     outline: 0;
     background-color: var(--base-color-accent-light);
+}
+
+button, input[type="button"], input[type="submit"] {
+    background-color: var(--button-color-bg);
+    color: var(--button-color-fg);
+    border: 0;
+    cursor: pointer;
+    padding: 7px;
+}
+button:hover, input[type="button"]:hover, input[type="submit"]:hover {
+    background-color: var(--button-color-bg-focus);
 }
 
 /* for links in running text */
@@ -108,11 +119,16 @@ table.entity_table {
 
 
 }
+table.entity_table thead {
+    --current-bg-color: var(--base-color-accent-dark);
+    font-weight: bold;
+}
+
 table.entity_table tr:nth-child(even) {
     --current-bg-color: rgba(255,255,255,0.05);
     /* make rows distinguishable with respect to any bg color */
 }
-table.entity_table tr:hover {
+table.entity_table :not(thead) tr:hover {
     --current-bg-color: rgba(255,255,255,0.2);
 }
 table.entity_table tr {
