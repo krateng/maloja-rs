@@ -264,7 +264,7 @@ span.selected {
 
 main {
     display: grid;
-    padding: 20px;
+    padding: 20px 20px 50px;
 
     min-height: 99%;
 }

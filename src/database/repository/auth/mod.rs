@@ -1,14 +1,21 @@
 use base64::Engine;
-use chrono::{Days, TimeDelta, Utc};
+use chrono::{Days, Duration, TimeDelta, TimeZone, Utc};
 use itertools::{Either, Itertools};
 use crate::database::errors::MalojaError;
 use crate::database::repository::MalojaDB;
-use crate::entity::{Client, ClientActiveModel, ClientColumn, ClientModel, ClientType};
-use sea_orm::{ColumnTrait, EntityTrait, IntoActiveModel};
+use crate::entity::{Client, ClientActiveModel, ClientColumn, ClientModel, ClientType, Scrobble, ScrobbleColumn};
+use sea_orm::{ColumnTrait, EntityTrait, IntoActiveModel, QuerySelect};
 use sea_orm::{NotSet, QueryFilter, Set};
 use base64::engine::general_purpose;
-use sea_query::Iden;
+use sea_orm::prelude::DateTime;
+use sea_query::{Condition, Iden, Query};
 use sha2::{Digest, Sha256};
+
+
+const WEB_SESSION_EXPIRY: Duration = Duration::days(30);
+const EXPIRY_REFRESH_THRESHOLD: Duration = Duration::days(2);
+const LAST_USED_REFRESH_THRESHOLD: Duration = Duration::seconds(30);
+
 
 impl MalojaDB {
 
@@ -106,15 +113,23 @@ impl MalojaDB {
         let now = Utc::now();
         let c = Client::find()
             .filter(ClientColumn::ClientType.eq(ClientType::Session))
-            .filter(ClientColumn::ValidUntil.gt(Utc::now()))
+            .filter(Condition::any()
+                .add(ClientColumn::ValidUntil.gt(Utc::now().timestamp()))
+                .add(ClientColumn::ValidUntil.is_null())
+            )
             .filter(ClientColumn::Active.eq(true))
             .filter(ClientColumn::TokenHash.eq(hash))
             .one(&self.connection).await?;
 
         if let Some(client) = c {
-            let mut client_active = client.into_active_model();
-            client_active.last_used_at = Set(Some(now.timestamp()));
-            client_active.valid_until = Set(Some((now + TimeDelta::days(30)).timestamp()));
+            let last_used_diff = now - Utc.timestamp_opt(client.last_used_at.unwrap_or(0), 0).unwrap();
+            let expiry_diff = Utc.timestamp_opt(client.valid_until.unwrap_or(0), 0).unwrap() - now;
+            if last_used_diff > LAST_USED_REFRESH_THRESHOLD || expiry_diff < (WEB_SESSION_EXPIRY - EXPIRY_REFRESH_THRESHOLD) {
+                let mut client_active = client.into_active_model();
+                client_active.last_used_at = Set(Some(now.timestamp()));
+                client_active.valid_until = Set(Some((now + WEB_SESSION_EXPIRY).timestamp()));
+                Client::update(client_active).exec_without_returning(&self.connection).await?;
+            }
             Ok(true)
         }
         else {
@@ -154,6 +169,18 @@ impl MalojaDB {
         else {
             Err(MalojaError::EntityNotFound { id: client_id })
         }
+    }
+
+    pub async fn clear_unused(&self, client_type: ClientType) -> Result<(), MalojaError> {
+        let used_clients = Query::select().column(ScrobbleColumn::OriginClientId).from(Scrobble).and_where(ScrobbleColumn::OriginClientId.is_not_null()).to_owned();
+
+        Client::delete_many()
+            .filter(ClientColumn::Id.not_in_subquery(used_clients))
+            .filter(ClientColumn::ClientType.eq(client_type))
+            .filter(ClientColumn::Active.eq(false))
+            .exec(&self.connection).await?;
+
+        Ok(())
     }
 
 }

@@ -2,18 +2,25 @@ mod pages;
 mod pages_admin;
 pub mod filters;
 mod pages_admin_post;
+mod web_auth;
 
 use crate::api::mount_apis;
 use axum::routing::{get, post};
-use axum::Router;
+use axum::{middleware, Router};
+use axum::extract::{Request, State};
+use axum::middleware::Next;
+use axum::response::Response;
+use axum_extra::extract::CookieJar;
 use pages::*;
 use pages_admin::*;
 use pages_admin_post::*;
 use tower_http::services::{ServeDir, ServeFile};
 use crate::configuration::app_state::AppState;
+use crate::server::web_auth::require_web_auth;
 
 pub async fn run_server(state: &AppState) -> Result<(), std::io::Error> {
-    let app = create_app().await;
+    // we pass state here only for the weird middleware, not yet to finish the app
+    let app = create_app(state).await;
     let bind_address = format!("{}:{}", state.config.bind_address, state.config.port);
     let listener = tokio::net::TcpListener::bind(bind_address).await?;
     let stateful_app = app.with_state(state.clone());
@@ -21,7 +28,7 @@ pub async fn run_server(state: &AppState) -> Result<(), std::io::Error> {
     Ok(())
 }
 
-pub async fn create_app() -> Router<AppState> {
+pub async fn create_app(state: &AppState) -> Router<AppState> {
     // TODO: files in package
     let mut app: Router<AppState> = Router::new();
     // APIS
@@ -29,6 +36,9 @@ pub async fn create_app() -> Router<AppState> {
     // SPECIAL PATHS
     app = app.nest_service("/api_explorer", ServeFile::new("src/web/special/api_explorer.html"));
     // TEMPLATES
+    let app_secure = Router::new()
+        .route("/admin_auth", get(admin_auth).post(post_admin_auth))
+        .route_layer(middleware::from_fn_with_state(state.clone(), require_web_auth));
     app = app
         .route("/about", get(about))
         .route("/artist/{id}", get(info_artist))
@@ -37,13 +47,12 @@ pub async fn create_app() -> Router<AppState> {
         .route("/pulse", get(pulse))
         .route("/performance", get(performance))
         .route("/scrobbles", get(scrobbles))
-        // admin
-        .route("/login", get(login))
-        .route("/login", post(post_login))
-        .route("/admin_auth", get(admin_auth))
-        .route("/admin_auth", post(post_admin_auth));
+        .route("/login", get(web_auth::login).post(web_auth::post_login))
+        .merge(app_secure);
+
     // STATIC FILES
     app = app.fallback_service(ServeDir::new("src/web/static"));
 
     app
 }
+

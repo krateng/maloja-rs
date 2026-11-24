@@ -72,6 +72,11 @@ can simply revoke them if you no longer use them, or rotate the keys if they hav
 
     </table>
 
+    <form method="post">
+        <input type="hidden" name="client_type" value="session" />
+        <button name="action" value="clear_unused">Clear unused</button>
+    </form>
+
 </section>
 <section>
     <h2>API Keys</h2>
@@ -107,8 +112,13 @@ can simply revoke them if you no longer use them, or rotate the keys if they hav
         </tr>
         {% endfor %}
     </table>
-
+    
     <button commandfor="new-api-key" command="show-modal">Create New</button>
+    <form method="post">
+
+        <input type="hidden" name="client_type" value="api_key" />
+        <button name="action" value="clear_unused">Clear unused</button>
+    </form>
 
     <dialog id="new-api-key">
         <form method="post">

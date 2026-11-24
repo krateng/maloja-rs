@@ -13,37 +13,6 @@ use crate::AppState;
 use crate::entity::ClientModel;
 use super::filters;
 
-
-// LOGIN
-
-#[derive(Template)]
-#[template(path = "login.html")]
-pub struct LoginPage{
-    pub failed: bool,
-    pub sessions: Vec<ClientModel>
-}
-
-#[derive(Deserialize)]
-pub struct QueryLogin {
-    pub target: Option<String>
-}
-
-
-
-pub async fn login(
-    State(state): State<AppState>,
-) -> Response {
-    let clients = state.db.get_clients().await.unwrap();
-    let p = LoginPage {
-        failed: false,
-        sessions: clients.sessions,
-    };
-    Html(p.render().unwrap()).into_response()
-}
-
-
-// BACKEND
-
 #[derive(Template)]
 #[template(path = "admin_auth.html")]
 pub struct AdminAuthPage{

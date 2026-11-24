@@ -31,11 +31,11 @@ fn format_short(timestamp: i64) -> String {
     let time = chrono::DateTime::from_timestamp(timestamp, 0).unwrap();
     let now = Utc::now();
     let diff = (now - time);
-    if diff.num_seconds() < 120 && diff.num_seconds() >= 0 {
-        format!("{} seconds ago", diff.num_seconds())
+    if diff.num_seconds() < 60 && diff.num_seconds() >= 0 {
+        "Last Minute".to_string()
     }
-    else if diff.num_minutes() < 120 && diff.num_seconds() >= 0 {
-        format!("{} minutes ago", diff.num_minutes())
+    else if diff.num_minutes() < 60 && diff.num_seconds() >= 0 {
+        "Last hour".to_string()
     }
     else if now.date_naive() == time.date_naive() {
         "Today".to_string()
