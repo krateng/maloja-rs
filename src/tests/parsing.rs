@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use chrono::Utc;
 use itertools::Itertools;
 use crate::{database, AppState};
+use crate::database::repository::get_or_create::AttributedScrobbleWrite;
 use crate::entity::artist::ArtistWrite;
 use crate::entity::{ArtistRead, ArtistWriteContext, TrackRead};
 use crate::entity::scrobble::{Model, ScrobbleWrite};
@@ -41,13 +42,15 @@ fn create_scrobble_writes(tracks: Vec<TrackInfo>) -> Vec<ScrobbleWrite> {
                     mbid: None,
                     spotify_id: None,
                 },
-                origin: None,
                 listen_duration: None,
             }
         })
         .collect();
 
     writes
+}
+fn attributed(writes: Vec<ScrobbleWrite>) -> Vec<AttributedScrobbleWrite> {
+    writes.into_iter().map(|write| AttributedScrobbleWrite { write, client_id: None }).collect()
 }
 
 fn assert_same_track(read: &TrackRead, compare: &TrackRead) {
@@ -62,7 +65,7 @@ fn assert_same_track(read: &TrackRead, compare: &TrackRead) {
 async fn assert_all_submitted_scrobbles_one_track(writes: Vec<ScrobbleWrite>, state: AppState) {
     let writes_amount = writes.len();
     for write in writes {
-        state.db.create_scrobbles(vec![write], false, true).await.unwrap();
+        state.db.create_scrobbles(attributed(vec![write]), false, true).await.unwrap();
     }
     let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
@@ -189,7 +192,7 @@ async fn provide_artist_by_id() {
     let writes = create_scrobble_writes(vec![
         (vec!["Jihyo"], "The Elven Priestess"),
     ]);
-    state.db.create_scrobbles(writes, false, true).await.unwrap();
+    state.db.create_scrobbles(attributed(writes), false, true).await.unwrap();
 
     let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
@@ -217,11 +220,10 @@ async fn provide_artist_by_id() {
             mbid: None,
             spotify_id: None,
         },
-        origin: None,
         listen_duration: None,
     };
 
-    state.db.create_scrobbles(vec![new_scrobble], false, true).await.unwrap();
+    state.db.create_scrobbles(attributed(vec![new_scrobble]), false, true).await.unwrap();
     let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
     ).await.unwrap();
@@ -236,7 +238,7 @@ async fn provide_track_by_id() {
     let writes = create_scrobble_writes(vec![
         (vec!["Jihyo"], "The Elven Priestess"),
     ]);
-    state.db.create_scrobbles(writes, false, true).await.unwrap();
+    state.db.create_scrobbles(attributed(writes), false, true).await.unwrap();
 
     let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
@@ -255,11 +257,10 @@ async fn provide_track_by_id() {
             mbid: None,
             spotify_id: None,
         },
-        origin: None,
         listen_duration: None,
     };
 
-    state.db.create_scrobbles(vec![new_scrobble], false, true).await.unwrap();
+    state.db.create_scrobbles(attributed(vec![new_scrobble]), false, true).await.unwrap();
     let scrobbles = state.db.scrobbles(
         &ALL_TIME, None, None, None,false
     ).await.unwrap();

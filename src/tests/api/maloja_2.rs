@@ -15,7 +15,7 @@ use crate::AppState;
 const SERVER_ADDRESS: &str = "http://localhost:42010/apis/maloja_2";
 
 async fn setup_test_router(state: &AppState) -> Router {
-    let router = create_app().await;
+    let router = create_app(state).await;
     router.with_state(state.clone())
 }
 

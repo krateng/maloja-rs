@@ -4,6 +4,7 @@ use crate::entity::scrobble::ScrobbleWrite;
 use crate::entity::track::TrackWrite;
 use rand::prelude::IndexedRandom;
 use rand::RngExt;
+use crate::database::repository::get_or_create::AttributedScrobbleWrite;
 use crate::entity::ArtistWriteContext;
 
 #[rustfmt::skip]
@@ -116,11 +117,13 @@ pub async fn fixture(amount_artists: u32, amount_tracks: u32, amount_scrobbles: 
 
     let mut scrobbles = vec![];
     for _i in 0..amount_scrobbles  {
-        scrobbles.push(ScrobbleWrite {
-            timestamp: Some(timestamp),
-            track: tracks.choose(&mut rng).unwrap().to_owned(),
-            origin: None,
-            listen_duration: None,
+        scrobbles.push(AttributedScrobbleWrite {
+            write: ScrobbleWrite {
+                timestamp: Some(timestamp),
+                track: tracks.choose(&mut rng).unwrap().to_owned(),
+                listen_duration: None,
+            },
+            client_id: None,
         });
 
         timestamp += rng.random_range(200..2000);
