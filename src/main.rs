@@ -3,6 +3,7 @@
 use log::info;
 use std::io;
 use std::io::Write;
+use colored::Colorize;
 use tokio::time::{sleep, Duration};
 use maloja_rs::{setup, AppState, server};
 
@@ -13,6 +14,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state = AppState::new(None).await?;
 
     setup(false, &state).await?;
+
+    if let Some(pw) = state.db.set_initial_password().await? {
+        println!("Initial password: {}", pw.bright_yellow().on_purple());
+    }
 
     // SERVER
     info!("Starting up server...");

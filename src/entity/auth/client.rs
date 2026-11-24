@@ -1,6 +1,7 @@
 use sea_orm::{ActiveModelBehavior, DeriveEntityModel};
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
+use crate::entity::auth::ClientType;
 use crate::entity::Scrobble;
 
 #[derive(Eq, PartialEq, Hash, Debug, Clone, DeriveEntityModel)]
@@ -31,15 +32,6 @@ pub struct Model {
 
     pub client_type: ClientType,
 
-}
-
-#[derive(EnumIter, DeriveActiveEnum, Hash, PartialEq, Eq, Debug, Clone, Deserialize)]
-#[sea_orm(rs_type = "String", db_type = "Text", rename_all = "snake_case")]
-#[serde(rename_all = "snake_case")]
-pub enum ClientType {
-    Session,
-    ApiKey,
-    Imported,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

@@ -1,15 +1,20 @@
+use std::sync::LazyLock;
+use argon2::{Argon2, PasswordHasher};
+use argon2::password_hash::phc::SaltString;
 use base64::Engine;
 use chrono::{Days, Duration, TimeDelta, TimeZone, Utc};
 use itertools::{Either, Itertools};
 use crate::database::errors::MalojaError;
 use crate::database::repository::MalojaDB;
-use crate::entity::{Client, ClientActiveModel, ClientColumn, ClientModel, ClientType, Scrobble, ScrobbleColumn};
-use sea_orm::{ColumnTrait, EntityTrait, IntoActiveModel, QuerySelect};
+use crate::entity::{Client, ClientActiveModel, ClientColumn, ClientModel, ClientType, Login, LoginActiveModel, Scrobble, ScrobbleColumn, Singleton, StoredPasswordHash};
+use sea_orm::{ColumnTrait, EntityTrait, IntoActiveModel};
 use sea_orm::{NotSet, QueryFilter, Set};
 use base64::engine::general_purpose;
 use sea_orm::prelude::DateTime;
 use sea_query::{Condition, Iden, Query};
 use sha2::{Digest, Sha256};
+use rand::seq::IndexedRandom;
+use csscolorparser::NAMED_COLORS;
 
 
 const WEB_SESSION_EXPIRY: Duration = Duration::days(30);
@@ -82,7 +87,7 @@ impl MalojaDB {
 
     // returns the session token
     pub async fn login(&self, session_id: Option<u32>, password: String, user_agent: Option<String>) -> Result<Option<String>, MalojaError> {
-        let pw_correct = true;
+        let pw_correct = self.check_password(password).await?;
 
         if pw_correct {
             if let Some(session_id) = session_id {
@@ -105,6 +110,40 @@ impl MalojaDB {
         }
         else {
             Ok(None)
+        }
+    }
+
+    pub async fn check_password(&self, password: String) -> Result<bool, MalojaError> {
+        let login = Login::find_by_id(Singleton::Only).one(&self.connection).await?;
+        let login = login.ok_or(MalojaError::EntityNotFound { id: 1 })?;
+        Ok(login.password_hash.check_pw(&password))
+    }
+
+    pub async fn set_password(&self, password: String) -> Result<(), MalojaError> {
+        let login = Login::find_by_id(Singleton::Only).one(&self.connection).await?;
+        let login = login.ok_or(MalojaError::EntityNotFound { id: 1 })?;
+        let hash = StoredPasswordHash::from_pw(&password);
+        let mut active = login.into_active_model();
+        active.password_hash = Set(hash);
+        Login::update(active).exec_without_returning(&self.connection).await?;
+        Ok(())
+    }
+
+    pub async fn set_initial_password(&self) -> Result<Option<String>, MalojaError> {
+        let login = Login::find_by_id(Singleton::Only).one(&self.connection).await?;
+        match login {
+            // already have a pw set
+            Some(login) => Ok(None),
+            // no pw, generate new
+            None => {
+                let pw = generate_password();
+                let login = LoginActiveModel {
+                    password_hash: Set(StoredPasswordHash::from_pw(&pw)),
+                    id: Set(Singleton::Only)
+                };
+                Login::insert(login).exec_without_returning(&self.connection).await?;
+                Ok(Some(pw))
+            }
         }
     }
 
@@ -214,4 +253,61 @@ fn hash_token(token: String) -> String {
     let hash = Sha256::digest(token.as_bytes());
     let hash_hex = format!("{:x}", hash);
     hash_hex
+}
+
+fn generate_password() -> String {
+
+    static COLORS: LazyLock<Vec<&'static str>> =
+        LazyLock::new(|| NAMED_COLORS.keys().map(|k| k.as_str()).collect());
+
+    const ADJECTIVES: &[&str] = &[
+        "sleepy", "angry", "excited", "happy", "cute", "frivolous", "playful", "scheming", "giddy", "confident",
+        "assertive", "gleeful",
+    ];
+    const IDOLS: &[&str] = &[
+        "soyeon", "yuqi", "miyeon", "shuhua", "minnie", "jennie", "lisa", "rose", "jisoo", "jihyo", "tzuyu", "mina",
+        "dahyun", "momo", "nancy", "yeonhee", "jisun", "chaewon", "wendy", "seolhyun", "sorn",
+    ];
+    const ACTIONS: &[&str] = &[
+        "sings", "hums", "dances", "vibes", "aurafarms", "sits", "stares", "smirks", "poses", "yells", "whispers",
+    ];
+    const PREPOSITIONS1: &[&str] = &[
+        "on", "in", "beside", "over", "under", "inside", "within", "above", "underneath", "behind",
+    ];
+    const ARTICLES: &[&str] = &[
+        "the", "a", "my", "our", "her", "your", "some", "every", "any",
+    ];
+    const ADJECTIVES2: &[&str] = &[
+        "cozy", "beautiful", "gorgeous", "cold", "comfy", "cute", "ancient", "tiny", "breathtaking", "awesome",
+    ];
+    const LANDSCAPES: &[&str] = &[
+        "forest", "glacier", "mountain", "tundra", "boreal", "arctic", "urban",
+    ];
+    const TRAINS: &[&str] = &[
+        "train", "tram", "metro", "lrt", "sbahn", "hsr", "maglev", "tunnelbana", "rail",
+    ];
+    const PLACES: &[&str] = &[
+        "station", "depot", "stop", "platform", "terminus", "junction", "siding", "yard",
+        "tunnel", "viaduct", "interchange",
+    ];
+    const PREPOSITIONS2: &[&str] = &[
+        "in", "by", "at", "near", "outside", "past",
+    ];
+    const DIRECTIONS: &[&str] = &[
+        "central", "western", "eastern", "northern", "southern", "outer", "inner",
+    ];
+    const CITIES: &[&str] = &[
+        "vienna", "berne", "chur", "lucerne", "stuttgart", "krakow", "warsaw", "budapest", "belgrade",
+        "moscow", "stpetersburg", "stockholm", "helsinki", "tallinn", "riga", "oslo", "kyiv",
+        "prague", "antwerp", "amsterdam", "brussels", "ulm", "munich", "augsburg", "istanbul", "antioch",
+        "jerusalem", "axum", "alexandria", "ctesiphon", "baghdad", "tehran", "merv", "bukhara", "samarkand",
+        "tashkent", "kokand", "kashgar", "yarkand", "khotan", "dunhuang", "changan", "nanjing",
+    ];
+
+    let slots = [ADJECTIVES, IDOLS, ACTIONS, PREPOSITIONS1, ARTICLES, ADJECTIVES2,
+        COLORS.as_slice(), LANDSCAPES, TRAINS, PLACES, PREPOSITIONS2, DIRECTIONS, CITIES];
+
+    let mut rng = rand::rng();
+    let words: Vec<_> = slots.into_iter().map(|slot| *slot.choose(&mut rng).expect("Static list")).collect();
+    words.join("-")
 }

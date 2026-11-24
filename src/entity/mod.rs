@@ -37,8 +37,15 @@ pub use auth::{
         Model as ClientModel, Entity as Client,
         ActiveModel as ClientActiveModel,
         Column as ClientColumn,
-        ClientType,
-    }
+    },
+    login::{
+        Model as LoginModel, Entity as Login,
+        ActiveModel as LoginActiveModel,
+        Column as LoginColumn,
+    },
+    ClientType,
+    StoredPasswordHash,
+    Singleton
 };
 
 use album::Relation as AlbumRelation;
