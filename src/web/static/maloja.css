@@ -121,6 +121,9 @@ table.entity_table {
     table-layout: fixed;
     width: 90%;
 
+    margin-top: 15px;
+    margin-bottom: 15px;
+
 
 }
 table.entity_table thead {
@@ -146,6 +149,10 @@ table.entity_table tr.inactive span.secondary_cell_info {
     color: var(--text-color-tertiary);
     opacity: 0.5;
 }
+table.entity_table tr.inactive span.tertiary_cell_info {
+    color: var(--text-color-tertiary);
+    opacity: 0.4;
+}
 table.entity_table tr td {
     padding-top: 2px;
     padding-bottom: 2px;
@@ -154,10 +161,16 @@ table.entity_table tr td {
     height: 1.4em;
     white-space: nowrap;
     position: relative;
+    overflow: clip;
 }
 
 table.entity_table span.secondary_cell_info {
     color: var(--text-color-secondary);
+}
+table.entity_table span.tertiary_cell_info {
+    color: var(--text-color-tertiary);
+    font-size: 80%;
+    display: block;
 }
 table.entity_table td.time {
     font-size: 90%;

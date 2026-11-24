@@ -37,6 +37,7 @@ pub use auth::{
         Model as ClientModel, Entity as Client,
         ActiveModel as ClientActiveModel,
         Column as ClientColumn,
+        ClientType,
     }
 };
 

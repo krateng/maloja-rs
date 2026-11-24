@@ -43,12 +43,12 @@
 <section>
     <form method="post" class="login_box"> <!-- no action means same url, so we carry over the target -->
         <label for="session">Session</label>
-        <select name="session" id="session">
+        <select name="session_id" id="session">
             <option value="0">New Device</option>
             {% if !sessions.is_empty() %}
             {# <optgroup label="Replace existing device"> #}
                 {% for session in sessions %}
-            <option value="{{ session.id }}">Replace: {{ session.identifier }}</option>
+                    <option value="{{ session.id }}">Replace: {{ session.identifier }}</option>
                 {% endfor %}
             {# </optgroup> #}
             {% endif %}

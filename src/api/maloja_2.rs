@@ -98,6 +98,9 @@ impl IntoResponse for MalojaError {
             MalojaError::AlbumNotFound { id } => {
                 create_response(&self, StatusCode::NOT_FOUND, format!("Album {} not found", id))
             }
+            MalojaError::EntityNotFound { id } => {
+                create_response(&self, StatusCode::NOT_FOUND, format!("Entity {} not found", id))
+            }
             MalojaError::DatabaseError { message } => {
                 create_response(&self, StatusCode::INTERNAL_SERVER_ERROR, message.clone())
             }

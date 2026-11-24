@@ -1,6 +1,6 @@
 use sea_orm::{ActiveModelBehavior, DeriveEntityModel};
 use sea_orm::entity::prelude::*;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use crate::entity::Scrobble;
 
 #[derive(Eq, PartialEq, Hash, Debug, Clone, DeriveEntityModel)]
@@ -25,13 +25,21 @@ pub struct Model {
     /// Displayed shortened key or User Agent
     pub display: String,
 
-    pub created_at: i64,
+    pub created_at: Option<i64>,
     pub last_used_at: Option<i64>,
     pub valid_until: Option<i64>,
 
-    // true if browser session, false if api key
-    pub session: bool,
+    pub client_type: ClientType,
 
+}
+
+#[derive(EnumIter, DeriveActiveEnum, Hash, PartialEq, Eq, Debug, Clone, Deserialize)]
+#[sea_orm(rs_type = "String", db_type = "Text", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
+pub enum ClientType {
+    Session,
+    ApiKey,
+    Imported,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

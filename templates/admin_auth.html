@@ -7,7 +7,7 @@
 {% block mainclass %}{% endblock mainclass %}
 
 {% block style %}
-    form#login_form {
+    form#change_pw_form {
         width:400px;
         display:grid;
         grid-template-columns: max-content 1fr;
@@ -17,29 +17,30 @@
 {% endblock style %}
 
 {% block top_info %}
-Here you can create or revoke API Keys for your different scrobble sources. You can also manage your sessions - when you
-login in a web browser, you can decide to create a new session or replace an existing one. This allows you e.g. to model
+Here you can create or revoke API Keys for your different scrobble sources. You can also manage your browsers -
+when you login, you can decide to create a new client or replace an existing one. This allows you e.g. to model
 a new browser install after reinstalling your OS as a logical continuation of the old one.<br/><br/>
-Note that Sessions and API Keys never disappear since they reference a client being used at any point in the past - you
+Note that Browsers and API Keys never disappear since they reference a client being used at any point in the past - you
 can simply revoke them if you no longer use them, or rotate the keys if they have been compromised.
-{% endblock top_info%}
+{% endblock top_info %}
 
 
 {% block body_sections %}
 <section>
-    <h2>Login</h2>
-    <form id="login_form">
+    <h2>Password</h2>
+    <form id="change_pw_form" method="post">
+        <input type="hidden" name="action" value="set_password" />
         <label for="password">New Password</label>
-        <input id="password" type="password" />
+        <input id="password" name="password" type="password" />
         <label for="password_confirm">Confirm Password</label>
-        <input id="password_confirm" type="password" />
+        <input id="password_confirm" name="password_confirm" type="password" />
         <input type="submit" value="Change Password" />
     </form>
 
 
 </section>
 <section>
-    <h2>Sessions</h2>
+    <h2>Browser Clients</h2>
     <table class="entity_table">
         <thead>
         <tr>
@@ -51,16 +52,19 @@ can simply revoke them if you no longer use them, or rotate the keys if they hav
         </tr>
         </thead>
         {% for session in sessions %}
-        <tr>
+        <tr {% if !session.active %}class="inactive"{% endif %}>
             <td>
                 {{ session.identifier }}
-                <span class="secondary_cell_info">{{ session.display }}</span>
+                {% if session.active %}<span class="tertiary_cell_info">{{ session.display }}</span>{% endif %}
             </td>
-            <td>{{ session.created_at | format_ts_short }}</td>
+            <td>{{ session.created_at | format_ts_short_allow_none }}</td>
             <td>{{ session.last_used_at | format_ts_short_allow_none }}</td>
             <td>{{ session.valid_until | format_ts_short_allow_none }}</td>
             <td>
-                <button>Logout</button>
+                <form method="post">
+                    <input type="hidden" name="client_id" value="{{ session.id }}" />
+                    <button name="action" value="revoke" {% if !session.active %}disabled{% endif %}>Logout</button>
+                </form>
             </td>
 
         </tr>
@@ -71,6 +75,8 @@ can simply revoke them if you no longer use them, or rotate the keys if they hav
 </section>
 <section>
     <h2>API Keys</h2>
+    {% let revoke_tooltip = "Revoke the key associated with this client. It will stop working immediately, but a new key can be generated in the future." %}
+    {% let reissue_tooltip = "Generate a new key to identify this client and activate it. The existing key will stop working immediately." %}
     <table class="entity_table">
         <thead>
         <tr>
@@ -85,25 +91,74 @@ can simply revoke them if you no longer use them, or rotate the keys if they hav
         <tr {% if !key.active %}class="inactive"{% endif %}>
             <td>
                 {{ key.identifier }}
-                {% if key.active %}<span class="secondary_cell_info">{{ key.display }}</span>{% endif %}
+                {% if key.active %}<span class="tertiary_cell_info">{{ key.display }}</span>{% endif %}
             </td>
-            <td>{{ key.created_at | format_ts_short }}</td>
+            <td>{{ key.created_at | format_ts_short_allow_none }}</td>
             <td>{{ key.last_used_at | format_ts_short_allow_none }}</td>
             <td>{{ key.valid_until | format_ts_short_allow_none }}</td>
             <td>
-                <button
-                        {% if !key.active %}disabled{% endif %}
-                        title="Revoke the key associated with this client. It will stop working immediately, but a new key can be generated in the future."
-                >Revoke</button>
-                <button
-                        title="Generate a new key to identify this client and activate it. The existing key will stop working immediately."
-                >{% if key.active %}Rotate{% else %}Reissue{% endif %}</button>
+                <form method="post">
+                    <input type="hidden" name="client_id" value="{{ key.id }}" />
+                    <button name="action" value="revoke" {% if !key.active %}disabled{% endif %} title="{{ revoke_tooltip }}">Revoke</button>
+                    <button name="action" value="reissue"  title="{{ reissue_tooltip }}">{% if key.active %}Rotate{% else %}Reissue{% endif %}</button>
+                </form>
+
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <button commandfor="new-api-key" command="show-modal">Create New</button>
+
+    <dialog id="new-api-key">
+        <form method="post">
+            <label for="new-key-name">Identifier</label>
+            <input id="new-key-name" type="text" required name="identifier" />
+            <!--
+            <label for="new-key-date">Expires</label>
+            <input id="new-key-date" type="date" name="expire" />
+            -->
+            <input type="hidden" name="client_type" value="api_key" />
+            <button name="action" value="create">Create new</button>
+        </form>
+    </dialog>
+
+
+
+</section>
+{% if !imported.is_empty() %}
+<section>
+    <h2>Imported Clients</h2>
+    <span>These clients were imported from your old data. They are currently not active, but you can reactivate them to
+    preserve continuity with your imported scrobble data.</span>
+    {% let session_tooltip = "Declare that this was a browser login session, meaning you have submitted scrobbles with this tag manually from the web interface." %}
+    {% let apikey_tooltip = "Declare that this was an API Client, meaning scrobbles with this tag were submitted from a music player or similar." %}
+    <table class="entity_table">
+        <thead>
+        <tr>
+            <td>Identifier</td>
+            <td>Actions</td>
+        </tr>
+        </thead>
+        {% for client in imported %}
+        <tr {% if !client.active %}class="inactive"{% endif %}>
+            <td>
+                {{ client.identifier }}
+            </td>
+            <td>
+                <form method="post">
+                    <input type="hidden" name="client_id" value="{{ client.id }}" />
+                    <input type="hidden" name="action" value="change_type" />
+                    <button name="target_type" value="session" title="{{ session_tooltip }}">Activate as Browser Login</button>
+                    <button name="target_type" value="api_key" title="{{ apikey_tooltip }}">Activate as API Key</button>
+                </form>
+
             </td>
         </tr>
         {% endfor %}
     </table>
 
 </section>
-
+{% endif %}
 
 {% endblock body_sections %}

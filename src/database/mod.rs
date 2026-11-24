@@ -44,8 +44,9 @@ pub async fn init_db(state: &AppState) -> Result<(), MalojaError> {
         Ok((imported, failed)) => {
             log::info!("Imported {} files, failed {}.", imported, failed);
         }
-        Err(_) => {
+        Err(e) => {
             log::error!("Failed to check for imports...");
+            //return Err(e)
         }
     };
 

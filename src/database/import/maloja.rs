@@ -13,7 +13,7 @@ use std::path::PathBuf;
 use parse_display::{Display, FromStr};
 use crate::configuration::app_state::AppState;
 use crate::database::repository::get_or_create::AttributedScrobbleWrite;
-use crate::entity::ArtistWriteContext;
+use crate::entity::{ArtistWriteContext, ClientType};
 
 #[derive(Deserialize, Debug, Clone)]
 struct MalojaExport {
@@ -95,7 +95,7 @@ pub async fn import_maloja(file: PathBuf, state: &AppState) -> Result<(), Maloja
     for client in clients {
         let client_id = match &client {
             MalojaOrigin::AttributedClient { identifier } => {
-                Some(state.db.get_or_create_client_by_identifier(identifier.clone(), true).await?)
+                Some(state.db.import_client(identifier.clone()).await?)
             }
             _ => None,
         };

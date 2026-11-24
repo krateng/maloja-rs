@@ -10,6 +10,8 @@ pub enum MalojaError {
     TrackNotFound { id: u32 },
     /// Album with that ID does not exist in Database
     AlbumNotFound { id: u32 },
+    /// Meta Entity with that ID does not exist in Database
+    EntityNotFound { id: u32 },
     /// A field needed to complete the entity submission was not provided
     MissingField { field: String },
     /// Could not connect to the Database
