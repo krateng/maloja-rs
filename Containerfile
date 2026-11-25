@@ -1,4 +1,4 @@
-FROM rust:1.83-alpine3.21 AS builder
+FROM rust:alpine3.24 AS builder
 
 ARG CARGO_PROFILE=release
 
@@ -14,6 +14,7 @@ RUN apk add --no-cache \
     bash
 
 ENV CARGO_TARGET_DIR=/target
+ENV RUSTFLAGS="-A warnings"
 
 # just build a fake application to build all our dependencies (caching)
 COPY Cargo.toml Cargo.lock ./
@@ -23,21 +24,22 @@ RUN cargo clean --profile ${CARGO_PROFILE} && rm -rf src
 # build full
 COPY Cargo.toml Cargo.lock ./
 COPY src/ ./src
+COPY templates/ ./templates
 RUN cargo build --profile ${CARGO_PROFILE}
 # copy result to neutral path so we dont need to care about profile in the final container
 RUN cp ${CARGO_TARGET_DIR}/$(if [ "$CARGO_PROFILE" = "release" ]; then echo "release"; else echo "debug"; fi)/maloja-rs ${CARGO_TARGET_DIR}/maloja-rs
 
 
-FROM alpine:3.21 AS dist
-ENV CARGO_TERM_COLOR=always
+FROM alpine:3.24 AS dist
 
-RUN mkdir /data /config /logs
-WORKDIR /data
+RUN install -o 1000 -d -m 775 /data /config /logs
 ENV MALOJA_CONFIG_PATH=/config
 ENV MALOJA_DATA_PATH=/data
 ENV MALOJA_LOG_PATH=/logs
 
-COPY --from=builder /target/maloja-rs /bin
+COPY --from=builder /target/maloja-rs /bin/maloja-rs
+
+USER 1000:1000
 
 EXPOSE 42010
 
