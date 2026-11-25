@@ -39,15 +39,14 @@ pub async fn admin_auth(
 fn extract_flash_cookie(jar: CookieJar) -> Option<Toast> {
     let cookie = jar.get("flash_message");
     if let Some(cookie) = cookie
-        && let Some(notif) = Notification::from_cookie(&cookie.value()) {
+        && let Some(notif) = Notification::from_cookie(cookie.value()) {
         Some(notif.into_toast())
     }
     else {
-        println!("cookie not found: {:?}", cookie);
         None
     }
 }
-fn extract_flash_cookies_full(jar: CookieJar) -> Vec<Toast> {
+pub fn extract_flash_cookies_full(jar: CookieJar) -> Vec<Toast> {
     let toast = extract_flash_cookie(jar);
     if let Some(toast) = toast {
         vec![toast]

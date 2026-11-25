@@ -14,7 +14,10 @@ use serde::Deserialize;
 use time::{Duration, SignedDuration};
 use crate::AppState;
 use crate::entity::ClientModel;
+use crate::server::notifications::Notification;
 use crate::server::pages::SharedPage;
+use crate::server::pages_admin::extract_flash_cookies_full;
+use crate::server::pages_admin_post::redirect_with_flash_cookie;
 
 const SESSION_COOKIE: &str = "session";
 
@@ -22,7 +25,6 @@ const SESSION_COOKIE: &str = "session";
 #[derive(Template)]
 #[template(path = "login.html")]
 pub struct LoginPage{
-    failed: bool,
     sessions: Vec<ClientModel>,
     shared_page: SharedPage,
 }
@@ -37,7 +39,7 @@ pub async fn login(
     Query(params_login): Query<QueryLogin>,
     jar: CookieJar,
 ) -> Response {
-    if check_auth(jar, state.clone()).await {
+    if check_auth(jar.clone(), state.clone()).await {
         // already logged in
         Redirect::to(&params_login.target.unwrap_or("/".to_owned())).into_response()
 
@@ -45,9 +47,10 @@ pub async fn login(
     else {
         let clients = state.db.get_clients().await.unwrap();
         let p = LoginPage {
-            failed: false,
             sessions: clients.sessions,
-            shared_page: Default::default(),
+            shared_page: SharedPage {
+                notifications: extract_flash_cookies_full(jar)
+            },
         };
         Html(p.render().unwrap()).into_response()
     }
@@ -63,6 +66,7 @@ pub async fn post_login(
     State(state): State<AppState>,
     Query(params_login): Query<QueryLogin>,
     user_agent: Option<TypedHeader<UserAgent>>,
+    OriginalUri(uri): OriginalUri,
     Form(form_login): Form<FormLogin>,
 ) -> Response {
     let session_id = match form_login.session_id {
@@ -89,16 +93,10 @@ pub async fn post_login(
         (jar.add(cookie), r).into_response()
     }
     else {
-        let clients = state.db.get_clients().await.unwrap();
-        let p = LoginPage {
-            failed: true,
-            sessions: clients.sessions,
-            shared_page: Default::default(),
-        };
-        let mut r = Html(p.render().unwrap()).into_response();
-        r.headers_mut().insert(WWW_AUTHENTICATE, HeaderValue::from_static("Cookie"));
-        *r.status_mut() = StatusCode::UNAUTHORIZED;
-        r
+        //let uri = uri.path_and_query().map(|x| x.as_str()).unwrap_or("/login");
+        // we cant redirect to a full query path because we use the same string
+        // to set the flash cookie. separate this? or maybe to a full typed handling
+        redirect_with_flash_cookie("/login", Notification::WrongPassword)
     }
 }
 

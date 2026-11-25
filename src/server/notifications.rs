@@ -14,6 +14,7 @@ pub enum Notification {
     // Errors
     PasswordInvalid,
     PasswordsDoNotMatch,
+    WrongPassword,
 }
 
 pub enum ToastType {
@@ -30,6 +31,7 @@ impl Notification {
             Self::ApiKeyReissued { token: _ } |
             Self::PasswordChanged => ToastType::Success,
 
+            Self::WrongPassword |
             Self::PasswordInvalid |
             Self::PasswordsDoNotMatch => ToastType::Error,
         };
@@ -39,6 +41,7 @@ impl Notification {
             Self::PasswordChanged => "Password changed".to_string(),
             Self::PasswordInvalid |
             Self::PasswordsDoNotMatch => "Password not changed".to_string(),
+            Self::WrongPassword => "Wrong password".to_string(),
         };
         let text = match self {
             Self::ApiKeyGenerated { token: _ } |

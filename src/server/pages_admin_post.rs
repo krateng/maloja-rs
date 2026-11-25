@@ -81,7 +81,7 @@ pub async fn post_admin_auth(
     }
 }
 
-fn redirect_with_flash_cookie(path: &str, msg: Notification) -> Response {
+pub fn redirect_with_flash_cookie(path: &str, msg: Notification) -> Response {
     let jar = CookieJar::new();
     let cookie = Cookie::build(("flash_message", msg.to_cookie()))
         .http_only(true)
