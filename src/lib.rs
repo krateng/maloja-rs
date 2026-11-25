@@ -3,6 +3,7 @@ use log::info;
 pub use crate::configuration::app_state::AppState;
 use crate::configuration::config::create_config_template;
 use crate::configuration::logging::{display_path, display_url};
+pub use crate::database::repository::auth::PasswordState;
 
 mod api;
 mod configuration;

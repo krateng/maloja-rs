@@ -8,6 +8,7 @@ pub struct Model {
     #[sea_orm(primary_key)]
     pub id: Singleton,
     pub password_hash: StoredPasswordHash,
+    pub app_generated: bool,
 }
 
 

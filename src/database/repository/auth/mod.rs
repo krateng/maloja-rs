@@ -125,24 +125,32 @@ impl MalojaDB {
         let hash = StoredPasswordHash::from_pw(&password)?;
         let mut active = login.into_active_model();
         active.password_hash = Set(hash);
+        active.app_generated = Set(false);
         Login::update(active).exec_without_returning(&self.connection).await?;
         Ok(())
     }
-
-    pub async fn set_initial_password(&self) -> Result<Option<String>, MalojaError> {
+    
+    pub async fn set_initial_password(&self) -> Result<PasswordState, MalojaError> {
         let login = Login::find_by_id(Singleton::Only).one(&self.connection).await?;
         match login {
             // already have a pw set
-            Some(login) => Ok(None),
+            Some(login) => {
+                match login.app_generated {
+                    true => Ok(PasswordState::AppGeneratedStillSet),
+                    false => Ok(PasswordState::AllGood),
+                }
+                
+            },
             // no pw, generate new
             None => {
                 let pw = generate_password();
                 let login = LoginActiveModel {
                     password_hash: Set(StoredPasswordHash::from_pw(&pw)?),
-                    id: Set(Singleton::Only)
+                    id: Set(Singleton::Only),
+                    app_generated: Set(true),
                 };
                 Login::insert(login).exec_without_returning(&self.connection).await?;
-                Ok(Some(pw))
+                Ok(PasswordState::NewlyGenerated(pw))
             }
         }
     }
@@ -236,6 +244,13 @@ struct TokenResult {
     token_display: String,
     hash: String,
 }
+
+pub enum PasswordState {
+    AllGood,
+    AppGeneratedStillSet,
+    NewlyGenerated(String),
+}
+
 fn generate_token() -> TokenResult {
     let mut buf = [0u8; 48];
     getrandom::fill(&mut buf).expect("OS RNG failed");
