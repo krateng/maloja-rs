@@ -60,11 +60,11 @@ pub fn mark_db_write() {
 }
 
 pub async fn connect(folders: &ApplicationFolders) -> Result<DatabaseConnection, MalojaError> {
-    let dbfile = get_database_path(folders).display().to_string();
-    let dbstring = format!("sqlite://{}?mode=rwc", dbfile);
-    let mut dboptions = ConnectOptions::new(dbstring);
-    dboptions.sqlx_logging(false);
-    match Database::connect(dboptions).await {
+    let db_file = get_database_path(folders).display().to_string();
+    let db_string = format!("sqlite://{}?mode=rwc", db_file);
+    let mut db_options = ConnectOptions::new(db_string);
+    db_options.sqlx_logging(false);
+    match Database::connect(db_options).await {
         Ok(conn) => {
             conn.execute_unprepared("PRAGMA foreign_keys = ON").await?;
             Ok(conn)
