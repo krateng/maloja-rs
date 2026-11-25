@@ -122,7 +122,7 @@ impl MalojaDB {
     pub async fn set_password(&self, password: String) -> Result<(), MalojaError> {
         let login = Login::find_by_id(Singleton::Only).one(&self.connection).await?;
         let login = login.ok_or(MalojaError::EntityNotFound { id: 1 })?;
-        let hash = StoredPasswordHash::from_pw(&password);
+        let hash = StoredPasswordHash::from_pw(&password)?;
         let mut active = login.into_active_model();
         active.password_hash = Set(hash);
         Login::update(active).exec_without_returning(&self.connection).await?;
@@ -138,7 +138,7 @@ impl MalojaDB {
             None => {
                 let pw = generate_password();
                 let login = LoginActiveModel {
-                    password_hash: Set(StoredPasswordHash::from_pw(&pw)),
+                    password_hash: Set(StoredPasswordHash::from_pw(&pw)?),
                     id: Set(Singleton::Only)
                 };
                 Login::insert(login).exec_without_returning(&self.connection).await?;
@@ -262,23 +262,26 @@ fn generate_password() -> String {
 
     const ADJECTIVES: &[&str] = &[
         "sleepy", "angry", "excited", "happy", "cute", "frivolous", "playful", "scheming", "giddy", "confident",
-        "assertive", "gleeful",
+        "assertive", "gleeful", "energetic", "motivated", "tired", "content", "relaxed",
     ];
     const IDOLS: &[&str] = &[
         "soyeon", "yuqi", "miyeon", "shuhua", "minnie", "jennie", "lisa", "rose", "jisoo", "jihyo", "tzuyu", "mina",
-        "dahyun", "momo", "nancy", "yeonhee", "jisun", "chaewon", "wendy", "seolhyun", "sorn",
+        "dahyun", "momo", "nancy", "yeonhee", "jisun", "chaewon", "wendy", "seolhyun", "sorn", "hyuna", "jeonghwa",
+        "elly", "hani", "solar", "hwasa", "akali", "yura",
     ];
     const ACTIONS: &[&str] = &[
         "sings", "hums", "dances", "vibes", "aurafarms", "sits", "stares", "smirks", "poses", "yells", "whispers",
+        "raps", "beatboxes", "battles", "whistles", "cycles", "lounges", "waits", "ponders",
     ];
     const PREPOSITIONS1: &[&str] = &[
         "on", "in", "beside", "over", "under", "inside", "within", "above", "underneath", "behind",
     ];
     const ARTICLES: &[&str] = &[
-        "the", "a", "my", "our", "her", "your", "some", "every", "any",
+        "the", "a", "my", "our", "her", "your", "some", "every", "any", "this", "that",
     ];
     const ADJECTIVES2: &[&str] = &[
-        "cozy", "beautiful", "gorgeous", "cold", "comfy", "cute", "ancient", "tiny", "breathtaking", "awesome",
+        "cozy", "beautiful", "gorgeous", "cold", "comfy", "cute", "historic", "tiny", "breathtaking", "wondrous",
+        "magical", "modern", "grand", "huge", "charming", "shiny",
     ];
     const LANDSCAPES: &[&str] = &[
         "forest", "glacier", "mountain", "tundra", "boreal", "arctic", "urban",

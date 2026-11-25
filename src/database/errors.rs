@@ -28,6 +28,8 @@ pub enum MalojaError {
     TimeError { message: String },
     /// Query string does not resolve to a valid query
     QueryError { message: String },
+    /// Invalid Password
+    PasswordError,
 }
 
 impl std::error::Error for MalojaError {

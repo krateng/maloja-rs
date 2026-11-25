@@ -1,6 +1,7 @@
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use sea_orm::{ColIdx, DeriveActiveEnum, DeriveValueType, EnumIter};
 use serde::Deserialize;
+use crate::database::errors::MalojaError;
 
 pub mod client;
 pub mod login;
@@ -30,10 +31,16 @@ impl std::fmt::Debug for StoredPasswordHash {
     }
 }
 impl StoredPasswordHash {
-    pub fn from_pw(password: &str) -> StoredPasswordHash {
-        let argon2 = Argon2::default();
-        let hash = argon2.hash_password(password.as_bytes()).expect("Argon2 hash failed");
-        Self(hash.to_string())
+    pub fn from_pw(password: &str) -> Result<StoredPasswordHash, MalojaError> {
+        if password.len() < 12 {
+            Err(MalojaError::PasswordError)
+        }
+        else {
+            let argon2 = Argon2::default();
+            let hash = argon2.hash_password(password.as_bytes()).expect("Argon2 hash failed");
+            Ok(Self(hash.to_string()))
+        }
+        
     }
 
     pub fn check_pw(&self, password: &str) -> bool {

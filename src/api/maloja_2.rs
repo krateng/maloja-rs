@@ -125,6 +125,9 @@ impl IntoResponse for MalojaError {
             MalojaError::InternalError { message } => {
                 create_response(&self, StatusCode::INTERNAL_SERVER_ERROR, message.clone())
             }
+            MalojaError::PasswordError => {
+                create_response(&self, StatusCode::BAD_REQUEST, String::from("Passwords must be at least 12 characters"))
+            }
         }
     }
 }
