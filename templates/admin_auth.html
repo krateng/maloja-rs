@@ -18,8 +18,7 @@
 
 {% block top_info %}
 Here you can create or revoke API Keys for your different scrobble sources. You can also manage your browsers -
-when you login, you can decide to create a new client or replace an existing one. This allows you e.g. to model
-a new browser install after reinstalling your OS as a logical continuation of the old one.<br/><br/>
+when you login, you can decide to create a new client or replace an existing one.<br/><br/>
 Note that Browsers and API Keys never disappear since they reference a client being used at any point in the past - you
 can simply revoke them if you no longer use them, or rotate the keys if they have been compromised.
 {% endblock top_info %}
@@ -36,18 +35,36 @@ can simply revoke them if you no longer use them, or rotate the keys if they hav
         <input id="password_confirm" name="password_confirm" type="password" />
         <input type="submit" value="Change Password" />
     </form>
-
-
 </section>
+<!--
+<section>
+    <h2>Security Settings</h2>
+    <form>
+        <input id="check-2fa" type="checkbox" />
+        <label for="check-2fa">2-Factor-Authentication</label>
+        <input id="check-new" type="checkbox" />
+        <label for="check-new">Allow new logins</label>
+    </form>
+</section>
+-->
+{% let clear_tooltip = "Remove all clients that have never submitted scrobbles and are currently not active." %}
+
 <section>
     <h2>Browser Clients</h2>
+    <p>
+        It is recommended to use a login for each distinct device you use. You can reuse an old session, for example when reinstalling
+        your desktop OS and your new browser no longer has its cookies, but should count as logical continuation of the old one.
+        Note however that two devices cannot be logged in at the same time using the same session at the same time, as each login
+        will invalidate the other.
+    </p>
+    {% let logout_tooltip = "Invalidate this session. The device will have to reauthenticate with the password, but can claim the existing session again." %}
     <table class="entity_table">
         <thead>
         <tr>
             <td>Identifier</td>
             <td>First Login</td>
             <td>Last Seen</td>
-            <td>Expiry</td>
+            <td>Valid Until</td>
             <td>Actions</td>
         </tr>
         </thead>
@@ -57,13 +74,13 @@ can simply revoke them if you no longer use them, or rotate the keys if they hav
                 {{ session.identifier }}
                 {% if session.active %}<span class="tertiary_cell_info">{{ session.display }}</span>{% endif %}
             </td>
-            <td>{{ session.created_at | format_ts_short_allow_none }}</td>
-            <td>{{ session.last_used_at | format_ts_short_allow_none }}</td>
-            <td>{{ session.valid_until | format_ts_short_allow_none }}</td>
+            <td>{{ session.created_at | format_ts_short_allow_none("Imported") }}</td>
+            <td>{{ session.last_used_at | format_ts_short_allow_none("Never") }}</td>
+            <td>{{ session.valid_until | format_ts_short_allow_none("Forever") }}</td>
             <td>
                 <form method="post">
                     <input type="hidden" name="client_id" value="{{ session.id }}" />
-                    <button name="action" value="revoke" {% if !session.active %}disabled{% endif %}>Logout</button>
+                    <button name="action" value="revoke" {% if !session.active %}disabled{% endif %} title="{{ logout_tooltip }}">Logout</button>
                 </form>
             </td>
 
@@ -74,12 +91,17 @@ can simply revoke them if you no longer use them, or rotate the keys if they hav
 
     <form method="post">
         <input type="hidden" name="client_type" value="session" />
-        <button name="action" value="clear_unused">Clear unused</button>
+        <button name="action" value="clear_unused" title="{{ clear_tooltip }}">Clear unused</button>
     </form>
 
 </section>
 <section>
     <h2>API Keys</h2>
+    <p>
+        It is recommended to create a new API Key for each logical scrobble source you use. If you move from an old e.g. Navidrome
+        installation to a new one, you can reuse the same logical client and simply rotate the key. Old clients for devices / applications
+        you no longer use remain in the database, they can simply be revoked and no longer offer any attack surface.
+    </p>
     {% let revoke_tooltip = "Revoke the key associated with this client. It will stop working immediately, but a new key can be generated in the future." %}
     {% let reissue_tooltip = "Generate a new key to identify this client and activate it. The existing key will stop working immediately." %}
     <table class="entity_table">
@@ -88,7 +110,7 @@ can simply revoke them if you no longer use them, or rotate the keys if they hav
             <td>Identifier</td>
             <td>Created</td>
             <td>Last Used</td>
-            <td>Expiry</td>
+            <td>Valid Until</td>
             <td>Actions</td>
         </tr>
         </thead>
@@ -98,9 +120,9 @@ can simply revoke them if you no longer use them, or rotate the keys if they hav
                 {{ key.identifier }}
                 {% if key.active %}<span class="tertiary_cell_info">{{ key.display }}</span>{% endif %}
             </td>
-            <td>{{ key.created_at | format_ts_short_allow_none }}</td>
-            <td>{{ key.last_used_at | format_ts_short_allow_none }}</td>
-            <td>{{ key.valid_until | format_ts_short_allow_none }}</td>
+            <td>{{ key.created_at | format_ts_short_allow_none("Imported") }}</td>
+            <td>{{ key.last_used_at | format_ts_short_allow_none("Never") }}</td>
+            <td>{{ key.valid_until | format_ts_short_allow_none("Forever") }}</td>
             <td>
                 <form method="post">
                     <input type="hidden" name="client_id" value="{{ key.id }}" />
@@ -114,10 +136,10 @@ can simply revoke them if you no longer use them, or rotate the keys if they hav
     </table>
 
     <button commandfor="new-api-key" command="show-modal">Create New</button>
-    <form method="post">
+    <form method="post" style="display: inline;">
 
         <input type="hidden" name="client_type" value="api_key" />
-        <button name="action" value="clear_unused">Clear unused</button>
+        <button name="action" value="clear_unused" title="{{ clear_tooltip }}">Clear unused</button>
     </form>
 
     <dialog id="new-api-key">
@@ -139,8 +161,10 @@ can simply revoke them if you no longer use them, or rotate the keys if they hav
 {% if !imported.is_empty() %}
 <section>
     <h2>Imported Clients</h2>
-    <span>These clients were imported from your old data. They are currently not active, but you can reactivate them to
-    preserve continuity with your imported scrobble data.</span>
+    <p>
+        These clients were imported from your old data. They are currently not active, but you can reactivate them to
+        preserve continuity with your imported scrobble data.
+    </p>
     {% let session_tooltip = "Declare that this was a browser login session, meaning you have submitted scrobbles with this tag manually from the web interface." %}
     {% let apikey_tooltip = "Declare that this was an API Client, meaning scrobbles with this tag were submitted from a music player or similar." %}
     <table class="entity_table">

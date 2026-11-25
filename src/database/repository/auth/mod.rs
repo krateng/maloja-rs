@@ -82,7 +82,7 @@ impl MalojaDB {
         let (_, token_result) = self.create_client(
             identifier, true, Some(Utc::now().timestamp()), ClientType::ApiKey, "".to_owned()
         ).await?;
-        Ok(token_result.token_display)
+        Ok(token_result.token)
     }
 
     // returns the session token
@@ -129,7 +129,7 @@ impl MalojaDB {
         Login::update(active).exec_without_returning(&self.connection).await?;
         Ok(())
     }
-    
+
     pub async fn set_initial_password(&self) -> Result<PasswordState, MalojaError> {
         let login = Login::find_by_id(Singleton::Only).one(&self.connection).await?;
         match login {
@@ -139,7 +139,7 @@ impl MalojaDB {
                     true => Ok(PasswordState::AppGeneratedStillSet),
                     false => Ok(PasswordState::AllGood),
                 }
-                
+
             },
             // no pw, generate new
             None => {

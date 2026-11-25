@@ -87,7 +87,7 @@ pub fn redirect_with_flash_cookie(path: &str, msg: Notification) -> Response {
         .http_only(true)
         .same_site(SameSite::Strict)
         .path(path.to_owned())
-        .max_age(Duration::seconds(10))
+        .max_age(Duration::seconds(3))
         .build();
     (jar.add(cookie), Redirect::to(path)).into_response()
 }

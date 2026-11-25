@@ -45,7 +45,7 @@ impl Notification {
         };
         let text = match self {
             Self::ApiKeyGenerated { token: _ } |
-            Self::ApiKeyReissued { token: _ } => Some("Your key:".to_string()),
+            Self::ApiKeyReissued { token: _ } => Some("Copy your key now, it will not be shown again:".to_string()),
             Self::PasswordInvalid => Some("Password needs to be at least 12 characters".to_string()),
             Self::PasswordsDoNotMatch => Some("Passwords do not match".to_string()),
 

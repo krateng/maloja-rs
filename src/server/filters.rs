@@ -19,10 +19,10 @@ pub fn format_ts_short(timestamp: &i64, env: &dyn askama::Values) -> AskamaResul
 }
 
 #[askama::filter_fn]
-pub fn format_ts_short_allow_none(timestamp: &Option<i64>, env: &dyn askama::Values) -> AskamaResult<String> {
+pub fn format_ts_short_allow_none(timestamp: &Option<i64>, env: &dyn askama::Values, default: &str) -> AskamaResult<String> {
     match timestamp {
         Some(timestamp) => Ok(format_short(*timestamp)),
-        None => Ok("Never".to_string()),
+        None => Ok(default.to_string()),
     }
 }
 
@@ -32,7 +32,7 @@ fn format_short(timestamp: i64) -> String {
     let now = Utc::now();
     let diff = (now - time);
     if diff.num_seconds() < 60 && diff.num_seconds() >= 0 {
-        "Last Minute".to_string()
+        "Last minute".to_string()
     }
     else if diff.num_minutes() < 60 && diff.num_seconds() >= 0 {
         "Last hour".to_string()
