@@ -5,13 +5,13 @@ mod pages_admin_post;
 mod web_auth;
 mod notifications;
 
+use std::collections::HashMap;
 use crate::api::mount_apis;
 use axum::routing::{get, post};
 use axum::{middleware, Router};
-use axum::extract::{Request, State};
-use axum::middleware::Next;
-use axum::response::Response;
-use axum_extra::extract::CookieJar;
+use axum::http::{header, Uri, StatusCode};
+use axum::response::{IntoResponse, Response};
+use rust_embed::{DynRustEmbed, Embed, EmbeddedFile, RustEmbed};
 use pages::*;
 use pages_admin::*;
 use pages_admin_post::*;
@@ -34,8 +34,6 @@ pub async fn create_app(state: &AppState) -> Router<AppState> {
     let mut app: Router<AppState> = Router::new();
     // APIS
     app = mount_apis(app);
-    // SPECIAL PATHS
-    app = app.nest_service("/api_explorer", ServeFile::new("src/web/special/api_explorer.html"));
     // TEMPLATES
     let app_secure = Router::new()
         .route("/admin_auth", get(admin_auth).post(post_admin_auth))
@@ -51,9 +49,41 @@ pub async fn create_app(state: &AppState) -> Router<AppState> {
         .route("/login", get(web_auth::login).post(web_auth::post_login))
         .merge(app_secure);
 
-    // STATIC FILES
-    app = app.fallback_service(ServeDir::new("src/web/static"));
+    // STATIC FILES AND SPECIAL
+    app = app.fallback(static_handler);
 
     app
+}
+
+#[derive(RustEmbed, Clone)]
+#[folder = "src/web/static/"]
+struct StaticFiles;
+
+#[derive(RustEmbed, Clone)]
+#[folder = "src/web/special/"]
+struct SpecialFiles;
+
+async fn static_handler(uri: Uri) -> Response {
+    let path = uri.path().trim_start_matches('/');
+    match StaticFiles::get(path) {
+        Some(f) => {
+            let mime = f.metadata.mimetype().to_owned();
+            ([(header::CONTENT_TYPE, mime)], f.data).into_response()
+        }
+        None => {
+            // we could use simple .html append or smth but this is meant
+            // for specific hardcoded paths that need to be explicitly spelled out
+            let embedded = match path {
+                "api_explorer" => SpecialFiles::get("api_explorer.html"),
+                _ => None
+            };
+            if let Some(f) = embedded {
+                let mime = f.metadata.mimetype().to_owned();
+                ([(header::CONTENT_TYPE, mime)], f.data).into_response()
+            } else {
+                StatusCode::NOT_FOUND.into_response()
+            }
+        },
+    }
 }
 
