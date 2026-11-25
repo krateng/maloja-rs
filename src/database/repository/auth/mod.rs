@@ -266,7 +266,9 @@ fn generate_token() -> TokenResult {
 
 fn hash_token(token: String) -> String {
     let hash = Sha256::digest(token.as_bytes());
-    let hash_hex = format!("{:x}", hash);
+    let hash_hex = hash
+        .iter().map(|b| format!("{:02x}", b))
+        .collect();
     hash_hex
 }
 
