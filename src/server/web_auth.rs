@@ -14,6 +14,7 @@ use serde::Deserialize;
 use time::{Duration, SignedDuration};
 use crate::AppState;
 use crate::entity::ClientModel;
+use crate::server::pages::SharedPage;
 
 const SESSION_COOKIE: &str = "session";
 
@@ -21,8 +22,9 @@ const SESSION_COOKIE: &str = "session";
 #[derive(Template)]
 #[template(path = "login.html")]
 pub struct LoginPage{
-    pub failed: bool,
-    pub sessions: Vec<ClientModel>
+    failed: bool,
+    sessions: Vec<ClientModel>,
+    shared_page: SharedPage,
 }
 
 #[derive(Deserialize)]
@@ -45,6 +47,7 @@ pub async fn login(
         let p = LoginPage {
             failed: false,
             sessions: clients.sessions,
+            shared_page: Default::default(),
         };
         Html(p.render().unwrap()).into_response()
     }
@@ -90,6 +93,7 @@ pub async fn post_login(
         let p = LoginPage {
             failed: true,
             sessions: clients.sessions,
+            shared_page: Default::default(),
         };
         let mut r = Html(p.render().unwrap()).into_response();
         r.headers_mut().insert(WWW_AUTHENTICATE, HeaderValue::from_static("Cookie"));

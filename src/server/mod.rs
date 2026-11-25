@@ -3,6 +3,7 @@ mod pages_admin;
 pub mod filters;
 mod pages_admin_post;
 mod web_auth;
+mod notifications;
 
 use crate::api::mount_apis;
 use axum::routing::{get, post};

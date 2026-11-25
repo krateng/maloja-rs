@@ -95,7 +95,19 @@
 
 
 		<div id="notification_area">
-
+		{% block toasts %}
+			{% for toast in shared_page.notifications %}
+			{% let toast_cls = toast.to_css_class() %}
+			<dialog class="toast toast-{{ toast_cls }}" open>
+				<div>
+					<h4>{{ toast.title }}</h4>
+					{% if let Some(text) = toast.text %}<p>{{ text }}</p>{% endif %}
+					{% if let Some(copy_text) = toast.copy_text %}<p class="copyable">{{ copy_text }}</p>{% endif %}
+				</div>
+				<form method="dialog"><button aria-label="Close">×</button></form>
+			</dialog>
+			{% endfor %}
+		{% endblock toasts %}
 		</div>
 
 	</body>

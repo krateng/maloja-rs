@@ -1,3 +1,4 @@
+use std::default::Default;
 use crate::database::views::{ChartsEntry, PerformanceEntry, PulseEntry};
 use crate::entity::album::AlbumRead;
 use crate::entity::artist::ArtistRead;
@@ -13,6 +14,7 @@ use axum::extract::{Path, Query, State};
 use axum::response::{Html, IntoResponse, Response};
 use crate::configuration::app_state::AppState;
 use crate::configuration::config::MalojaConfig;
+use crate::server::notifications::Toast;
 use super::filters;
 
 
@@ -41,6 +43,12 @@ fn get_preset_ranges() -> Vec<ValidTimeRange> {
     result
 }
 
+
+#[derive(Default)]
+pub struct SharedPage {
+    pub notifications: Vec<Toast>,
+}
+
 #[derive(Template)]
 #[template(path = "info_artist.html")]
 struct ArtistPage {
@@ -51,6 +59,7 @@ struct ArtistPage {
     scrobbles: Vec<ScrobbleRead>,
     pulses: Vec<(RangeType, Vec<PulseEntry>)>,
     performances: Vec<(RangeType, Vec<PerformanceEntry>)>,
+    shared_page: SharedPage,
 }
 pub async fn info_artist(
     State(state): State<AppState>,
@@ -95,6 +104,7 @@ pub async fn info_artist(
         scrobbles: scrobbles,
         pulses: pulses,
         performances: performances,
+        shared_page: Default::default(),
     };
     Html(p.render().unwrap()).into_response()
 }
@@ -108,6 +118,7 @@ struct TrackPage {
     scrobbles: Vec<ScrobbleRead>,
     pulses: Vec<(RangeType, Vec<PulseEntry>)>,
     performances: Vec<(RangeType, Vec<PerformanceEntry>)>,
+    shared_page: SharedPage,
 }
 pub async fn info_track(
     State(state): State<AppState>,
@@ -142,6 +153,7 @@ pub async fn info_track(
         scrobbles: scrobbles,
         pulses: pulses,
         performances: performances,
+        shared_page: Default::default(),
     };
     Html(p.render().unwrap()).into_response()
 }
@@ -156,6 +168,7 @@ struct AlbumPage {
     scrobbles: Vec<ScrobbleRead>,
     pulses: Vec<(RangeType, Vec<PulseEntry>)>,
     performances: Vec<(RangeType, Vec<PerformanceEntry>)>,
+    shared_page: SharedPage,
 }
 pub async fn info_album(
     State(state): State<AppState>,
@@ -193,6 +206,7 @@ pub async fn info_album(
         scrobbles: scrobbles,
         pulses: pulses,
         performances: performances,
+        shared_page: Default::default(),
     };
     Html(p.render().unwrap()).into_response()
 }
@@ -207,6 +221,7 @@ struct PulsePage {
     entity_limit: EntityLimit,
     preset_steps: Vec<RangeType>,
     preset_ranges: Vec<ValidTimeRange>,
+    shared_page: SharedPage,
 }
 pub async fn pulse(
     State(state): State<AppState>,
@@ -248,6 +263,7 @@ pub async fn pulse(
         entity_limit: EntityLimit { artist, album, track },
         preset_steps: RANGE_TYPES.to_vec(),
         preset_ranges: get_preset_ranges(),
+        shared_page: Default::default(),
     };
     Html(p.render().unwrap()).into_response()
 }
@@ -262,6 +278,7 @@ struct PerformancePage {
     entity_limit: EntityLimit,
     preset_steps: Vec<RangeType>,
     preset_ranges: Vec<ValidTimeRange>,
+    shared_page: SharedPage,
 }
 pub async fn performance(
     State(state): State<AppState>,
@@ -303,6 +320,7 @@ pub async fn performance(
         entity_limit: EntityLimit { artist, album, track },
         preset_steps: RANGE_TYPES.to_vec(),
         preset_ranges: get_preset_ranges(),
+        shared_page: Default::default(),
     };
     Html(p.render().unwrap()).into_response()
 }
@@ -315,6 +333,7 @@ struct ScrobblesPage {
     entity_limit: EntityLimit,
     timerange: ValidTimeRange,
     preset_ranges: Vec<ValidTimeRange>,
+    shared_page: SharedPage,
 }
 pub async fn scrobbles(
     State(state): State<AppState>,
@@ -351,6 +370,7 @@ pub async fn scrobbles(
         entity_limit: EntityLimit { artist, album, track },
         timerange,
         preset_ranges: get_preset_ranges(),
+        shared_page: Default::default(),
     };
     Html(p.render().unwrap()).into_response()
 }
@@ -359,9 +379,13 @@ pub async fn scrobbles(
 #[template(path = "about.html")]
 struct AboutPage {
     version: String,
+    shared_page: SharedPage,
 }
 pub async fn about() -> Response {
-    let p = AboutPage { version: env!("CARGO_PKG_VERSION").to_string() };
+    let p = AboutPage {
+        version: env!("CARGO_PKG_VERSION").to_string(),
+        shared_page: Default::default(),
+    };
 
     Html(p.render().unwrap()).into_response()
 }
