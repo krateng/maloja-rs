@@ -81,11 +81,11 @@ pub async fn create_app(state: &AppState) -> Router<AppState> {
 }
 
 #[derive(RustEmbed, Clone)]
-#[folder = "src/web/static/"]
+#[folder = "web/static/"]
 struct StaticFiles;
 
 #[derive(RustEmbed, Clone)]
-#[folder = "src/web/special/"]
+#[folder = "web/special/"]
 struct SpecialFiles;
 
 async fn static_handler(uri: Uri) -> Response {
