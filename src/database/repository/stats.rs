@@ -43,7 +43,8 @@ impl MalojaDB {
             .join(JoinType::LeftJoin, entity::track::Relation::Scrobble.def())
             .column_as(TrackColumn::Id, "track_id")
             .column_as(ScrobbleColumn::Timestamp.count(), "scrobbles")
-            .column_as(Expr::cust("RANK() OVER (ORDER BY COUNT(scrobbles.timestamp) DESC)"), "rank")
+            // TODO AVOID RAW SQL
+            .column_as(Expr::cust("RANK() OVER (ORDER BY COUNT(music_scrobbles.timestamp) DESC)"), "rank")
             .group_by(TrackColumn::Id);
 
         match real_filter {
@@ -92,7 +93,8 @@ impl MalojaDB {
             .join(JoinType::LeftJoin, entity::track::Relation::Scrobble.def())
             .column_as(ArtistColumn::Id, "artist_id")
             .column_as(ScrobbleColumn::Timestamp.count(), "scrobbles")
-            .column_as(Expr::cust("RANK() OVER (ORDER BY COUNT(scrobbles.timestamp) DESC)"), "rank")
+            // TODO AVOID RAW SQL
+            .column_as(Expr::cust("RANK() OVER (ORDER BY COUNT(music_scrobbles.timestamp) DESC)"), "rank")
             .filter(ScrobbleColumn::Timestamp.between(from_ts, to_ts))
             .group_by(ArtistColumn::Id)
             .order_by_desc(ScrobbleColumn::Timestamp.count());
@@ -126,7 +128,8 @@ impl MalojaDB {
             .join(JoinType::LeftJoin, entity::track::Relation::Scrobble.def())
             .column_as(AlbumColumn::Id, "album_id")
             .column_as(ScrobbleColumn::Timestamp.count(), "scrobbles")
-            .column_as(Expr::cust("RANK() OVER (ORDER BY COUNT(scrobbles.timestamp) DESC)"), "rank")
+            // TODO AVOID RAW SQL
+            .column_as(Expr::cust("RANK() OVER (ORDER BY COUNT(music_scrobbles.timestamp) DESC)"), "rank")
             .filter(ScrobbleColumn::Timestamp.between(from_ts, to_ts))
             .group_by(AlbumColumn::Id);
 
