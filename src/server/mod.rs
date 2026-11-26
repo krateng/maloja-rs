@@ -9,9 +9,11 @@ use std::collections::HashMap;
 use crate::api::mount_apis;
 use axum::routing::{get, post};
 use axum::{middleware, Router};
-use axum::http::{header, Uri, StatusCode};
+use axum::http::{header, Uri, StatusCode, HeaderValue};
 use axum::response::{IntoResponse, Response};
-use rust_embed::{DynRustEmbed, Embed, EmbeddedFile, RustEmbed};
+use axum_csp::{CspValue, CspHeaderBuilder, CspDirectiveType};
+use tower_http::set_header::SetResponseHeaderLayer;
+use rust_embed::RustEmbed;
 use pages::*;
 use pages_admin::*;
 use pages_admin_post::*;
@@ -51,6 +53,29 @@ pub async fn create_app(state: &AppState) -> Router<AppState> {
 
     // STATIC FILES AND SPECIAL
     app = app.fallback(static_handler);
+
+    // SECURITY
+    let csp_rules = CspHeaderBuilder::new()
+        .add(CspDirectiveType::DefaultSrc, vec![CspValue::SelfSite])
+        .add(CspDirectiveType::ScriptSource, vec![CspValue::SelfSite])
+        // maybe move all styles out at some point?
+        .add(CspDirectiveType::StyleSource, vec![CspValue::UnsafeInline, CspValue::SelfSite])
+        .add(CspDirectiveType::StyleSourceAttr, vec![CspValue::UnsafeInline, CspValue::SelfSite])
+        // add image domains once image fetch is set up
+        .add(CspDirectiveType::ImgSrc, vec![CspValue::SelfSite])
+        .add(CspDirectiveType::ObjectSrc, vec![CspValue::None])
+        .add(CspDirectiveType::BaseUri, vec![CspValue::None])
+        .finish();
+
+    app = app
+        .layer(SetResponseHeaderLayer::if_not_present(
+            header::CONTENT_SECURITY_POLICY,
+            csp_rules,
+        ))
+        .layer(SetResponseHeaderLayer::if_not_present(
+            header::X_CONTENT_TYPE_OPTIONS,
+            HeaderValue::from_static("nosniff"),
+        ));
 
     app
 }

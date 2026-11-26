@@ -19,7 +19,7 @@ chrono-tz = {  version = "0.10.4" }
 axum = { version = "0.8.1" }
 utoipa = { version = "6.0.0" }
 utoipa-axum = { version = "0.3.0" }
-tower-http = { version = "0.7.1", features = ["fs"] }
+tower-http = { version = "0.7.1", features = ["fs", "set-header"] }
 serde = { version = "1.0.216", features = ["derive"] }
 serde_json = {  version = "1.0.134" }
 serde-inline-default = { version = "1.0.3" }
@@ -37,6 +37,7 @@ dotenvy = "0.15.7"
 itertools = "0.15.0"
 parse-display = "0.11.0"
 axum-extra = { version = "0.12.6", features = ["cookie", "typed-header"] }
+axum-csp = "0.0.10"
 rust-embed = {  version = "8.14.0", features = ["mime-guess"] }
 time = "0.3.55"
 getrandom = "0.4.3"

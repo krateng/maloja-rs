@@ -439,6 +439,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "axum-csp"
+version = "0.0.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2e945cee80108e3c8a4c24e4d18673857748eb091b696d6494369d740fcb71f0"
+dependencies = [
+ "axum",
+ "regex",
+]
+
+[[package]]
 name = "axum-extra"
 version = "0.12.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2113,6 +2123,7 @@ dependencies = [
  "argon2",
  "askama",
  "axum",
+ "axum-csp",
  "axum-extra",
  "base64 0.23.1",
  "chrono",
