@@ -54,20 +54,15 @@ impl ActiveModelBehavior for ActiveModel {}
 
 /// Representation of a scrobble with the information that can be supplied from the outside.
 /// Used for creating or patching a scrobble
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, Deserialize, ToSchema)]
-#[schema(title = "Scrobble (Post)", as = entity::scrobble::ScrobbleWrite, description = "Instance of user listening to a track")]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
 pub struct ScrobbleWrite {
-    #[schema(examples(904098042))]
     pub timestamp: Option<i64>,
     pub track: TrackWrite,
-    #[schema(examples(174))]
     pub listen_duration: Option<u32>,
 }
 
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
-#[schema(title = "Scrobble", as = entity::scrobble::ScrobbleRead, description = "Instance of user listening to a track")]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize)]
 pub struct ScrobbleRead {
-    #[schema(examples(904098042))]
     pub timestamp: i64,
     pub time_local: String, //TODO generate in template instead?
     pub track: TrackRead,

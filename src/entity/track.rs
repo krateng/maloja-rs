@@ -73,34 +73,24 @@ impl ActiveModelBehavior for ActiveModel {}
 /// Representation of a track with the information that can be supplied from the outside.
 /// Used for creating or patching a track, or to identify a track within another entity which could
 /// exist or should be newly created
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, Deserialize, ToSchema)]
-#[schema(title = "Track (Post)", as = entity::track::TrackWrite, description = "Musical work")]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
 pub struct TrackWrite {
-    #[schema(minimum = 1, examples(42))]
     pub id: Option<u32>,
-    #[schema(examples("Whistle"))]
     pub title: Option<String>,
     pub artists: Option<Vec<ArtistWriteContext>>,
-    #[schema(examples(195))]
     pub track_length: Option<u32>,
     pub album: Option<AlbumWrite>,
-    #[schema(examples("1d48f0c7-f65f-4e3d-8b3e-b066531b9a67"))]
     pub mbid: Option<String>,
-    #[schema(examples("6NEoeBLQbOMw92qMeLfI40"))]
     pub spotify_id: Option<String>,
 }
 
 /// Representation of a track as it should be shown to the outside, for example in the API.
-#[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize, ToSchema)]
-#[schema(title = "Track", as = entity::track::TrackRead, description = "Musical work")]
+#[derive(Clone, Eq, Hash, PartialEq, Debug, Serialize)]
 pub struct TrackRead {
-    #[schema(minimum = 1, examples(42))]
     pub id: u32,
-    #[schema(examples("Whistle"))]
     pub title: String,
     pub artists: Vec<ArtistReadContext>,
     pub album: Option<AlbumRead>,
-    #[schema(examples(195))]
     pub track_length: Option<u32>,
 }
 

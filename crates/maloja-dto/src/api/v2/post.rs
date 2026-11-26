@@ -5,7 +5,7 @@ use serde_inline_default::serde_inline_default;
 #[cfg_attr(
     feature = "utoipa",
     derive(utoipa::ToSchema),
-    schema(title = "Scrobble (Post)", as = ScrobbleWrite, description = "Instance of user listening to a track")
+    schema(title = "Scrobble (Post)", as = embedded::Scrobble, description = "Instance of user listening to a track")
 )]
 pub struct ScrobbleWrite {
     #[cfg_attr(feature = "utoipa", schema(examples(904098042)))]
@@ -19,7 +19,7 @@ pub struct ScrobbleWrite {
 #[cfg_attr(
     feature = "utoipa",
     derive(utoipa::ToSchema),
-    schema(title = "Track (Post)", as = EmbeddedTrackWrite, description = "Instance of user listening to a track")
+    schema(title = "Track (Post)", as = embedded::track, description = "Musical work")
 )]
 pub struct EmbeddedTrackWrite {
     /// Referencing a track by ID will always override all other information
@@ -41,7 +41,7 @@ pub struct EmbeddedTrackWrite {
 #[cfg_attr(
     feature = "utoipa",
     derive(utoipa::ToSchema),
-    schema(title = "Album (Post)", as = EmbeddedAlbumWrite, description = "Studio album / EP / Single a track canonically belongs to")
+    schema(title = "Album (Post)", as = embedded::album, description = "Studio album / EP / Single a track canonically belongs to")
 )]
 pub struct EmbeddedAlbumWrite {
     /// Referencing an album by ID will always override all other information
@@ -61,7 +61,7 @@ pub struct EmbeddedAlbumWrite {
 #[cfg_attr(
     feature = "utoipa",
     derive(utoipa::ToSchema),
-    schema(title = "Album Artist / Track Artist (Post)", as = EmbeddedContextArtistWrite, description = "Performer, composer or otherwise credited entity in relation to a specific album or track")
+    schema(title = "Album Artist / Track Artist (Post)", as = embedded::artist, description = "Performer, composer or otherwise credited entity in relation to a specific album or track")
 )]
 pub struct EmbeddedContextArtistWrite {
     /// Referencing an artist by ID will always override all other information

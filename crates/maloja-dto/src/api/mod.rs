@@ -1,2 +1,2 @@
-mod api_v1;
-mod api_v2;
+pub mod v1;
+pub mod v2;

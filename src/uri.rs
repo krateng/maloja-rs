@@ -1,5 +1,4 @@
 use crate::database::errors::MalojaError;
-use crate::database::views::{Paginated, PaginationInfo};
 use crate::entity::album::AlbumRead;
 use crate::entity::artist::ArtistRead;
 use crate::entity::track::TrackRead;
@@ -11,6 +10,7 @@ use std::collections::HashMap;
 use std::convert::identity;
 use sea_query::Iden;
 use utoipa::IntoParams;
+use maloja_dto::api::v2::get::{Paginated, PaginationInfo};
 
 // Every category of query / path arguments should have struct that converts both to and from the backend object that we use to represent its meaning
 // each struct also implements a function to convert to the raw query string so we can chain those in templates
