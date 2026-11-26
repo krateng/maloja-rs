@@ -22,9 +22,9 @@ RUN mkdir src && echo "fn main() {}" > src/main.rs && cargo build --profile ${CA
 RUN cargo clean --profile ${CARGO_PROFILE} && rm -rf src
 
 # build full
-COPY Cargo.toml Cargo.lock ./
+COPY Cargo.toml Cargo.lock askama.toml ./
 COPY src/ ./src
-COPY templates/ ./templates
+COPY web/ ./web
 RUN cargo build --profile ${CARGO_PROFILE}
 # copy result to neutral path so we dont need to care about profile in the final container
 RUN cp ${CARGO_TARGET_DIR}/$(if [ "$CARGO_PROFILE" = "release" ]; then echo "release"; else echo "debug"; fi)/maloja-rs ${CARGO_TARGET_DIR}/maloja-rs
