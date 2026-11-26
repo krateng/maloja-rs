@@ -2120,9 +2120,12 @@ dependencies = [
 name = "maloja-dto"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "parse-display",
  "serde",
+ "serde-inline-default",
  "serde_with",
+ "utoipa",
 ]
 
 [[package]]

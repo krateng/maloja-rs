@@ -40,7 +40,7 @@ pub async fn import_maloja(file: PathBuf, state: &AppState) -> Result<(), Maloja
         .map(|scrobble| {
             AttributedScrobbleWrite {
                 write: ScrobbleWrite {
-                    timestamp: Some(scrobble.time),
+                    timestamp: Some(scrobble.time.into()),
                     track: TrackWrite {
                         id: None,
                         title: Some(scrobble.track.title),
