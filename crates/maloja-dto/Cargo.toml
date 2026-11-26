@@ -1,0 +1,9 @@
+[package]
+name = "maloja-dto"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+serde = { version = "1.0.229", features = ["derive"] }
+parse-display = "0.11.0"
+serde_with = "3.25.0"

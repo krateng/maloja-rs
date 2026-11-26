@@ -2117,6 +2117,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "maloja-dto"
+version = "0.1.0"
+dependencies = [
+ "parse-display",
+ "serde",
+ "serde_with",
+]
+
+[[package]]
 name = "maloja-rs"
 version = "0.1.0"
 dependencies = [
@@ -2138,6 +2147,7 @@ dependencies = [
  "http-body-util",
  "itertools 0.15.0",
  "log",
+ "maloja-dto",
  "parse-display",
  "rand 0.10.3",
  "regex",

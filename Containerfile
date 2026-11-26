@@ -18,13 +18,14 @@ ENV RUSTFLAGS="-A warnings"
 
 # just build a fake application to build all our dependencies (caching)
 COPY Cargo.toml Cargo.lock ./
+COPY crates/ ./crates/
 RUN mkdir src && echo "fn main() {}" > src/main.rs && cargo build --profile ${CARGO_PROFILE}
 RUN cargo clean --profile ${CARGO_PROFILE} && rm -rf src
 
 # build full
-COPY Cargo.toml Cargo.lock askama.toml ./
-COPY src/ ./src
-COPY web/ ./web
+COPY askama.toml ./
+COPY src/ ./src/
+COPY web/ ./web/
 RUN cargo build --profile ${CARGO_PROFILE}
 # copy result to neutral path so we dont need to care about profile in the final container
 RUN cp ${CARGO_TARGET_DIR}/$(if [ "$CARGO_PROFILE" = "release" ]; then echo "release"; else echo "debug"; fi)/maloja-rs ${CARGO_TARGET_DIR}/maloja-rs

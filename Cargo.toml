@@ -6,6 +6,7 @@ edition = "2024"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+maloja-dto = { path = "crates/maloja-dto", version = "0.1.0" }
 sea-orm = { version = "2.0.4", features = [
     "sqlx-sqlite", "runtime-tokio-rustls", "macros", "sqlite-use-returning-for-3_35", "with-uuid"
 ] }
