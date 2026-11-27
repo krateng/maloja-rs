@@ -6,7 +6,7 @@ use sea_orm::ActiveValue::Set;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, NotSet, QueryFilter, TransactionSession, TransactionTrait};
 use std::collections::{HashMap, HashSet};
 use itertools::{Either, Itertools};
-use sea_query::Expr;
+use sea_orm::sea_query::Expr;
 use crate::configuration::rules::apply_track_rules;
 use crate::database::repository::MalojaDB;
 use crate::database::transform::writes_to_models::{album_write_to_model, artist_write_to_model, scrobble_write_to_model, track_write_to_model};

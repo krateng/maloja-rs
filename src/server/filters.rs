@@ -1,7 +1,5 @@
 use askama::Result as AskamaResult;
 use chrono::{Duration, Utc};
-use sea_query::Iden;
-use time::macros::timestamp;
 
 #[askama::filter_fn]
 pub fn format_ts(timestamp: &i64, env: &dyn askama::Values) -> AskamaResult<String> {

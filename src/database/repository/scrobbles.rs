@@ -10,7 +10,7 @@ use crate::entity::track::{
 use crate::entity::track_artist::Column as TrackArtistColumn;
 use crate::timeranges::{ValidTimeRange};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QueryOrder, QuerySelect, QueryTrait, RelationTrait};
-use sea_query::JoinType;
+use sea_orm::sea_query::JoinType;
 use crate::database::repository::helpers::{ensure_single_filter, SingleFilter};
 use crate::database::transform::models_to_reads::scrobble_model_to_read;
 

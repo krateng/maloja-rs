@@ -1,0 +1,9 @@
+*
+!src/
+!web/
+!Cargo.toml
+!Cargo.lock
+!askama.toml
+!crates/*/Cargo.toml
+!crates/*/Cargo.lock
+!crates/*/src/

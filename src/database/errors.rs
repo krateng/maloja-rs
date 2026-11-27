@@ -1,5 +1,5 @@
 use serde::Serialize;
-use strum_macros::{Display, EnumString};
+use strum::{Display, EnumString};
 use utoipa::ToSchema;
 
 #[derive(Debug, Serialize, ToSchema, Clone, EnumString, Display)]

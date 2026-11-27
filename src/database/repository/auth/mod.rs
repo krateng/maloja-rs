@@ -1,6 +1,4 @@
 use std::sync::LazyLock;
-use argon2::{Argon2, PasswordHasher};
-use argon2::password_hash::phc::SaltString;
 use base64::Engine;
 use chrono::{Days, Duration, TimeDelta, TimeZone, Utc};
 use itertools::{Either, Itertools};
@@ -10,8 +8,7 @@ use crate::entity::{Client, ClientActiveModel, ClientColumn, ClientModel, Client
 use sea_orm::{ColumnTrait, EntityTrait, IntoActiveModel};
 use sea_orm::{NotSet, QueryFilter, Set};
 use base64::engine::general_purpose;
-use sea_orm::prelude::DateTime;
-use sea_query::{Condition, Iden, Query};
+use sea_orm::sea_query::{Condition, Query};
 use sha2::{Digest, Sha256};
 use rand::seq::IndexedRandom;
 use csscolorparser::NAMED_COLORS;
@@ -253,7 +250,7 @@ pub enum PasswordState {
 
 fn generate_token() -> TokenResult {
     let mut buf = [0u8; 48];
-    getrandom::fill(&mut buf).expect("OS RNG failed");
+    rand::fill(&mut buf);
     let token = format!("mlj_{}", general_purpose::URL_SAFE_NO_PAD.encode(buf));
     let hash_hex = hash_token(token.clone());
     let token_display = format!("{}...{}", &token[..4], &token[token.len()-4..]);

@@ -18,6 +18,7 @@ ENV RUSTFLAGS="-A warnings"
 
 # just build a fake application to build all our dependencies (caching)
 COPY Cargo.toml Cargo.lock ./
+# sub crates should not change too often (target is ignored in .containerignore)
 COPY crates/ ./crates/
 RUN mkdir src && echo "fn main() {}" > src/main.rs && cargo build --profile ${CARGO_PROFILE}
 RUN cargo clean --profile ${CARGO_PROFILE} && rm -rf src

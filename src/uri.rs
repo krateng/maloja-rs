@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 use std::cmp::min;
 use std::collections::HashMap;
 use std::convert::identity;
-use sea_query::Iden;
 use utoipa::IntoParams;
 use maloja_dto::api::v2::get::{Paginated, PaginationInfo};
 

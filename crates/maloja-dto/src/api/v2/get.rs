@@ -4,7 +4,7 @@ use serde::Serialize;
 #[cfg_attr(
     feature = "utoipa",
     derive(utoipa::ToSchema),
-    schema(title = "Scrobble (Post)", as = read::Scrobble, description = "Instance of user listening to a track")
+    schema(title = "Scrobble", as = read::Scrobble, description = "Instance of user listening to a track")
 )]
 pub struct Scrobble {
     #[cfg_attr(feature = "utoipa", schema(examples(904098042)))]

@@ -1,18 +1,14 @@
-use chrono::{naive::Days, DateTime, Datelike, Local, Month, Months, NaiveDate, NaiveTime, NaiveWeek, TimeDelta, Utc, Weekday};
+use chrono::{naive::Days, DateTime, Datelike, Local, Month, Months, NaiveDate, NaiveTime, NaiveWeek, Utc, Weekday};
 use chrono_tz::Tz;
 use serde::{Serialize, Serializer};
 use std::fmt::{Display, Formatter};
 use std::iter::successors;
-use std::ops::Add;
 use std::sync::LazyLock;
 use regex::Regex;
 use sea_orm::prelude::Date;
-use sea_query::Iden;
-use sea_query::prelude::rust_decimal::prelude::FromPrimitive;
-use strum_macros::Display;
-use utoipa::ToSchema;
+use sea_orm::sea_query::prelude::rust_decimal::prelude::FromPrimitive;
+use strum::Display;
 use crate::database::errors::MalojaError;
-use crate::timeranges::RangeType::Day;
 
 const TIMEZONE: Tz = Tz::Europe__Vienna; //AEIOU
 const WEEK_BEGIN: Weekday = Weekday::Sun;

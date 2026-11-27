@@ -23,7 +23,7 @@ use crate::timeranges::{ValidTimeRange};
 use sea_orm::{
     ColumnTrait, EntityTrait, JoinType, QueryFilter, QueryOrder, QuerySelect, RelationTrait,
 };
-use sea_query::Expr;
+use sea_orm::sea_query::Expr;
 use crate::database::repository::helpers::{ensure_single_filter, SingleFilter};
 // Alright for all selections, we dont join with additional information - modularity over query performance for now
 // we generate stats over IDs and use batch resolve with id maps
