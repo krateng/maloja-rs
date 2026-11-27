@@ -13,7 +13,7 @@ mod listenbrainz;
 mod maloja_1;
 mod maloja_2;
 
-const APIS: [ScrobbleAPI; 3] = [listenbrainz::API, audioscrobbler::API, maloja_2::API];
+const APIS: [ScrobbleAPI; 4] = [listenbrainz::API, audioscrobbler::API, maloja_2::API, maloja_1::API];
 
 pub struct ScrobbleAPI {
     pub prefix: &'static str,
