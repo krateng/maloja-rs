@@ -27,7 +27,7 @@ colored = { version = "3.0.0" }
 base64 = {  version = "0.23.1" }
 # web server
 axum = { version = "0.8.1" }
-axum-extra = { version = "0.12.6", features = ["cookie", "typed-header"] }
+axum-extra = { version = "0.12.6", features = ["cookie", "typed-header", "query"] }
 axum-csp = {  version = "0.0.10" }
 tower = { version = "0.5.2" }
 tower-http = { version = "0.7.1", features = ["fs", "set-header"] }
